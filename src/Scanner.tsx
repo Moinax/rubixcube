@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { classify, FACE_COLORS, FACE_NAMES, FACES, type Face, type RGB } from "./cube";
+import { classify, FACE_COLORS, FACE_NAMES, FACES, vivid, type Face, type RGB } from "./cube";
 
 // Turning the cube a quarter left each time shows F, R, B, L; then the top and bottom.
 const STEPS: { face: Face; top: Face; hint: string }[] = [
@@ -134,7 +134,9 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
     if (still < recent.length) moved.current = true;
     const known = faces.some((f, i) => f && i !== step && close(f[4], live[4], SAME_CENTER));
     const dark = live.some((c) => Math.max(...c) < 45);
-    const ready = moved.current && !known && !dark;
+    // Any face of a mixed cube shows several colored stickers; a person or a room shows none.
+    const cube = live.filter(vivid).length >= 4;
+    const ready = moved.current && !known && !dark && cube;
     setSteady(ready ? still / STEADY_FRAMES : 0);
     if (ready && still === STEADY_FRAMES) capture();
   }, [live]); // only a new frame triggers a check; `capture` reads this render's state

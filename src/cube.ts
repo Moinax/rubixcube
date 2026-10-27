@@ -198,6 +198,17 @@ function lab([r, g, b]: RGB): RGB {
 }
 
 /**
+ * Whether a sampled color is vivid enough to be a colored sticker. On a real
+ * webcam every sticker measured chroma 38 or more, while a person and the room
+ * behind stayed under 31.
+ * ponytail: threshold from one real webcam; lower it if a dim cube never triggers.
+ */
+export function vivid(c: RGB): boolean {
+  const [, a, b] = lab(c);
+  return Math.hypot(a, b) >= 35;
+}
+
+/**
  * Turns 54 sampled colors (facelet order) into a state. Each sticker goes to
  * the closest center color, closest pairs first, at most 9 per color, which
  * settles most red/orange and white/yellow doubts.

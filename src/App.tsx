@@ -10,7 +10,17 @@ type Screen =
   | { name: "scan"; scan?: Scan }
   | { name: "edit"; state: string; scan?: Scan }
   | { name: "solving" }
-  | { name: "guide"; start: string; groups: Group[]; learn: boolean };
+  | { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number };
+
+// The current screen survives a reload, so a scanned cube never has to be scanned again.
+const STORAGE_KEY = "rubixcube";
+function restore(): Screen {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)!) ?? { name: "home" };
+  } catch {
+    return { name: "home" };
+  }
+}
 
 const SHOWCASE = "R U F' L2 D B' R2 U'".split(" ").reduce(applyMove, SOLVED);
 
@@ -19,14 +29,17 @@ const primary = `${button} bg-white text-black hover:bg-zinc-200`;
 const secondary = `${button} bg-white/8 text-zinc-100 ring-1 ring-white/10 hover:bg-white/14`;
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>({ name: "home" });
+  const [screen, setScreen] = useState<Screen>(restore);
+  useEffect(() => {
+    if (screen.name !== "solving") localStorage.setItem(STORAGE_KEY, JSON.stringify(screen));
+  }, [screen]);
 
   async function startGuide(edit: Extract<Screen, { name: "edit" }>, learn: boolean) {
     setScreen({ name: "solving" });
     await new Promise((r) => setTimeout(r, 50)); // let the spinner paint before the solver blocks
     try {
       const groups = learn ? beginnerSolve(edit.state) : [{ stage: 0, text: "", moves: solve(edit.state) }];
-      setScreen({ name: "guide", start: edit.state, groups, learn });
+      setScreen({ name: "guide", start: edit.state, groups, learn, step: 0 });
     } catch (e) {
       console.error(e);
       alert("Le calcul de la solution a échoué. Vérifie les couleurs, ou essaie l'autre mode.");
@@ -82,6 +95,8 @@ export default function App() {
           start={screen.start}
           groups={screen.groups}
           learn={screen.learn}
+          step={screen.step}
+          onStep={(step) => setScreen({ ...screen, step })}
           onScan={() => setScreen({ name: "scan" })}
           onEdit={(state) => setScreen({ name: "edit", state })}
         />
@@ -129,12 +144,13 @@ type GuideProps = {
   start: string;
   groups: Group[];
   learn: boolean;
+  step: number;
+  onStep: (step: number) => void;
   onScan: () => void;
   onEdit: (state: string) => void;
 };
 
-function Guide({ start, groups, learn, onScan, onEdit }: GuideProps) {
-  const [step, setStep] = useState(0);
+function Guide({ start, groups, learn, step, onStep, onScan, onEdit }: GuideProps) {
   const flat = useMemo(() => groups.flatMap((g, group) => g.moves.map((move) => ({ move, group }))), [groups]);
   const states = useMemo(
     () => flat.reduce((acc, { move }) => [...acc, applyMove(acc.at(-1)!, move)], [start]),
@@ -142,7 +158,7 @@ function Guide({ start, groups, learn, onScan, onEdit }: GuideProps) {
   );
   const total = flat.length;
   const done = step === total;
-  const go = (delta: number) => setStep((s) => Math.min(total, Math.max(0, s + delta)));
+  const go = (delta: number) => onStep(Math.min(total, Math.max(0, step + delta)));
   const move = flat[step]?.move;
   const group = done ? undefined : groups[flat[step].group];
   const groupStart = flat.findIndex((f) => f.group === flat[step]?.group);
@@ -179,7 +195,7 @@ function Guide({ start, groups, learn, onScan, onEdit }: GuideProps) {
               <li key={s.title}>
                 <button
                   disabled={first < 0}
-                  onClick={() => setStep(first)}
+                  onClick={() => onStep(first)}
                   title={first < 0 ? `${s.title} : déjà fait` : s.title}
                   className={`rounded-full px-3 py-1 text-xs font-semibold disabled:line-through disabled:opacity-40 ${
                     group?.stage === i ? "bg-white text-black" : (group?.stage ?? 99) > i ? "bg-white/5 text-zinc-500" : "bg-white/10"
@@ -236,7 +252,7 @@ function Guide({ start, groups, learn, onScan, onEdit }: GuideProps) {
             {chips.map(({ move: m, i }) => (
               <li key={i}>
                 <button
-                  onClick={() => setStep(i)}
+                  onClick={() => onStep(i)}
                   className={`min-w-10 rounded-md px-2 py-1 font-mono text-sm ${
                     i === step ? "bg-white text-black" : i < step ? "bg-white/5 text-zinc-500" : "bg-white/10"
                   }`}

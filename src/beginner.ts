@@ -1,4 +1,4 @@
-import { applyMove, FACE_NAMES, simplify, STICKERS, stickerAt, type Face, type Vec } from "./cube.ts";
+import { applyMove, colorsOf as key, FACE_NAMES, NORMALS, PIECES, simplify, STICKERS, stickerAt, type Face, type Vec } from "./cube.ts";
 
 // Layer-by-layer beginner method, played like a human would: hold the cube
 // yellow up, turn it with y to face the slot you work on, and apply the
@@ -56,15 +56,8 @@ export const STAGES: Stage[] = [
   },
 ];
 
-const UP: Vec = [0, 1, 0];
-const DOWN: Vec = [0, -1, 0];
-const FRONT: Vec = [0, 0, 1];
-const SIDE_FACES: [Face, Vec][] = [
-  ["F", [0, 0, 1]],
-  ["R", [1, 0, 0]],
-  ["B", [0, 0, -1]],
-  ["L", [-1, 0, 0]],
-];
+const { U: UP, D: DOWN, F: FRONT, R: RIGHT_SIDE, B: BACK } = NORMALS;
+const SIDE_FACES = (["F", "R", "B", "L"] as Face[]).map((f) => [f, NORMALS[f]] as const);
 const SEXY = ["R", "U", "R'", "U'"];
 const RIGHT = "U R U' R' U' F' U F".split(" ");
 const LEFT = "U' L' U L U F U' F'".split(" ");
@@ -78,15 +71,10 @@ const turns = (m: string, n: number) => Array(n % 4).fill(m) as string[];
 const play = (state: string, moves: string[]) => moves.reduce(applyMove, state);
 
 // Cubies as their facelet indices, corners and edges only.
-const CUBIES = [
-  ...STICKERS.reduce((m, s, i) => m.set(`${s.pos}`, [...(m.get(`${s.pos}`) ?? []), i]), new Map<string, number[]>()).values(),
-]
-  .filter((c) => c.length > 1)
-  .map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));
+const CUBIES = PIECES.map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));
 
 const center = (s: string, normal: Vec) => s[stickerAt(normal, normal)!];
 const colorAt = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
-const key = (s: string, idx: number[]) => idx.map((i) => s[i]).sort().join("");
 export const findPiece = (s: string, piece: string) => CUBIES.find((c) => key(s, c.idx) === piece)!.pos;
 const solvedAt = (s: string, pos: Vec) =>
   CUBIES.find((c) => same(c.pos, pos))!.idx.every((i) => s[i] === center(s, STICKERS[i].normal));
@@ -196,7 +184,7 @@ export function beginnerSolve(start: string): Group[] {
     }
     // Slot below the corner's two side colors, at front-right, corner right above it.
     const sides = corner.replace(W, "");
-    const moves = setup(s, (t) => same(findPiece(t, corner), URF) && [...sides].every((c) => [center(t, FRONT), center(t, [1, 0, 0])].includes(c)))!;
+    const moves = setup(s, (t) => same(findPiece(t, corner), URF) && [...sides].every((c) => [center(t, FRONT), center(t, RIGHT_SIDE)].includes(c)))!;
     let t = play(s, moves);
     let reps = 0;
     while (!solvedAt(t, FRD)) (t = play(t, SEXY)), reps++;
@@ -226,7 +214,7 @@ export function beginnerSolve(start: string): Group[] {
     const edge = key(s, up.idx);
     const moves = setup(s, (t) => same(findPiece(t, edge), UF) && colorAt(t, UF, FRONT) === center(t, FRONT))!;
     const t = play(s, moves);
-    const right = colorAt(t, UF, UP) === center(t, [1, 0, 0]);
+    const right = colorAt(t, UF, UP) === center(t, RIGHT_SIDE);
     emit(
       4,
       `Arête ${names(edge)} : aligne sa couleur de devant avec le centre, puis glisse-la vers la ${right ? "droite" : "gauche"}.`,
@@ -265,7 +253,7 @@ export function beginnerSolve(start: string): Group[] {
       emit(6, "Tourne le haut : toutes les arêtes jaunes s'alignent avec leurs centres.", align);
       break;
     }
-    const pair = setup(s, (t) => edgeAligned(t, [0, 0, -1]) && edgeAligned(t, [1, 0, 0]));
+    const pair = setup(s, (t) => edgeAligned(t, BACK) && edgeAligned(t, RIGHT_SIDE));
     emit(
       6,
       pair

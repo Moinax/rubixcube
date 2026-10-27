@@ -20,6 +20,10 @@ const SAME_CENTER = 60; // closer than this to a captured center = that face aga
 export type Scan = (RGB[] | undefined)[];
 
 const close = (a: RGB, b: RGB, tolerance: number) => a.every((v, k) => Math.abs(v - b[k]) <= tolerance);
+const nextMissing = (faces: Scan) => {
+  const i = faces.findIndex((f) => !f);
+  return i < 0 ? null : i;
+};
 const rgb = (c?: RGB) => (c ? `rgb(${c.join(",")})` : "transparent");
 
 /** Average color of the middle of each of the 9 cells, row by row. */
@@ -37,8 +41,8 @@ function sampleGrid(data: Uint8ClampedArray): RGB[] {
   });
 }
 
-const Chip = ({ face }: { face: Face }) => (
-  <span className="inline-flex items-center gap-1.5 font-semibold">
+export const Chip = ({ face }: { face: Face }) => (
+  <span className="inline-flex items-center gap-1.5 font-semibold text-zinc-100">
     <span className="size-3.5 rounded-sm" style={{ background: FACE_COLORS[face] }} />
     {FACE_NAMES[face]}
   </span>
@@ -61,10 +65,7 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
   const [live, setLive] = useState<RGB[]>([]);
   const [box, setBox] = useState(0);
   const [faces, setFaces] = useState<Scan>(() => initial ?? Array(6).fill(undefined));
-  const [step, setStep] = useState<number | null>(() => {
-    const missing = faces.findIndex((f) => !f);
-    return missing < 0 ? null : missing;
-  });
+  const [step, setStep] = useState<number | null>(() => nextMissing(faces));
   const [steady, setSteady] = useState(0);
   const [flash, setFlash] = useState(false);
   // Display only: a webcam facing you reads like a mirror; samples stay unmirrored.
@@ -123,8 +124,7 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
     navigator.vibrate?.(60);
     setFlash(true);
     setTimeout(() => setFlash(false), 350);
-    const missing = next.findIndex((f) => !f);
-    goTo(missing < 0 ? null : missing);
+    goTo(nextMissing(next));
   }
 
   useEffect(() => {

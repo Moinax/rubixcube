@@ -61,7 +61,7 @@ const INDEX = new Map(STICKERS.map((s, i) => [`${s.pos}|${s.normal}`, i]));
 /** Facelet index of the sticker on cubie `pos` facing `normal`, if any. */
 export const stickerAt = (pos: Vec, normal: Vec) => INDEX.get(`${pos}|${normal}`);
 
-export const dot = (a: Vec, b: Vec) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const dot = (a: Vec, b: Vec) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 /** Clockwise quarter turn of `v` seen from the tip of the unit axis `a`. */
 function turn(v: Vec, a: Vec): Vec {
@@ -80,6 +80,8 @@ export const quarterTurns = (move: string) => (move[1] === "2" ? 2 : move[1] ===
 const ROTATIONS: Record<string, Face> = { x: "R", y: "U", z: "F" };
 export const isRotation = (move: string) => move[0] in ROTATIONS;
 export const moveAxis = (move: string) => NORMALS[(ROTATIONS[move[0]] ?? move[0]) as Face];
+/** Whether the cubie at `pos` turns with `move`. */
+export const inLayer = (move: string, pos: Vec) => isRotation(move) || dot(pos, moveAxis(move)) === 1;
 
 // Source facelet of each target facelet, per move, built on first use.
 const PERMUTATIONS = new Map<string, number[]>();
@@ -89,7 +91,7 @@ function permutation(move: string): number[] {
   const turns = (quarterTurns(move) + 4) % 4;
   const p = STICKERS.map((_, i) => i);
   STICKERS.forEach(({ pos, normal }, i) => {
-    if (!isRotation(move) && dot(pos, axis) !== 1) return;
+    if (!inLayer(move, pos)) return;
     for (let t = 0; t < turns; t++) [pos, normal] = [turn(pos, axis), turn(normal, axis)];
     p[stickerAt(pos, normal)!] = i;
   });
@@ -172,7 +174,7 @@ const DIRECTIONS: Record<Face, [string, string, string]> = {
 
 const ROTATION_TEXT: Record<string, [string, string, string]> = {
   y: ["la face droite vient devant toi", "la face gauche vient devant toi", "la face arrière vient devant toi"],
-  x: ["la face avant monte en haut", "la face du bas vient devant toi", "le bas passe en haut"],
+  x: ["la face avant monte en haut", "la face du haut vient devant toi", "le bas passe en haut"],
   z: ["le haut part à droite", "le haut part à gauche", "le bas passe en haut, garde la même face devant toi"],
 };
 
@@ -232,10 +234,10 @@ export function classify(samples: RGB[]): string {
 }
 
 // Facelet indices of each corner and edge, grouped by cubie.
-const PIECES = [
+export const PIECES = [
   ...STICKERS.reduce((m, s, i) => m.set(`${s.pos}`, [...(m.get(`${s.pos}`) ?? []), i]), new Map<string, number[]>()).values(),
 ].filter((p) => p.length > 1);
-const colorsOf = (state: string, piece: number[]) => piece.map((i) => state[i]).sort().join("");
+export const colorsOf = (state: string, piece: number[]) => piece.map((i) => state[i]).sort().join("");
 const REAL_PIECES = new Set(PIECES.map((p) => colorsOf(SOLVED, p)));
 
 /** Facelets of pieces that cannot exist or appear twice: where a misread hides. */

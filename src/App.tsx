@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import CubeView from "./CubeView";
 import NetEditor from "./NetEditor";
-import Scanner, { type Scan } from "./Scanner";
+import Scanner, { Chip, type Scan } from "./Scanner";
 import { beginnerSolve, findPiece, STAGES, type Group } from "./beginner";
-import { applyMove, describeMove, FACE_COLORS, FACE_NAMES, SOLVED, solve, suspects, upright, validate, type Face } from "./cube";
+import { applyMove, describeMove, SOLVED, solve, suspects, upright, validate, type Face } from "./cube";
 
 type Screen =
   | { name: "home" }
@@ -21,11 +21,17 @@ const secondary = `${button} bg-white/8 text-zinc-100 ring-1 ring-white/10 hover
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: "home" });
 
-  async function startGuide(state: string, learn: boolean) {
+  async function startGuide(edit: Extract<Screen, { name: "edit" }>, learn: boolean) {
     setScreen({ name: "solving" });
     await new Promise((r) => setTimeout(r, 50)); // let the spinner paint before the solver blocks
-    const groups = learn ? beginnerSolve(state) : [{ stage: 0, text: "", moves: solve(state) }];
-    setScreen({ name: "guide", start: state, groups, learn });
+    try {
+      const groups = learn ? beginnerSolve(edit.state) : [{ stage: 0, text: "", moves: solve(edit.state) }];
+      setScreen({ name: "guide", start: edit.state, groups, learn });
+    } catch (e) {
+      console.error(e);
+      alert("Le calcul de la solution a échoué. Vérifie les couleurs, ou essaie l'autre mode.");
+      setScreen(edit);
+    }
   }
 
   switch (screen.name) {
@@ -65,7 +71,7 @@ export default function App() {
           state={screen.state}
           onChange={(state) => setScreen({ ...screen, state })}
           onScan={() => setScreen({ name: "scan", scan: screen.scan })}
-          onSolve={(learn) => startGuide(screen.state, learn)}
+          onSolve={(learn) => startGuide(screen, learn)}
         />
       );
     case "solving":
@@ -144,6 +150,9 @@ function Guide({ start, groups, learn, onScan, onEdit }: GuideProps) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // A focused button already handles Space itself.
+      if (e.key === " " && (e.target as Element).closest("button, summary")) return;
+      if (e.key === " ") e.preventDefault();
       if (e.key === "ArrowRight" || e.key === " ") go(1);
       if (e.key === "ArrowLeft") go(-1);
     };
@@ -151,20 +160,14 @@ function Guide({ start, groups, learn, onScan, onEdit }: GuideProps) {
     return () => removeEventListener("keydown", onKey);
   });
 
-  const chip = (f: Face) => (
-    <span className="inline-flex items-center gap-1 font-semibold text-zinc-100">
-      <span className="size-3 rounded-sm" style={{ background: FACE_COLORS[f] }} />
-      {FACE_NAMES[f]}
-    </span>
-  );
   // Fast mode lists every move; learn mode only the moves of the current instruction.
-  const chips = learn ? flat.map((f, i) => ({ ...f, i })).filter((f) => f.group === flat[step]?.group) : flat.map((f, i) => ({ ...f, i }));
+  const chips = flat.map((f, i) => ({ ...f, i })).filter((f) => !learn || f.group === flat[step]?.group);
   const stage = learn && group ? STAGES[group.stage] : undefined;
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-4 p-4">
       <p className="text-center text-sm text-zinc-400">
-        Tiens ton cube {chip(state[4] as Face)} en haut et {chip(state[22] as Face)} face à toi
+        Tiens ton cube <Chip face={state[4] as Face} /> en haut et <Chip face={state[22] as Face} /> face à toi
         {learn ? "." : ", sans jamais le retourner."}
       </p>
 

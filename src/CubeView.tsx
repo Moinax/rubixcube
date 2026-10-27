@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { dot, FACE_COLORS, isRotation, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
+import { FACE_COLORS, inLayer, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
 
 // BoxGeometry material order: +x, -x, +y, -y, +z, -z.
 const SIDES: Vec[] = [
@@ -42,7 +42,9 @@ export default function CubeView({ state, move, highlight, autoRotate = false }:
     el.append(renderer.domElement);
     const world = new THREE.Scene();
     const pmrem = new THREE.PMREMGenerator(renderer);
-    world.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const room = new RoomEnvironment();
+    world.environment = pmrem.fromScene(room, 0.04).texture;
+    room.dispose();
     const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
     camera.position.set(4.6, 4, 6.2);
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -53,6 +55,7 @@ export default function CubeView({ state, move, highlight, autoRotate = false }:
 
     const resize = new ResizeObserver(() => {
       const { clientWidth: w, clientHeight: h } = el;
+      if (!w || !h) return;
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -70,6 +73,7 @@ export default function CubeView({ state, move, highlight, autoRotate = false }:
       pmrem.dispose();
       world.environment?.dispose();
       renderer.dispose();
+      renderer.forceContextLoss(); // browsers cap live WebGL contexts, and screens remount this view
       renderer.domElement.remove();
       scene.current = null;
     };
@@ -99,7 +103,7 @@ export default function CubeView({ state, move, highlight, autoRotate = false }:
           );
           mesh.position.set(x, y, z);
           if (highlight && `${pos}` === `${highlight}`) mesh.add(new THREE.LineSegments(OUTLINE, OUTLINE_MATERIAL));
-          (axis && (isRotation(move!) || dot(pos, axis) === 1) ? layer : ctx.root).add(mesh);
+          (move && inLayer(move, pos) ? layer : ctx.root).add(mesh);
         }
 
     if (!axis) {

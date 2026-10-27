@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import CubeView from "./CubeView";
 import NetEditor from "./NetEditor";
-import Scanner from "./Scanner";
+import Scanner, { type Scan } from "./Scanner";
 import { beginnerSolve, findPiece, STAGES, type Group } from "./beginner";
 import { applyMove, describeMove, FACE_COLORS, FACE_NAMES, SOLVED, solve, suspects, upright, validate, type Face } from "./cube";
 
 type Screen =
   | { name: "home" }
-  | { name: "scan" }
-  | { name: "edit"; state: string }
+  | { name: "scan"; scan?: Scan }
+  | { name: "edit"; state: string; scan?: Scan }
   | { name: "solving" }
   | { name: "guide"; start: string; groups: Group[]; learn: boolean };
 
@@ -53,7 +53,8 @@ export default function App() {
     case "scan":
       return (
         <Scanner
-          onDone={(state) => setScreen({ name: "edit", state })}
+          initial={screen.scan}
+          onDone={(state, scan) => setScreen({ name: "edit", state, scan })}
           onManual={() => setScreen({ name: "edit", state: SOLVED })}
           onCancel={() => setScreen({ name: "home" })}
         />
@@ -62,8 +63,8 @@ export default function App() {
       return (
         <Editor
           state={screen.state}
-          onChange={(state) => setScreen({ name: "edit", state })}
-          onScan={() => setScreen({ name: "scan" })}
+          onChange={(state) => setScreen({ ...screen, state })}
+          onScan={() => setScreen({ name: "scan", scan: screen.scan })}
           onSolve={(learn) => startGuide(screen.state, learn)}
         />
       );

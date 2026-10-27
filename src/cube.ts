@@ -100,7 +100,7 @@ export function validate(state: string): string | null {
   }
   const cube = Cube.fromString(state);
   if (cube.asString() !== state || new Set(cube.cp).size !== 8 || new Set(cube.ep).size !== 12)
-    return "Certaines pièces n'existent pas sur un vrai cube : une couleur est sans doute mal lue.";
+    return "Certaines pièces n'existent pas ou apparaissent deux fois (cases encadrées) : une couleur est mal lue sur l'une d'elles.";
   if (sum(cube.co) % 3) return "Un coin est tourné sur lui-même : vérifie les couleurs des coins.";
   if (sum(cube.eo) % 2) return "Une arête est retournée : vérifie les couleurs des arêtes.";
   if (parity(cube.cp) !== parity(cube.ep))
@@ -154,9 +154,8 @@ export function classify(samples: RGB[]): string {
   const labs = samples.map(lab);
   // Lightness weighs half: shading varies more than hue across a photo.
   const dist = (a: RGB, b: RGB) => ((a[0] - b[0]) / 2) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
-  const pairs = labs
-    .flatMap((l, i) => [...FACES].map((_, f) => ({ i, f, d: dist(l, labs[9 * f + 4]) })))
-    .sort((a, b) => a.d - b.d);
+  const d = labs.map((l) => [...FACES].map((_, f) => dist(l, labs[9 * f + 4])));
+  const pairs = d.flatMap((row, i) => row.map((d, f) => ({ i, f, d }))).sort((a, b) => a.d - b.d);
   const out: string[] = [];
   const left = Array(6).fill(9);
   for (const { i, f } of pairs)
@@ -164,5 +163,35 @@ export function classify(samples: RGB[]): string {
       out[i] = FACES[f];
       left[f]--;
     }
-  return out.join("");
+  const state = out.join("");
+  if (!validate(state)) return state;
+
+  // One misread sticker makes the 9-per-color cap push another one the other
+  // way, so the usual mistake is a swap: try the cheapest swap that gives a
+  // real cube. ponytail: single swap only, two independent misreads stay manual.
+  const f = (i: number) => FACES.indexOf(out[i]);
+  const swaps = [];
+  for (let i = 0; i < 54; i++)
+    for (let j = i + 1; j < 54; j++)
+      if (out[i] !== out[j]) swaps.push({ i, j, cost: d[i][f(j)] + d[j][f(i)] - d[i][f(i)] - d[j][f(j)] });
+  for (const { i, j } of swaps.sort((a, b) => a.cost - b.cost)) {
+    const s = out.with(i, out[j]).with(j, out[i]).join("");
+    if (!validate(s)) return s;
+  }
+  return state;
+}
+
+// Facelet indices of each corner and edge, grouped by cubie.
+const PIECES = [
+  ...STICKERS.reduce((m, s, i) => m.set(`${s.pos}`, [...(m.get(`${s.pos}`) ?? []), i]), new Map<string, number[]>()).values(),
+].filter((p) => p.length > 1);
+const colorsOf = (state: string, piece: number[]) => piece.map((i) => state[i]).sort().join("");
+const REAL_PIECES = new Set(PIECES.map((p) => colorsOf(SOLVED, p)));
+
+/** Facelets of pieces that cannot exist or appear twice: where a misread hides. */
+export function suspects(state: string): Set<number> {
+  const keys = PIECES.map((p) => colorsOf(state, p));
+  return new Set(
+    PIECES.filter((_, k) => !REAL_PIECES.has(keys[k]) || keys.indexOf(keys[k]) !== keys.lastIndexOf(keys[k])).flat(),
+  );
 }

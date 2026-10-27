@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Cube from "cubejs";
-import { applyMove, classify, FACES, SOLVED, solve, validate, type RGB } from "../src/cube.ts";
+import { applyMove, classify, FACES, SOLVED, solve, suspects, validate, type RGB } from "../src/cube.ts";
 
 const MOVES = [...FACES].flatMap((f) => [f, f + "'", f + "2"]);
 
@@ -39,4 +39,19 @@ test("classify recovers a scrambled cube from noisy colors", () => {
   const state = Cube.random().asString();
   const noisy = [...state].map((f, i) => rgb[f].map((c) => Math.max(0, c - (i % 5) * 9)) as RGB);
   assert.equal(classify(noisy), state);
+});
+
+test("classify fixes a red sticker read as orange, and suspects points at it", () => {
+  const rgb: Record<string, RGB> = {
+    U: [235, 235, 230], R: [200, 30, 30], F: [20, 170, 80],
+    D: [240, 215, 20], L: [250, 120, 25], B: [20, 90, 210],
+  };
+  const state = "R U F' L2 D B' R2 U' F2 L".split(" ").reduce(applyMove, SOLVED);
+  const red = [...state].findIndex((f, i) => f === "R" && i % 9 !== 4);
+  const samples = [...state].map((f, i) => rgb[f].map((c) => Math.max(0, c - (i % 5) * 9)) as RGB);
+  samples[red] = [250, 118, 26]; // under warm light red reads as plain orange
+  assert.equal(classify(samples), state);
+
+  const misread = state.slice(0, red) + "L" + state.slice(red + 1);
+  assert.ok(suspects(misread).has(red));
 });

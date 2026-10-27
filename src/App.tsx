@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import CubeView from "./CubeView";
 import NetEditor from "./NetEditor";
 import Scanner from "./Scanner";
-import { applyMove, describeMove, FACE_COLORS, FACE_NAMES, SOLVED, solve, validate, type Face } from "./cube";
+import { applyMove, describeMove, FACE_COLORS, FACE_NAMES, SOLVED, solve, suspects, validate, type Face } from "./cube";
 
 type Screen =
   | { name: "home" }
@@ -91,7 +91,7 @@ function Editor({ state, onChange, onScan, onSolve }: EditorProps) {
         </p>
       </div>
       <div className="grid items-center gap-6 md:grid-cols-[3fr_2fr]">
-        <NetEditor state={state} onChange={onChange} />
+        <NetEditor state={state} onChange={onChange} highlight={error ? suspects(state) : undefined} />
         <div className="aspect-square">
           <CubeView state={state} />
         </div>

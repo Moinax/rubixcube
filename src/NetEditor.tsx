@@ -11,10 +11,10 @@ const LAYOUT: [Face, number, number][] = [
   ["D", 6, 3],
 ];
 
-type Props = { state: string; onChange: (state: string) => void };
+type Props = { state: string; onChange: (state: string) => void; highlight?: Set<number> };
 
 /** Flat cube pattern: pick a color, tap stickers to paint them. Centers are fixed. */
-export default function NetEditor({ state, onChange }: Props) {
+export default function NetEditor({ state, onChange, highlight }: Props) {
   const [brush, setBrush] = useState<Face>("U");
   const paint = (i: number) => onChange(state.slice(0, i) + brush + state.slice(i + 1));
 
@@ -30,7 +30,7 @@ export default function NetEditor({ state, onChange }: Props) {
                 disabled={k === 4}
                 onClick={() => paint(i)}
                 aria-label={`Case ${k + 1} de la face ${FACE_NAMES[face]}`}
-                className="aspect-square rounded-[4px] ring-black/40 enabled:hover:ring-2 enabled:hover:ring-white"
+                className={`aspect-square rounded-[4px] enabled:hover:ring-2 enabled:hover:ring-white ${highlight?.has(i) ? "animate-pulse outline-3 outline-offset-1 outline-fuchsia-400" : ""}`}
                 style={{
                   gridRow: row + Math.floor(k / 3) + 1,
                   gridColumn: col + (k % 3) + 1,

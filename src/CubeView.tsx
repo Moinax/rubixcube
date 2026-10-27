@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -25,15 +25,25 @@ const material = (color: string) => {
   return MATERIALS.get(color)!;
 };
 
-const PAUSE = 500;
-const HOLD = 1100;
+const PAUSE = 700; // the start position stays in view this long before the move plays
+
+type View = "start" | "play" | "end";
+
+// Single arrow with a bar for start and end, a plain arrow to play.
+const CONTROLS: [View, string, React.ReactNode][] = [
+  ["start", "Avant le mouvement", <><rect x="5" y="5" width="2.5" height="14" rx="1" /><path d="M19 5v14L9 12z" /></>],
+  ["play", "Jouer le mouvement depuis le début", <path d="M7 5v14l12-7z" />],
+  ["end", "Après le mouvement", <><path d="M5 5v14l10-7z" /><rect x="16.5" y="5" width="2.5" height="14" rx="1" /></>],
+];
 
 type Props = { state: string; move?: string; highlight?: Vec; autoRotate?: boolean };
 
-/** Renders `state`; when `move` is set, plays it on a loop from `state`. `highlight` outlines one cubie. */
+/** Renders `state`; when `move` is set, plays it once from `state`, with controls to hold its start or end, or play it again. `highlight` outlines one cubie. */
 export default function CubeView({ state, move, highlight, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void }>(null);
+  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; show?: (view: View) => void }>(null);
+  const progress = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<View>("play");
 
   useEffect(() => {
     const el = host.current!;
@@ -115,12 +125,49 @@ export default function CubeView({ state, move, highlight, autoRotate = false }:
     const duration = turns === 2 ? 1300 : 850;
     const vector = new THREE.Vector3(...axis);
     let start: number | undefined;
+    let pinned: number | undefined; // 0 or 1 holds the start or the end of the move
+    ctx.show = (next) => {
+      pinned = next === "start" ? 0 : next === "end" ? 1 : undefined;
+      start = undefined; // playing restarts from the start position, held for PAUSE
+      setView(next);
+    };
+    ctx.show("play");
     ctx.onFrame = (t) => {
       start ??= t;
-      const k = Math.min(1, Math.max(0, (((t - start) % (PAUSE + duration + HOLD)) - PAUSE) / duration));
+      const k = pinned ?? Math.min(1, Math.max(0, (t - start - PAUSE) / duration));
       layer.quaternion.setFromAxisAngle(vector, angle * k * k * (3 - 2 * k));
+      progress.current?.style.setProperty("width", `${k * 100}%`);
+      if (pinned === undefined && k === 1) {
+        pinned = 1;
+        setView("end");
+      }
     };
   }, [state, move, `${highlight}`]);
 
-  return <div ref={host} className="h-full w-full touch-none" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={host} className="h-full w-full touch-none" />
+      {move && (
+        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1 overflow-hidden rounded-full bg-black/50 p-1 ring-1 ring-white/15 backdrop-blur">
+          {CONTROLS.map(([id, label, icon]) => (
+            <button
+              key={id}
+              onClick={() => scene.current?.show?.(id)}
+              title={label}
+              aria-label={label}
+              aria-pressed={view === id}
+              className={`grid h-9 w-11 place-items-center rounded-full transition ${
+                view === id ? "bg-white text-black" : "text-zinc-200 hover:bg-white/15"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden>
+                {icon}
+              </svg>
+            </button>
+          ))}
+          <div ref={progress} className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-emerald-400" />
+        </div>
+      )}
+    </div>
+  );
 }

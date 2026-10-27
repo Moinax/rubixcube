@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Cube from "cubejs";
-import { beginnerSolve } from "../src/beginner.ts";
+import { beginnerSolve, findPiece, homeOf, STAGES } from "../src/beginner.ts";
 import { applyMove, simplify, SOLVED, upright } from "../src/cube.ts";
 
 // Solved up to a whole-cube rotation: every face is one color.
@@ -31,4 +31,14 @@ test("beginner method solves random cubes, stage by stage", () => {
   }
   console.log(`  ${((performance.now() - t0) / 200).toFixed(1)} ms per cube`);
   assert.deepEqual(beginnerSolve(SOLVED).map((g) => g.stage), [0]);
+});
+
+test("the outlined home is where stages 2 to 4 leave their piece", () => {
+  for (let i = 0; i < 20; i++) {
+    let s = Cube.random().asString();
+    for (const g of beginnerSolve(s)) {
+      s = g.moves.reduce(applyMove, s);
+      if (STAGES[g.stage].toHome && g.piece && !/coincé|mal placée/.test(g.text)) assert.deepEqual(findPiece(s, g.piece), homeOf(s, g.piece), g.text);
+    }
+  }
 });

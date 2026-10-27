@@ -116,6 +116,10 @@ export function upright(state: string): string {
   throw new Error("no white or green center");
 }
 
+/** The sequence that undoes `moves`. */
+export const invert = (moves: string[]) =>
+  [...moves].reverse().map((m) => (m.endsWith("'") ? m[0] : m.endsWith("2") ? m : m + "'"));
+
 /** Merges consecutive turns of the same face or rotation: U U → U2, R R' → nothing. */
 export function simplify(moves: string[]): string[] {
   const out: string[] = [];

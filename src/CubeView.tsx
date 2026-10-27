@@ -18,6 +18,8 @@ const GEOMETRY = new RoundedBoxGeometry(0.96, 0.96, 0.96, 4, 0.14);
 const PLASTIC = new THREE.MeshStandardMaterial({ color: "#1a1b20", roughness: 0.6 });
 const OUTLINE = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.06, 1.06, 1.06));
 const OUTLINE_MATERIAL = new THREE.LineBasicMaterial({ color: "#f0abfc" });
+const TARGET = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.12, 1.12, 1.12));
+const TARGET_MATERIAL = new THREE.LineBasicMaterial({ color: "#34d399" });
 const MATERIALS = new Map<string, THREE.Material>();
 const material = (color: string) => {
   if (!MATERIALS.has(color))
@@ -36,14 +38,21 @@ const CONTROLS: [View, string, React.ReactNode][] = [
   ["end", "Après le mouvement", <><path d="M5 5v14l10-7z" /><rect x="16.5" y="5" width="2.5" height="14" rx="1" /></>],
 ];
 
-type Props = { state: string; move?: string; highlight?: Vec; autoRotate?: boolean };
+type Props = { state: string; move?: string; highlight?: Vec; target?: Vec; autoRotate?: boolean };
 
-/** Renders `state`; when `move` is set, plays it once from `state`, with controls to hold its start or end, or play it again. `highlight` outlines one cubie. */
-export default function CubeView({ state, move, highlight, autoRotate = false }: Props) {
+/** Renders `state`; when `move` is set, plays it once from `state`, with controls to hold its start or end, or play it again. `highlight` outlines one cubie, `target` (in green) the place it goes to. */
+export default function CubeView({ state, move, highlight, target, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; show?: (view: View) => void }>(null);
   const progress = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>("play");
+  // A new move starts playing: reset during render rather than from the effect.
+  const scene3d = `${state}|${move}|${highlight}|${target}`; // what the effect below rebuilds on
+  const [shown, setShown] = useState(scene3d);
+  if (shown !== scene3d) {
+    setShown(scene3d);
+    setView("play");
+  }
 
   useEffect(() => {
     const el = host.current!;
@@ -113,6 +122,7 @@ export default function CubeView({ state, move, highlight, autoRotate = false }:
           );
           mesh.position.set(x, y, z);
           if (highlight && `${pos}` === `${highlight}`) mesh.add(new THREE.LineSegments(OUTLINE, OUTLINE_MATERIAL));
+          if (target && `${pos}` === `${target}`) mesh.add(new THREE.LineSegments(TARGET, TARGET_MATERIAL));
           (move && inLayer(move, pos) ? layer : ctx.root).add(mesh);
         }
 
@@ -131,7 +141,6 @@ export default function CubeView({ state, move, highlight, autoRotate = false }:
       start = undefined; // playing restarts from the start position, held for PAUSE
       setView(next);
     };
-    ctx.show("play");
     ctx.onFrame = (t) => {
       start ??= t;
       const k = pinned ?? Math.min(1, Math.max(0, (t - start - PAUSE) / duration));
@@ -142,13 +151,13 @@ export default function CubeView({ state, move, highlight, autoRotate = false }:
         setView("end");
       }
     };
-  }, [state, move, `${highlight}`]);
+  }, [state, move, `${highlight}`, `${target}`]);
 
   return (
-    <div className="relative h-full w-full">
-      <div ref={host} className="h-full w-full touch-none" />
+    <div className="flex h-full w-full flex-col items-center gap-2">
+      <div ref={host} className="min-h-0 w-full flex-1 touch-none" />
       {move && (
-        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1 overflow-hidden rounded-full bg-black/50 p-1 ring-1 ring-white/15 backdrop-blur">
+        <div className="relative flex gap-1 overflow-hidden rounded-full bg-white/8 p-1 ring-1 ring-white/15">
           {CONTROLS.map(([id, label, icon]) => (
             <button
               key={id}

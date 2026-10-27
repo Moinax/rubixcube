@@ -5,8 +5,10 @@ import { applyMove, colorsOf as key, FACE_NAMES, NORMALS, PIECES, simplify, STIC
 // handful of algorithms the method teaches. Each step is simulated, never searched,
 // except the daisy, which is intuitive anyway.
 
-export type Stage = { title: string; goal: string; how: string };
-export type Group = { stage: number; text: string; moves: string[]; piece?: string };
+/** `toHome`: the stage puts each piece in its final place, which the guide outlines. */
+export type Stage = { title: string; goal: string; how: string; toHome?: boolean };
+/** Moves to play with their instruction; course demos also carry a title and their own start cube. */
+export type Group = { stage: number; text: string; moves: string[]; piece?: string; title?: string; from?: string };
 
 export const STAGES: Stage[] = [
   {
@@ -17,22 +19,25 @@ export const STAGES: Stage[] = [
   {
     title: "La marguerite",
     goal: "Les 4 arêtes blanches autour du centre jaune, blanc vers le haut.",
-    how: "Le dessus ne contient encore rien d'important, on peut donc y ranger les arêtes blanches librement. Si la place visée est déjà prise, tourne d'abord le haut pour ne pas déloger une pétale.",
+    how: "Le dessus ne contient encore rien d'important, on peut donc y ranger les arêtes blanches librement. Si la place visée est déjà prise, tourne d'abord le haut pour ne pas déloger un pétale.",
   },
   {
     title: "La croix blanche",
+    toHome: true,
     goal: "Les 4 arêtes blanches en bas, alignées avec leurs centres.",
-    how: "Tourne le haut jusqu'à ce que la deuxième couleur d'une pétale soit au-dessus du centre de la même couleur, puis fais un demi-tour de cette face : la pétale descend à sa place, blanc en bas.",
+    how: "Tourne le haut jusqu'à ce que la deuxième couleur d'un pétale soit au-dessus du centre de la même couleur, puis fais un demi-tour de cette face : le pétale descend à sa place, blanc en bas.",
   },
   {
     title: "Les coins blancs",
+    toHome: true,
     goal: "Finir la première couronne.",
-    how: "Place l'emplacement du coin en bas à droite devant toi et le coin juste au-dessus. R U R' U' (le « sexy move ») sort le coin et le remet tourné d'un cran : répète-le jusqu'à ce que le blanc soit en bas. 6 répétitions ramènent le cube à l'identique, donc rien d'autre ne casse en bas.",
+    how: "Mets la place du coin en bas à droite devant toi et le coin juste au-dessus. R U R' U' (le « sexy move ») sort le coin et le remet tourné d'un cran : répète-le jusqu'à ce que le blanc soit en bas. 6 répétitions ramènent le cube à l'identique, donc rien d'autre ne casse en bas.",
   },
   {
     title: "La deuxième couronne",
+    toHome: true,
     goal: "Placer les 4 arêtes du milieu.",
-    how: "Prends une arête du haut sans jaune, aligne sa couleur de devant avec le centre, puis glisse-la à droite (U R U' R' U' F' U F) ou à gauche (U' L' U L U F U' F'), selon la couleur du dessus. L'algorithme écarte l'emplacement, y glisse l'arête puis remet le coin blanc en place. Les deux versions sont le miroir l'une de l'autre.",
+    how: "Prends une arête du haut sans jaune, aligne sa couleur de devant avec le centre, puis glisse-la à droite (U R U' R' U' F' U F) ou à gauche (U' L' U L U F U' F'), selon la couleur du dessus. L'algorithme écarte la place, y glisse l'arête puis remet le coin blanc en place. Les deux versions sont le miroir l'une de l'autre.",
   },
   {
     title: "La croix jaune",
@@ -58,17 +63,17 @@ export const STAGES: Stage[] = [
 
 const { U: UP, D: DOWN, F: FRONT, R: RIGHT_SIDE, B: BACK } = NORMALS;
 const SIDE_FACES = (["F", "R", "B", "L"] as Face[]).map((f) => [f, NORMALS[f]] as const);
-const SEXY = ["R", "U", "R'", "U'"];
-const RIGHT = "U R U' R' U' F' U F".split(" ");
-const LEFT = "U' L' U L U F U' F'".split(" ");
-const FLIP = "F R U R' U' F'".split(" ");
-const SUNE = "R U R' U R U2 R' U".split(" ");
-const CYCLE = "U R U' L' U R' U' L".split(" ");
-const TWIST = "R' D' R D".split(" ");
+export const SEXY = ["R", "U", "R'", "U'"];
+export const RIGHT = "U R U' R' U' F' U F".split(" ");
+export const LEFT = "U' L' U L U F U' F'".split(" ");
+export const FLIP = "F R U R' U' F'".split(" ");
+export const SUNE = "R U R' U R U2 R' U".split(" ");
+export const CYCLE = "U R U' L' U R' U' L".split(" ");
+export const TWIST = "R' D' R D".split(" ");
 
 const same = (a: Vec, b: Vec) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 const turns = (m: string, n: number) => Array(n % 4).fill(m) as string[];
-const play = (state: string, moves: string[]) => moves.reduce(applyMove, state);
+export const play = (state: string, moves: string[]) => moves.reduce(applyMove, state);
 
 // Cubies as their facelet indices, corners and edges only.
 const CUBIES = PIECES.map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));
@@ -76,6 +81,13 @@ const CUBIES = PIECES.map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));
 const center = (s: string, normal: Vec) => s[stickerAt(normal, normal)!];
 const colorAt = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
 export const findPiece = (s: string, piece: string) => CUBIES.find((c) => key(s, c.idx) === piece)!.pos;
+/** Where `piece` belongs: next to the centers of its colors. */
+export const homeOf = (s: string, piece: string) =>
+  (Object.values(NORMALS) as Vec[]).filter((n) => piece.includes(center(s, n))).reduce((a, n) => a.map((v, i) => v + n[i]) as Vec, [0, 0, 0] as Vec);
+const has = (moves: string[], turn: string) => moves.some((m) => m[0] === turn);
+/** The setup in words: turn the cube (y) and/or the top (U), in that order; empty when there is none. */
+const holdSteps = (moves: string[], turnCube: string, turnTop: string) =>
+  [has(moves, "y") && turnCube, has(moves, "U") && turnTop].filter(Boolean).join(", puis ");
 const solvedAt = (s: string, pos: Vec) =>
   CUBIES.find((c) => same(c.pos, pos))!.idx.every((i) => s[i] === center(s, STICKERS[i].normal));
 /** The cubie at `pos` holds the colors of the centers around it, in any orientation. */
@@ -85,6 +97,7 @@ const placedAt = (s: string, pos: Vec) => {
 };
 const pieces = (s: string, test: (colors: string, pos: Vec) => boolean) =>
   CUBIES.filter((c) => test(key(s, c.idx), c.pos));
+const capitalize = (text: string) => text[0].toUpperCase() + text.slice(1);
 const names = (piece: string) => [...piece].map((c) => FACE_NAMES[c as Face]).join("-");
 
 /** Cheapest y^r U^k (r < ys, k < us) for which `ok` holds on the result. */
@@ -179,7 +192,8 @@ export function beginnerSolve(start: string): Group[] {
     const corner = key(s, (up ?? todo[0]).idx);
     if (!up) {
       const moves = setup(s, (t) => same(findPiece(t, corner), FRD), 4, 1)!;
-      emit(3, `Le coin ${names(corner)} est coincé en bas : mets-le en bas à droite devant toi et fais une fois R U R' U' pour le remonter.`, [...moves, ...SEXY], corner);
+      const where = has(moves, "y") ? "tourne le cube pour l'avoir en bas à droite devant toi, puis fais" : "il est déjà en bas à droite devant toi, fais";
+      emit(3, `Le coin ${names(corner)} est coincé en bas au mauvais endroit : ${where} une fois R U R' U' pour le remonter.`, [...moves, ...SEXY], corner);
       continue;
     }
     // Slot below the corner's two side colors, at front-right, corner right above it.
@@ -188,9 +202,11 @@ export function beginnerSolve(start: string): Group[] {
     let t = play(s, moves);
     let reps = 0;
     while (!solvedAt(t, FRD)) (t = play(t, SEXY)), reps++;
+    const [front, right] = [FACE_NAMES[center(t, FRONT) as Face], FACE_NAMES[center(t, RIGHT_SIDE) as Face]];
+    const hold = holdSteps(moves, `tourne le cube pour avoir le centre ${front} devant toi et le centre ${right} à droite`, "tourne le haut pour amener le coin juste au-dessus de sa place");
     emit(
       3,
-      `Coin ${names(corner)} : mets son emplacement en bas à droite devant toi, le coin juste au-dessus, puis R U R' U' ${reps} fois.`,
+      `Coin ${names(corner)} : sa place, encadrée en vert, est en bas entre les centres ${front} et ${right}. ${hold ? capitalize(hold) : "Le coin est déjà juste au-dessus de sa place"}. Fais R U R' U' ${reps === 1 ? "une" : reps} fois, jusqu'à ce que le blanc soit en bas.`,
       [...moves, ...Array(reps).fill(SEXY).flat()],
       corner,
     );
@@ -208,16 +224,19 @@ export function beginnerSolve(start: string): Group[] {
     if (!up) {
       const edge = key(s, todo[0].idx);
       const moves = setup(s, (t) => same(findPiece(t, edge), FR), 4, 1)!;
-      emit(4, `L'arête ${names(edge)} est mal placée au milieu : mets-la à droite devant toi et fais l'algorithme de droite pour la sortir.`, [...moves, ...RIGHT], edge);
+      const where = has(moves, "y") ? "tourne le cube pour l'avoir à droite devant toi, puis fais" : "elle est déjà à droite devant toi, fais";
+      emit(4, `L'arête ${names(edge)} est au milieu mais mal placée : ${where} l'algorithme de droite pour la sortir en haut.`, [...moves, ...RIGHT], edge);
       continue;
     }
     const edge = key(s, up.idx);
     const moves = setup(s, (t) => same(findPiece(t, edge), UF) && colorAt(t, UF, FRONT) === center(t, FRONT))!;
     const t = play(s, moves);
     const right = colorAt(t, UF, UP) === center(t, RIGHT_SIDE);
+    const front = FACE_NAMES[center(t, FRONT) as Face];
+    const align = holdSteps(moves, `tourne le cube pour avoir le centre ${front} devant toi`, `tourne le haut pour amener l'arête au-dessus du centre ${front}`);
     emit(
       4,
-      `Arête ${names(edge)} : aligne sa couleur de devant avec le centre, puis glisse-la vers la ${right ? "droite" : "gauche"}.`,
+      `Arête ${names(edge)} : ${align || `elle est déjà au-dessus du centre ${front}`}. Glisse-la vers la ${right ? "droite" : "gauche"}, à sa place encadrée en vert.`,
       [...moves, ...(right ? RIGHT : LEFT)],
       edge,
     );

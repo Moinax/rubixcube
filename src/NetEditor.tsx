@@ -30,7 +30,7 @@ export default function NetEditor({ state, onChange, highlight }: Props) {
                 disabled={k === 4}
                 onClick={() => paint(i)}
                 aria-label={`Case ${k + 1} de la face ${FACE_NAMES[face]}`}
-                className={`aspect-square rounded-[4px] enabled:hover:ring-2 enabled:hover:ring-white ${highlight?.has(i) ? "animate-pulse outline-3 outline-offset-1 outline-fuchsia-400" : ""}`}
+                className={`aspect-square rounded-[4px] enabled:hover:ring-2 enabled:hover:ring-white ${highlight?.has(i) ? "outline-3 outline-offset-1 outline-fuchsia-400" : ""}`}
                 style={{
                   gridRow: row + Math.floor(k / 3) + 1,
                   gridColumn: col + (k % 3) + 1,

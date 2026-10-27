@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { dot, FACE_COLORS, NORMALS, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
+import { dot, FACE_COLORS, isRotation, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
 
 // BoxGeometry material order: +x, -x, +y, -y, +z, -z.
 const SIDES: Vec[] = [
@@ -16,6 +16,8 @@ const SIDES: Vec[] = [
 ];
 const GEOMETRY = new RoundedBoxGeometry(0.96, 0.96, 0.96, 4, 0.14);
 const PLASTIC = new THREE.MeshStandardMaterial({ color: "#1a1b20", roughness: 0.6 });
+const OUTLINE = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.06, 1.06, 1.06));
+const OUTLINE_MATERIAL = new THREE.LineBasicMaterial({ color: "#f0abfc" });
 const MATERIALS = new Map<string, THREE.Material>();
 const material = (color: string) => {
   if (!MATERIALS.has(color))
@@ -26,10 +28,10 @@ const material = (color: string) => {
 const PAUSE = 500;
 const HOLD = 1100;
 
-type Props = { state: string; move?: string; autoRotate?: boolean };
+type Props = { state: string; move?: string; highlight?: Vec; autoRotate?: boolean };
 
-/** Renders `state`; when `move` is set, plays it on a loop from `state`. */
-export default function CubeView({ state, move, autoRotate = false }: Props) {
+/** Renders `state`; when `move` is set, plays it on a loop from `state`. `highlight` outlines one cubie. */
+export default function CubeView({ state, move, highlight, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void }>(null);
 
@@ -79,7 +81,7 @@ export default function CubeView({ state, move, autoRotate = false }: Props) {
 
   useEffect(() => {
     const ctx = scene.current!;
-    const axis = move ? NORMALS[move[0] as Face] : null;
+    const axis = move ? moveAxis(move) : null;
     const layer = new THREE.Group();
     ctx.root.clear();
     ctx.root.add(layer);
@@ -96,7 +98,8 @@ export default function CubeView({ state, move, autoRotate = false }: Props) {
             }),
           );
           mesh.position.set(x, y, z);
-          (axis && dot(pos, axis) === 1 ? layer : ctx.root).add(mesh);
+          if (highlight && `${pos}` === `${highlight}`) mesh.add(new THREE.LineSegments(OUTLINE, OUTLINE_MATERIAL));
+          (axis && (isRotation(move!) || dot(pos, axis) === 1) ? layer : ctx.root).add(mesh);
         }
 
     if (!axis) {
@@ -113,7 +116,7 @@ export default function CubeView({ state, move, autoRotate = false }: Props) {
       const k = Math.min(1, Math.max(0, (((t - start) % (PAUSE + duration + HOLD)) - PAUSE) / duration));
       layer.quaternion.setFromAxisAngle(vector, angle * k * k * (3 - 2 * k));
     };
-  }, [state, move]);
+  }, [state, move, `${highlight}`]);
 
   return <div ref={host} className="h-full w-full touch-none" />;
 }

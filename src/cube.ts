@@ -50,7 +50,7 @@ const POSITIONS: Record<Face, (r: number, c: number) => Vec> = {
   B: (r, c) => [1 - c, 1 - r, -1],
 };
 
-const STICKERS = [...FACES].flatMap((f) =>
+export const STICKERS = [...FACES].flatMap((f) =>
   Array.from({ length: 9 }, (_, i) => ({
     pos: POSITIONS[f as Face](Math.floor(i / 3), i % 3),
     normal: NORMALS[f as Face],
@@ -76,16 +76,58 @@ function turn(v: Vec, a: Vec): Vec {
 /** Clockwise quarter turns of a move: 1, 2 or -1. */
 export const quarterTurns = (move: string) => (move[1] === "2" ? 2 : move[1] === "'" ? -1 : 1);
 
-export function applyMove(state: string, move: string): string {
-  const axis = NORMALS[move[0] as Face];
+// Whole-cube rotations turn like the face they are named after: x = R, y = U, z = F.
+const ROTATIONS: Record<string, Face> = { x: "R", y: "U", z: "F" };
+export const isRotation = (move: string) => move[0] in ROTATIONS;
+export const moveAxis = (move: string) => NORMALS[(ROTATIONS[move[0]] ?? move[0]) as Face];
+
+// Source facelet of each target facelet, per move, built on first use.
+const PERMUTATIONS = new Map<string, number[]>();
+
+function permutation(move: string): number[] {
+  const axis = moveAxis(move);
   const turns = (quarterTurns(move) + 4) % 4;
-  const out = state.split("");
+  const p = STICKERS.map((_, i) => i);
   STICKERS.forEach(({ pos, normal }, i) => {
-    if (dot(pos, axis) !== 1) return;
+    if (!isRotation(move) && dot(pos, axis) !== 1) return;
     for (let t = 0; t < turns; t++) [pos, normal] = [turn(pos, axis), turn(normal, axis)];
-    out[stickerAt(pos, normal)!] = state[i];
+    p[stickerAt(pos, normal)!] = i;
   });
-  return out.join("");
+  PERMUTATIONS.set(move, p);
+  return p;
+}
+
+export function applyMove(state: string, move: string): string {
+  const p = PERMUTATIONS.get(move) ?? permutation(move);
+  let out = "";
+  for (let i = 0; i < 54; i++) out += state[p[i]];
+  return out;
+}
+
+/** The same cube turned back to white up, green in front. */
+export function upright(state: string): string {
+  for (const a of ["", "x", "x2", "x'", "z", "z'"])
+    for (const b of ["", "y", "y2", "y'"]) {
+      const s = [a, b].filter(Boolean).reduce(applyMove, state);
+      if (s[4] === "U" && s[22] === "F") return s;
+    }
+  throw new Error("no white or green center");
+}
+
+/** Merges consecutive turns of the same face or rotation: U U → U2, R R' → nothing. */
+export function simplify(moves: string[]): string[] {
+  const out: string[] = [];
+  for (const m of moves) {
+    const last = out.at(-1);
+    if (last?.[0] !== m[0]) {
+      out.push(m);
+      continue;
+    }
+    const turns = (quarterTurns(last) + quarterTurns(m) + 4) % 4;
+    out.pop();
+    if (turns) out.push(m[0] + ["", "", "2", "'"][turns]);
+  }
+  return out;
 }
 
 const parity = (p: number[]) =>
@@ -128,11 +170,19 @@ const DIRECTIONS: Record<Face, [string, string, string]> = {
   B: ["Face arrière", "un quart de tour, le haut part vers la gauche", "un quart de tour, le haut part vers la droite"],
 };
 
+const ROTATION_TEXT: Record<string, [string, string, string]> = {
+  y: ["la face droite vient devant toi", "la face gauche vient devant toi", "la face arrière vient devant toi"],
+  x: ["la face avant monte en haut", "la face du bas vient devant toi", "le bas passe en haut"],
+  z: ["le haut part à droite", "le haut part à gauche", "le bas passe en haut, garde la même face devant toi"],
+};
+
 /** French instruction for a move, as seen from the front. */
 export function describeMove(move: string): string {
-  const [name, cw, ccw] = DIRECTIONS[move[0] as Face];
   const turns = quarterTurns(move);
-  return `${name} : ${turns === 2 ? "un demi-tour" : turns === 1 ? cw : ccw}`;
+  const pick = <T,>([cw, ccw, half]: [T, T, T]) => (turns === 2 ? half : turns === 1 ? cw : ccw);
+  if (isRotation(move)) return `Tourne tout le cube : ${pick(ROTATION_TEXT[move[0]])}`;
+  const [name, cw, ccw] = DIRECTIONS[move[0] as Face];
+  return `${name} : ${pick([cw, ccw, "un demi-tour"])}`;
 }
 
 function lab([r, g, b]: RGB): RGB {

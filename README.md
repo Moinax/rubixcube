@@ -1,7 +1,13 @@
 # Rubik's Cube
 
 Scan a real 3x3 cube with the camera (or type its colors in), then follow the
-solution move by move on an animated 3D cube.
+solution move by move on an animated 3D cube, in one of two modes:
+
+- **Fast**: the shortest solution cubejs finds (~20 moves).
+- **Learn**: the layer-by-layer beginner method (`src/beginner.ts`), ~170 moves
+  split into 8 stages (daisy, white cross, white corners, middle layer, yellow
+  cross, yellow edges, yellow corners placed then oriented), each with the rule
+  it teaches and the piece it works on outlined in 3D.
 
 - Solver: [cubejs](https://github.com/ldez/cubejs) (Kociemba two-phase, ≤ 22 moves),
   patched in `patches/` so its `this.Cube` lookup survives bundling.

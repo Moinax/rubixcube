@@ -1,53 +1,101 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import CubeView from "./CubeView";
+import Guide from "./Guide";
+import { Back, Home, InputChoice, type Mode, type Resume } from "./Home";
 import NetEditor from "./NetEditor";
-import Scanner, { Chip, type Scan } from "./Scanner";
-import { beginnerSolve, findPiece, homeOf, STAGES, type Group } from "./beginner";
+import Scanner, { type Scan } from "./Scanner";
+import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
 import { COURSE } from "./course";
-import { applyMove, describeMove, SOLVED, solve, suspects, upright, validate, type Face } from "./cube";
+import { SOLVED, solve, suspects, validate } from "./cube";
 
+/** Modes that solve the user's own cube, so need its colors first. */
+type CubeMode = Exclude<Mode, "course">;
+type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number; course?: boolean };
 type Screen =
   | { name: "home" }
-  | { name: "scan"; scan?: Scan }
-  | { name: "edit"; state: string; scan?: Scan }
+  | { name: "input"; mode: CubeMode }
+  | { name: "scan"; mode: CubeMode; scan?: Scan }
+  | { name: "edit"; mode: CubeMode; state: string; scan?: Scan }
   | { name: "solving" }
-  | { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number; course?: boolean };
+  | GuideScreen;
 
-// The current screen survives a reload, so a scanned cube never has to be scanned again.
+// The current screen survives a reload, so a scanned cube never has to be scanned again,
+// and the last guide stays one tap away from the home screen.
 const STORAGE_KEY = "rubixcube";
-function restore(): Screen {
+const GUIDE_KEY = "rubixcube:guide";
+
+/** Rebuilds a saved learn or course plan from the code, so text updates reach a guide in progress;
+ * the saved plan stays if that fails. The fast solution has no texts and costs a solver warm-up. */
+function refresh(guide: GuideScreen): GuideScreen {
+  if (!guide.learn) return guide;
   try {
-    const screen: Screen = JSON.parse(localStorage.getItem(STORAGE_KEY)!) ?? { name: "home" };
-    // Rebuild the plan and its texts from the code, so an update reaches a guide in progress;
-    // the saved plan stays if that fails. The fast solution has no texts and costs a solver
-    // warm-up, so it stays as saved.
-    if (screen.name === "guide" && screen.learn) {
-      try {
-        screen.groups = screen.course ? COURSE : beginnerSolve(screen.start);
-      } catch (e) {
-        console.error(e);
-      }
-      screen.step = Math.min(screen.step, screen.groups.reduce((n, g) => n + g.moves.length, 0));
-    }
-    return screen;
+    guide = { ...guide, groups: guide.course ? COURSE : beginnerSolve(guide.start) };
+  } catch (e) {
+    console.error(e);
+  }
+  return { ...guide, step: Math.min(guide.step, guide.groups.reduce((n, g) => n + g.moves.length, 0)) };
+}
+
+function load<T>(key: string): T | undefined {
+  try {
+    return JSON.parse(localStorage.getItem(key)!) ?? undefined;
   } catch {
-    return { name: "home" };
+    return undefined;
   }
 }
 
-const SHOWCASE = "R U F' L2 D B' R2 U'".split(" ").reduce(applyMove, SOLVED);
+function restore(): Screen {
+  const screen = load<Screen>(STORAGE_KEY) ?? { name: "home" };
+  if (screen.name === "guide") return refresh(screen);
+  // Screens saved before modes existed: their cube was meant to be learned.
+  if (screen.name === "scan" || screen.name === "edit") screen.mode ??= "learn";
+  return screen;
+}
 
-const button = "rounded-xl px-4 py-3 font-semibold transition disabled:opacity-40";
-const primary = `${button} bg-white text-black hover:bg-zinc-200`;
-const secondary = `${button} bg-white/8 text-zinc-100 ring-1 ring-white/10 hover:bg-white/14`;
+/** The unfinished guide the home screen offers to resume. */
+function resumable(): { guide: GuideScreen; resume: Resume } | undefined {
+  const saved = load<GuideScreen>(GUIDE_KEY);
+  if (!saved) return;
+  const guide = refresh(saved);
+  const groupOfMove = guide.groups.flatMap((g) => g.moves.map(() => g));
+  const total = groupOfMove.length;
+  if (guide.step >= total) return;
+  const state = planStates(guide.start, guide.groups)[guide.step];
+  const where = guide.learn ? STAGES[groupOfMove[guide.step].stage].title : "Résoudre mon cube";
+  return {
+    guide,
+    resume: {
+      face: state.slice(0, 9),
+      title: "Reprendre là où tu en étais",
+      detail: guide.course ? `Le cours : ${where.toLowerCase()}` : `${where}, coup ${guide.step + 1} sur ${total}`,
+    },
+  };
+}
+
+const WIDE = "(min-width: 48rem)";
+const useWide = () =>
+  useSyncExternalStore(
+    (onChange) => {
+      const query = matchMedia(WIDE);
+      query.addEventListener("change", onChange);
+      return () => query.removeEventListener("change", onChange);
+    },
+    () => matchMedia(WIDE).matches,
+  );
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>(restore);
   useEffect(() => {
-    if (screen.name !== "solving") localStorage.setItem(STORAGE_KEY, JSON.stringify(screen));
+    if (screen.name === "solving") return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(screen));
+    // The course is always one tap away; only a guide on the user's own cube is worth resuming.
+    if (screen.name === "guide" && !screen.course) localStorage.setItem(GUIDE_KEY, JSON.stringify(screen));
   }, [screen]);
+  // Read once per visit to the home screen: it rebuilds the saved plan, which costs a solve.
+  const saved = useMemo(() => (screen.name === "home" ? resumable() : undefined), [screen.name]);
 
-  async function startGuide(edit: Extract<Screen, { name: "edit" }>, learn: boolean) {
+  async function startGuide(edit: Extract<Screen, { name: "edit" }>) {
+    const learn = edit.mode === "learn";
     setScreen({ name: "solving" });
     await new Promise((r) => setTimeout(r, 50)); // let the spinner paint before the solver blocks
     try {
@@ -55,7 +103,7 @@ export default function App() {
       setScreen({ name: "guide", start: edit.state, groups, learn, step: 0 });
     } catch (e) {
       console.error(e);
-      alert("Le calcul de la solution a échoué. Vérifie les couleurs, ou essaie l'autre mode.");
+      alert("Le calcul de la solution a échoué. Vérifie les couleurs, ou reviens à l'accueil pour essayer l'autre mode.");
       setScreen(edit);
     }
   }
@@ -63,53 +111,52 @@ export default function App() {
   switch (screen.name) {
     case "home":
       return (
-        <main className="mx-auto flex min-h-dvh max-w-xl flex-col items-center justify-center gap-6 p-6 text-center">
-          <div className="aspect-square w-full max-w-sm">
-            <CubeView state={SHOWCASE} autoRotate />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">Résous ton Rubik's Cube</h1>
-          <p className="text-zinc-400">
-            Montre les 6 faces de ton cube à la caméra, puis suis les mouvements un par un en 3D : la solution
-            la plus courte, ou la méthode débutant pour apprendre à le résoudre toi-même. Sans scanner, le cours
-            t'apprend la méthode cas par cas, sur un cube d'exemple.
-          </p>
-          <div className="flex w-full flex-col gap-3">
-            <button className={primary} onClick={() => setScreen({ name: "scan" })}>
-              Scanner mon cube
-            </button>
-            <button className={secondary} onClick={() => setScreen({ name: "edit", state: SOLVED })}>
-              Saisir les couleurs à la main
-            </button>
-            <button
-              className={secondary}
-              onClick={() => setScreen({ name: "guide", start: COURSE[0].from!, groups: COURSE, learn: true, step: 0, course: true })}
-            >
-              Apprendre sans scanner
-            </button>
-          </div>
-        </main>
+        <Home
+          resume={saved?.resume}
+          onResume={() => saved && setScreen(saved.guide)}
+          onMode={(mode) =>
+            setScreen(
+              mode === "course"
+                ? { name: "guide", start: COURSE[0].from!, groups: COURSE, learn: true, step: 0, course: true }
+                : { name: "input", mode },
+            )
+          }
+        />
+      );
+    case "input":
+      return (
+        <InputChoice
+          mode={screen.mode}
+          onScan={() => setScreen({ name: "scan", mode: screen.mode })}
+          onManual={() => setScreen({ name: "edit", mode: screen.mode, state: SOLVED })}
+          onBack={() => setScreen({ name: "home" })}
+        />
       );
     case "scan":
       return (
         <Scanner
           initial={screen.scan}
-          onDone={(state, scan) => setScreen({ name: "edit", state, scan })}
-          onManual={() => setScreen({ name: "edit", state: SOLVED })}
-          onCancel={() => setScreen({ name: "home" })}
+          onDone={(state, scan) => setScreen({ name: "edit", mode: screen.mode, state, scan })}
+          onManual={() => setScreen({ name: "edit", mode: screen.mode, state: SOLVED })}
+          onCancel={() => setScreen({ name: "input", mode: screen.mode })}
         />
       );
     case "edit":
       return (
         <Editor
           state={screen.state}
+          mode={screen.mode}
+          scanned={!!screen.scan}
           onChange={(state) => setScreen({ ...screen, state })}
-          onScan={() => setScreen({ name: "scan", scan: screen.scan })}
-          onSolve={(learn) => startGuide(screen, learn)}
+          onScan={() => setScreen({ name: "scan", mode: screen.mode, scan: screen.scan })}
+          onBack={() => setScreen({ name: "input", mode: screen.mode })}
+          onSolve={() => startGuide(screen)}
         />
       );
     case "solving":
-      return <p className="grid min-h-dvh place-items-center text-zinc-400">Calcul de la solution…</p>;
-    case "guide":
+      return <p className="grid min-h-dvh place-items-center text-mist">Calcul de la solution…</p>;
+    case "guide": {
+      const mode = screen.learn ? "learn" : "fast";
       return (
         <Guide
           start={screen.start}
@@ -119,270 +166,70 @@ export default function App() {
           step={screen.step}
           onStep={(step) => setScreen({ ...screen, step })}
           onHome={() => setScreen({ name: "home" })}
-          onScan={() => setScreen({ name: "scan" })}
-          onEdit={(state) => setScreen({ name: "edit", state })}
+          onScan={() => setScreen({ name: "scan", mode })}
+          onEdit={(state) => setScreen({ name: "edit", mode, state })}
         />
       );
+    }
   }
 }
 
-type EditorProps = { state: string; onChange: (s: string) => void; onScan: () => void; onSolve: (learn: boolean) => void };
-
-function Editor({ state, onChange, onScan, onSolve }: EditorProps) {
-  const error = validate(state);
-  return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-5 p-4">
-      <div>
-        <h1 className="text-2xl font-bold">Vérifie les couleurs</h1>
-        <p className="text-zinc-400">
-          Compare avec ton cube et corrige les cases fausses : choisis une couleur, puis touche la case.
-        </p>
-      </div>
-      <div className="grid items-center gap-6 md:grid-cols-[3fr_2fr]">
-        <NetEditor state={state} onChange={onChange} highlight={error ? suspects(state) : undefined} />
-        <div className="aspect-square">
-          <CubeView state={state} />
-        </div>
-      </div>
-      <p className={`rounded-xl p-3 text-sm ${error ? "bg-amber-950/60 text-amber-200" : "bg-emerald-950/60 text-emerald-200"}`}>
-        {error ?? "Ce cube est valide."}
-      </p>
-      <div className="grid gap-3 md:grid-cols-3">
-        <button className={secondary} onClick={onScan}>
-          Rescanner
-        </button>
-        <button className={primary} disabled={!!error} onClick={() => onSolve(false)}>
-          Solution rapide
-        </button>
-        <button className={primary} disabled={!!error} onClick={() => onSolve(true)}>
-          Apprendre la méthode
-        </button>
-      </div>
-    </main>
-  );
-}
-
-const FACES_EN: [string, string][] = [["R", "Right"], ["L", "Left"], ["U", "Up"], ["D", "Down"], ["F", "Front"], ["B", "Back"]];
-
-/** How to read the moves: the standard (Singmaster) notation every cube tutorial uses. */
-function Notation() {
-  const letter = (m: string) => <span className="font-mono font-bold text-zinc-100">{m}</span>;
-  return (
-    <details className="text-left text-sm text-zinc-400">
-      <summary className="cursor-pointer text-zinc-300">Que veulent dire les lettres ?</summary>
-      <div className="mt-2 flex flex-col gap-2">
-        <p>
-          C'est la notation standard des cubeurs. Chaque lettre est l'initiale anglaise d'une face ; seule, elle
-          veut dire un quart de tour dans le sens des aiguilles d'une montre, comme si tu regardais cette face en face.
-        </p>
-        <ul className="grid gap-1 sm:grid-cols-2">
-          {FACES_EN.map(([m, en]) => (
-            <li key={m}>
-              {letter(m)} <span className="text-zinc-500">({en})</span> : {describeMove(m).replace(" : ", ", ")}
-            </li>
-          ))}
-        </ul>
-        <p>
-          {letter("'")} (prime) : le même quart de tour dans l'autre sens, {letter("R'")} défait {letter("R")}.{" "}
-          {letter("2")} : un demi-tour, {letter("U2")} = {letter("U U")}. {letter("x y z")} : tout le cube tourne
-          dans ta main, comme {letter("R")}, {letter("U")} et {letter("F")}.
-        </p>
-      </div>
-    </details>
-  );
-}
-
-type GuideProps = {
-  start: string;
-  groups: Group[];
-  learn: boolean;
-  course?: boolean;
-  step: number;
-  onStep: (step: number) => void;
-  onHome: () => void;
+type EditorProps = {
+  state: string;
+  mode: CubeMode;
+  scanned: boolean;
+  onChange: (s: string) => void;
   onScan: () => void;
-  onEdit: (state: string) => void;
+  onBack: () => void;
+  onSolve: () => void;
 };
 
-function Guide({ start, groups, learn, course, step, onStep, onHome, onScan, onEdit }: GuideProps) {
-  const flat = useMemo(() => groups.flatMap((g, group) => g.moves.map((move) => ({ move, group }))), [groups]);
-  // States before each move; a group with its own start cube (a course demo) begins from it.
-  const states = useMemo(() => {
-    const out = [start];
-    flat.forEach(({ move, group }, i) => {
-      if (flat[i - 1]?.group !== group) out[i] = groups[group].from ?? out[i];
-      out.push(applyMove(out[i], move));
-    });
-    return out;
-  }, [start, flat, groups]);
-  const total = flat.length;
-  const done = step === total;
-  const go = (delta: number) => onStep(Math.min(total, Math.max(0, step + delta)));
-  const move = flat[step]?.move;
-  const group = done ? undefined : groups[flat[step].group];
-  const groupStart = flat.findIndex((f) => f.group === flat[step]?.group);
-  const state = states[step];
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      // A focused button already handles Space itself.
-      if (e.key === " " && (e.target as Element).closest("button, summary")) return;
-      if (e.key === " ") e.preventDefault();
-      if (e.key === "ArrowRight" || e.key === " ") go(1);
-      if (e.key === "ArrowLeft") go(-1);
-    };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  });
-
-  // Fast mode lists every move; learn mode only the moves of the current instruction.
-  const chips = flat.map((f, i) => ({ ...f, i })).filter((f) => !learn || f.group === flat[step]?.group);
-  const stage = learn && group ? STAGES[group.stage] : undefined;
-  const inGroup = `${step - groupStart + 1} / ${chips.length}`;
-  const counter = course
-    ? `Mouvement ${inGroup} de ce cas`
-    : `Mouvement ${step + 1} / ${total}${learn ? ` · ${inGroup} de cette séquence` : ""}`;
-  const doneText = course
-    ? "Prends ton cube et refais chaque étape : les pastilles te ramènent à n'importe quel cas."
-    : total ? `${total} mouvements, bravo.` : "Ton cube était déjà résolu.";
-
+function Editor({ state, mode, scanned, onChange, onScan, onBack, onSolve }: EditorProps) {
+  const error = validate(state);
+  // One 3D view at a time: beside the net on wide screens, folded under it on phones.
+  const wide = useWide();
+  const cube = (
+    <div className="mx-auto aspect-square w-full max-w-sm md:max-w-none">
+      <CubeView state={state} />
+    </div>
+  );
   return (
-    <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-4 p-4">
-      <div className="flex items-center justify-between gap-3 text-sm text-zinc-400">
-        <button onClick={onHome} className="hover:text-zinc-100">
-          ← Accueil
-        </button>
-        <p className="text-center">
-          {course ? (
-            `Cube d'exemple : trouve le même cas sur ton cube${group && group.stage > 0 ? ", tenu jaune en haut" : ""}.`
-          ) : (
-            <>
-              Tiens ton cube <Chip face={state[4] as Face} /> en haut et <Chip face={state[22] as Face} /> face à toi
-              {learn ? "." : ", sans jamais le retourner."}
-            </>
-          )}
-        </p>
-        <span />
+    <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-5 p-5 md:p-10">
+      <div>
+        {/* After a scan, going back means scanning again; after typing colors in, back to the choice. */}
+        <Back label={scanned ? "Rescanner" : "Retour"} onClick={scanned ? onScan : onBack} />
       </div>
-
-      {learn && (
-        <ol className="flex flex-wrap justify-center gap-1.5">
-          {STAGES.map((s, i) => {
-            const first = flat.findIndex((f) => groups[f.group].stage === i);
-            return (
-              <li key={s.title}>
-                <button
-                  disabled={first < 0}
-                  onClick={() => onStep(first)}
-                  title={first < 0 ? `${s.title} : déjà fait` : s.title}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold disabled:line-through disabled:opacity-40 ${
-                    group?.stage === i ? "bg-white text-black" : (group?.stage ?? 99) > i ? "bg-white/5 text-zinc-500" : "bg-white/10"
-                  }`}
-                >
-                  {i}. {s.title}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-
-      <div className="grid flex-1 items-center gap-6 md:grid-cols-[1fr_1fr]">
-        <div className="aspect-square max-h-[60dvh] w-full justify-self-center">
-          <CubeView
-            state={state}
-            move={move}
-            highlight={group?.piece ? findPiece(state, group.piece) : undefined}
-            target={stage?.toHome && group?.piece ? homeOf(state, group.piece) : undefined}
-          />
-        </div>
-        <div className="flex flex-col gap-4 text-center md:text-left">
-          {stage && (
-            <section className="rounded-xl bg-white/5 p-4 text-left ring-1 ring-white/10">
-              <h2 className="font-bold">{stage.title}</h2>
-              <p className="text-sm text-zinc-300">{stage.goal}</p>
-              <details className="mt-2 text-sm text-zinc-400">
-                <summary className="cursor-pointer text-zinc-300">Comment ça marche ?</summary>
-                <p className="mt-1">{stage.how}</p>
-              </details>
-              {course && (
-                <ol className="mt-3 flex flex-wrap gap-1.5">
-                  {groups.map((g, i) => {
-                    if (g.stage !== group?.stage) return null;
-                    const first = flat.findIndex((f) => f.group === i);
-                    return (
-                      <li key={i}>
-                        <button
-                          onClick={() => onStep(first)}
-                          className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
-                            g === group ? "bg-fuchsia-300 text-black" : "bg-white/10 hover:bg-white/15"
-                          }`}
-                        >
-                          {g.title}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ol>
-              )}
-            </section>
-          )}
-          {done ? (
-            <div>
-              <p className="text-4xl font-bold">{course ? "Cours terminé 🎉" : "Résolu 🎉"}</p>
-              <p className="mt-2 text-zinc-400">{doneText}</p>
-            </div>
-          ) : (
-            <div>
-              {group?.text && (
-                <div className="mb-3 rounded-lg bg-fuchsia-400/10 p-3 text-left text-fuchsia-100">
-                  {group.title && <p className="font-semibold">{group.title}</p>}
-                  <p>{group.text}</p>
-                </div>
-              )}
-              <p className="text-sm text-zinc-400">{counter}</p>
-              <p className="font-mono text-6xl font-bold">{move}</p>
-              <p className="mt-2 text-lg">{describeMove(move!)}</p>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <button className={secondary} disabled={step === 0} onClick={() => go(-1)}>
-              ← Précédent
-            </button>
-            <button className={primary} disabled={done} onClick={() => go(1)}>
-              {step === total - 1 ? "Terminer" : "Suivant →"}
-            </button>
-          </div>
-          <ol className="flex flex-wrap justify-center gap-1.5 md:justify-start">
-            {chips.map(({ move: m, i }) => (
-              <li key={i}>
-                <button
-                  onClick={() => onStep(i)}
-                  title={describeMove(m)}
-                  className={`min-w-10 rounded-md px-2 py-1 font-mono text-sm ${
-                    i === step ? "bg-white text-black" : i < step ? "bg-white/5 text-zinc-500" : "bg-white/10"
-                  }`}
-                >
-                  {m}
-                </button>
-              </li>
-            ))}
-          </ol>
-          <Notation />
-        </div>
+      <div>
+        <h1 className="wide text-3xl">Vérifie les couleurs</h1>
+        <p className="mt-1 text-mist">Touche une couleur, puis les cases à corriger.</p>
       </div>
-
-      {!course && (
-        <div className="flex justify-center gap-3 text-sm">
-          <span className="text-zinc-500">Perdu ?</span>
-          <button className="font-semibold underline" onClick={onScan}>
-            Rescanner le cube
-          </button>
-          <button className="font-semibold underline" onClick={() => onEdit(upright(state))}>
-            Corriger les couleurs
-          </button>
+      <div className="grid gap-6 md:grid-cols-[3fr_2fr] md:items-start md:gap-10">
+        <div className="flex flex-col gap-4">
+          <p
+            className={`flex items-start gap-2.5 rounded-2xl border p-3 text-sm ${
+              error ? "border-amber-400/30 bg-amber-400/10 text-amber-200" : "border-place/30 bg-place/10 text-emerald-200"
+            }`}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden className="mt-0.5 size-4 flex-none fill-none stroke-current stroke-2">
+              <path d={error ? "M12 4l9 16H3zM12 10v4M12 17v.5" : "M5 12.5l4.5 4.5L19 7.5"} />
+            </svg>
+            {error ?? "Ce cube est valide."}
+          </p>
+          <NetEditor state={state} onChange={onChange} highlight={error ? suspects(state) : undefined} />
+          {!wide && (
+            <details className="rounded-2xl border border-edge bg-shell">
+              <summary className="cursor-pointer p-3 text-sm">
+                <span className="font-semibold">Voir en 3D</span> <span className="text-mist">pour comparer avec ton cube</span>
+              </summary>
+              <div className="px-3 pb-3">{cube}</div>
+            </details>
+          )}
         </div>
-      )}
+        {wide && cube}
+      </div>
+      <button className="btn btn-main mt-auto w-full md:mt-0 md:w-auto md:self-start" disabled={!!error} onClick={onSolve}>
+        {mode === "fast" ? "Voir la solution" : "Commencer le guide"}
+      </button>
     </main>
   );
 }

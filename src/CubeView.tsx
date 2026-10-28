@@ -33,9 +33,9 @@ type View = "start" | "play" | "end";
 
 // Single arrow with a bar for start and end, a plain arrow to play.
 const CONTROLS: [View, string, React.ReactNode][] = [
-  ["start", "Avant le mouvement", <><rect x="5" y="5" width="2.5" height="14" rx="1" /><path d="M19 5v14L9 12z" /></>],
-  ["play", "Jouer le mouvement depuis le début", <path d="M7 5v14l12-7z" />],
-  ["end", "Après le mouvement", <><path d="M5 5v14l10-7z" /><rect x="16.5" y="5" width="2.5" height="14" rx="1" /></>],
+  ["start", "Avant le coup", <><rect x="5" y="5" width="2.5" height="14" rx="1" /><path d="M19 5v14L9 12z" /></>],
+  ["play", "Jouer le coup depuis le début", <path d="M7 5v14l12-7z" />],
+  ["end", "Après le coup", <><path d="M5 5v14l10-7z" /><rect x="16.5" y="5" width="2.5" height="14" rx="1" /></>],
 ];
 
 type Props = { state: string; move?: string; highlight?: Vec; target?: Vec; autoRotate?: boolean };
@@ -58,6 +58,8 @@ export default function CubeView({ state, move, highlight, target, autoRotate = 
     const el = host.current!;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    // Out of the flow: the canvas follows its box and never widens the layout around it.
+    renderer.domElement.className = "absolute inset-0";
     el.append(renderer.domElement);
     const world = new THREE.Scene();
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -155,7 +157,7 @@ export default function CubeView({ state, move, highlight, target, autoRotate = 
 
   return (
     <div className="flex h-full w-full flex-col items-center gap-2">
-      <div ref={host} className="min-h-0 w-full flex-1 touch-none" />
+      <div ref={host} className="relative min-h-0 w-full flex-1 touch-none" />
       {move && (
         <div className="relative flex gap-1 overflow-hidden rounded-full bg-white/8 p-1 ring-1 ring-white/15">
           {CONTROLS.map(([id, label, icon]) => (

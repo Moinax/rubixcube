@@ -81,6 +81,16 @@ const CUBIES = PIECES.map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));
 const center = (s: string, normal: Vec) => s[stickerAt(normal, normal)!];
 const colorAt = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
 export const findPiece = (s: string, piece: string) => CUBIES.find((c) => key(s, c.idx) === piece)!.pos;
+/** The cube before each move of a plan, then after the last; a group with `from` (a course demo) starts from it. */
+export function planStates(start: string, groups: Group[]): string[] {
+  const out = [start];
+  for (const g of groups) {
+    if (g.from) out[out.length - 1] = g.from;
+    for (const m of g.moves) out.push(applyMove(out.at(-1)!, m));
+  }
+  return out;
+}
+
 /** Where `piece` belongs: next to the centers of its colors. */
 export const homeOf = (s: string, piece: string) =>
   (Object.values(NORMALS) as Vec[]).filter((n) => piece.includes(center(s, n))).reduce((a, n) => a.map((v, i) => v + n[i]) as Vec, [0, 0, 0] as Vec);

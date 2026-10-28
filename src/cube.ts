@@ -29,6 +29,10 @@ export const FACE_NAMES: Record<Face, string> = {
   B: "bleu",
 };
 
+const FEMININE: Record<Face, string> = { U: "blanche", R: "rouge", F: "verte", D: "jaune", L: "orange", B: "bleue" };
+/** The color agreeing with a feminine noun: « la face verte », « 8 cases blanches » (orange stays invariable). */
+export const feminine = (f: Face, plural = false) => FEMININE[f] + (plural && f !== "L" ? "s" : "");
+
 // x points right (R), y up (U), z toward you (F).
 export const NORMALS: Record<Face, Vec> = {
   U: [0, 1, 0],
@@ -144,11 +148,11 @@ const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
 export function validate(state: string): string | null {
   for (const f of FACES) {
     const n = [...state].filter((c) => c === f).length;
-    if (n !== 9) return `Il y a ${n} cases ${FACE_NAMES[f as Face]} au lieu de 9.`;
+    if (n !== 9) return `Il y a ${n} cases ${feminine(f as Face, n > 1)} au lieu de 9.`;
   }
   const cube = Cube.fromString(state);
   if (cube.asString() !== state || new Set(cube.cp).size !== 8 || new Set(cube.ep).size !== 12)
-    return "Certaines pièces n'existent pas ou apparaissent deux fois (cases encadrées) : une couleur est mal lue sur l'une d'elles.";
+    return "Certaines pièces n'existent pas ou apparaissent deux fois (encadrées en jaune) : une couleur est mal lue sur l'une d'elles.";
   if (sum(cube.co) % 3) return "Un coin est tourné sur lui-même : vérifie les couleurs des coins.";
   if (sum(cube.eo) % 2) return "Une arête est retournée : vérifie les couleurs des arêtes.";
   if (parity(cube.cp) !== parity(cube.ep))

@@ -1,6 +1,77 @@
 @import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
 
+/* The interface is the cube's black plastic: only the cube carries sticker colors.
+   Pink and green are the two signals of the 3D view, the piece and its place. */
+@theme {
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-plastic: #16171b;
+  --color-shell: #1f2127;
+  --color-raised: #262830;
+  --color-blank: #2a2c33;
+  --color-edge: #2d3037;
+  --color-chalk: #f3f2ee;
+  --color-mist: #9a9ea8;
+  --color-piece: #f0abfc;
+  --color-place: #34d399;
+}
+
+/* Headings and move letters: wide and heavy, chunky like the cube. */
+@utility wide {
+  font-stretch: 112%;
+  font-weight: 760;
+  letter-spacing: 0.005em;
+}
+
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  border-radius: 0.875rem;
+  font-weight: 650;
+  transition: background-color 150ms;
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+@utility btn-main {
+  background: var(--color-chalk);
+  color: var(--color-plastic);
+  &:enabled:hover {
+    background: #fff;
+  }
+}
+@utility btn-ghost {
+  border: 1px solid var(--color-edge);
+  color: var(--color-chalk);
+  &:enabled:hover {
+    background: var(--color-shell);
+  }
+}
+
+/* A phone in either orientation: narrow, or too short for the guide to fit without the bottom bar. */
+@custom-variant phone {
+  @media (max-width: 47.99rem) {
+    @slot;
+  }
+  @media (max-height: 32rem) {
+    @slot;
+  }
+}
+@custom-variant roomy (@media (min-width: 48rem) and (min-height: 32.01rem));
+
+/* No double-tap zoom when tapping "Suivant" quickly on a phone. */
+button,
+summary {
+  touch-action: manipulation;
+}
+
+/* A faint relief of 3x3 faces, like the texture molded into the plastic, quieter behind the content. */
 body {
-  @apply bg-[#121318] text-zinc-100 antialiased;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  @apply bg-plastic font-sans text-chalk antialiased;
+  background-attachment: fixed;
+  background-image: radial-gradient(ellipse 70% 60% at 50% 45%, var(--color-plastic) 20%, transparent 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cg fill='%23fff' fill-opacity='.028'%3E%3Crect x='4' y='4' width='8' height='8' rx='2'/%3E%3Crect x='14' y='4' width='8' height='8' rx='2'/%3E%3Crect x='24' y='4' width='8' height='8' rx='2'/%3E%3Crect x='4' y='14' width='8' height='8' rx='2'/%3E%3Crect x='14' y='14' width='8' height='8' rx='2'/%3E%3Crect x='24' y='14' width='8' height='8' rx='2'/%3E%3Crect x='4' y='24' width='8' height='8' rx='2'/%3E%3Crect x='14' y='24' width='8' height='8' rx='2'/%3E%3Crect x='24' y='24' width='8' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E");
 }

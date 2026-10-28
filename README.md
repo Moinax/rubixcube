@@ -1,7 +1,10 @@
-# Rubik's Cube
+# Cubiste
 
-Scan a real 3x3 cube with the camera (or type its colors in), then follow the
-solution move by move on an animated 3D cube, in one of two modes, or learn the method without scanning:
+A Rubik's Cube solver and teacher. *Résous ton cube, coup par coup.*
+
+Pick a mode first. The two that solve your own cube then ask for it: scan it
+with the camera, or type its colors in. Then follow the moves one by one on an
+animated 3D cube:
 
 - **Fast**: the shortest solution cubejs finds (~20 moves).
 - **Learn**: the layer-by-layer beginner method (`src/beginner.ts`), ~170 moves
@@ -14,7 +17,7 @@ solution move by move on an animated 3D cube, in one of two modes, or learn the 
 
 - Solver: [cubejs](https://github.com/ldez/cubejs) (Kociemba two-phase, ≤ 22 moves),
   patched in `patches/` so its `this.Cube` lookup survives bundling.
-- 3D: three.js. UI: React + Tailwind.
+- 3D: three.js. UI: React + Tailwind, Archivo (self-hosted via `@fontsource-variable/archivo`).
 
 ```sh
 pnpm install

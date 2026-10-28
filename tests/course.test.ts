@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { STAGES } from "../src/beginner.ts";
+import { beginnerSolve, planStates, STAGES } from "../src/beginner.ts";
 import { COURSE } from "../src/course.ts";
-import { applyMove, colorsOf, PIECES, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
+import { applyMove, colorsOf, PIECES, SOLVED, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
 
 const at = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
 const center = (s: string, n: Vec) => at(s, n, n);
@@ -55,4 +55,24 @@ test("the last demo turns the corners and leaves the cube solved", () => {
   const end = last.moves.reduce(applyMove, last.from!);
   assert.equal(end, applyMove("UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB", "z2"));
   assert.notEqual(at(last.from!, [1, 1, 1], [0, 1, 0]), "D");
+});
+
+test("planStates starts each course demo from its own cube and ends a beginner plan solved", () => {
+  const states = planStates(COURSE[0].from!, COURSE);
+  let i = 0;
+  for (const g of COURSE) {
+    assert.equal(states[i], g.from, g.title);
+    i += g.moves.length;
+  }
+  assert.equal(states.length, i + 1);
+  const start = "R U F' L2 D B' R2 U' F2 L".split(" ").reduce(applyMove, SOLVED);
+  const end = planStates(start, beginnerSolve(start)).at(-1)!;
+  assert.ok([0, 1, 2, 3, 4, 5].every((f) => new Set(end.slice(9 * f, 9 * f + 9)).size === 1));
+});
+
+test("stages come in order, so each stage's moves are one run the progress bar can measure", () => {
+  const ordered = (groups: { stage: number }[]) => groups.every((g, i) => i === 0 || groups[i - 1].stage <= g.stage);
+  assert.ok(ordered(COURSE));
+  const start = "D' R2 F U' L B2 R' D F2 U".split(" ").reduce(applyMove, SOLVED);
+  assert.ok(ordered(beginnerSolve(start)));
 });

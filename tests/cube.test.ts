@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Cube from "cubejs";
-import { applyMove, classify, FACES, SOLVED, solve, suspects, validate, vivid, type RGB } from "../src/cube.ts";
+import { applyMove, classify, FACES, feminine, SOLVED, solve, suspects, validate, vivid, type Face, type RGB } from "../src/cube.ts";
 
 const MOVES = [...FACES].flatMap((f) => [f, f + "'", f + "2"]);
 
@@ -26,7 +26,7 @@ test("validate rejects impossible cubes", () => {
     [a[i], a[j]] = [a[j], a[i]];
     return a.join("");
   };
-  assert.match(validate(SOLVED.replace("R", "U"))!, /10 cases blanc/);
+  assert.match(validate(SOLVED.replace("R", "U"))!, /10 cases blanches/);
   assert.match(validate(swap(SOLVED, 7, 19))!, /arête/); // U8 <-> F2: flipped UF edge
   assert.notEqual(validate(swap(swap(SOLVED, 8, 9), 9, 20)), null); // twisted UFR corner
 });
@@ -72,4 +72,9 @@ test("vivid tells cube faces from a person, on real webcam frames", () => {
   ];
   for (const f of faces) assert.ok(f.filter(vivid).length >= 4, `cube ${f[4]}`);
   for (const f of people) assert.ok(f.filter(vivid).length < 4, `person ${f[4]}`);
+});
+
+test("feminine agrees colors with feminine nouns, orange stays invariable", () => {
+  assert.deepEqual([..."URFDLB"].map((f) => feminine(f as Face)), ["blanche", "rouge", "verte", "jaune", "orange", "bleue"]);
+  assert.deepEqual([..."URFDLB"].map((f) => feminine(f as Face, true)), ["blanches", "rouges", "vertes", "jaunes", "orange", "bleues"]);
 });

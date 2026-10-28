@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FACE_COLORS, FACE_NAMES, FACES, type Face } from "./cube";
+import { FACE_COLORS, FACE_NAMES, FACES, feminine, type Face } from "./cube";
 
 // Unfolded cube: [face, grid row, grid column] of each 3x3 block.
 const LAYOUT: [Face, number, number][] = [
@@ -20,7 +20,7 @@ export default function NetEditor({ state, onChange, highlight }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-12 gap-[3px]">
+      <div className="grid grid-cols-12 gap-[3px] md:gap-1">
         {LAYOUT.flatMap(([face, row, col]) =>
           Array.from({ length: 9 }, (_, k) => {
             const i = 9 * FACES.indexOf(face) + k;
@@ -29,8 +29,8 @@ export default function NetEditor({ state, onChange, highlight }: Props) {
                 key={i}
                 disabled={k === 4}
                 onClick={() => paint(i)}
-                aria-label={`Case ${k + 1} de la face ${FACE_NAMES[face]}`}
-                className={`aspect-square rounded-[4px] enabled:hover:ring-2 enabled:hover:ring-white ${highlight?.has(i) ? "outline-3 outline-offset-1 outline-fuchsia-400" : ""}`}
+                aria-label={`Case ${k + 1} de la face ${feminine(face)}`}
+                className={`aspect-square rounded-[4px] enabled:hover:ring-2 enabled:hover:ring-chalk ${highlight?.has(i) ? "outline-3 outline-offset-1 outline-amber-400" : ""}`}
                 style={{
                   gridRow: row + Math.floor(k / 3) + 1,
                   gridColumn: col + (k % 3) + 1,
@@ -41,14 +41,14 @@ export default function NetEditor({ state, onChange, highlight }: Props) {
           }),
         )}
       </div>
-      <div className="flex justify-center gap-2">
+      <div className="flex justify-between gap-1.5 rounded-2xl border border-edge bg-shell p-1.5 md:justify-start md:gap-2 md:self-start">
         {[...FACES].map((f) => (
           <button
             key={f}
             onClick={() => setBrush(f as Face)}
             aria-label={`Pinceau ${FACE_NAMES[f as Face]}`}
             aria-pressed={brush === f}
-            className={`size-9 rounded-lg transition ${brush === f ? "scale-110 ring-3 ring-white" : "ring-1 ring-white/20"}`}
+            className={`size-10 rounded-[10px] transition ${brush === f ? "ring-2 ring-chalk ring-offset-2 ring-offset-shell" : ""}`}
             style={{ background: FACE_COLORS[f as Face] }}
           />
         ))}

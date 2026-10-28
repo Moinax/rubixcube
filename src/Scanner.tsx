@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { classify, FACE_COLORS, FACE_NAMES, FACES, vivid, type Face, type RGB } from "./cube";
+import { Back } from "./Home";
+import { classify, FACE_COLORS, FACE_NAMES, FACES, feminine, vivid, type Face, type RGB } from "./cube";
 
 // Turning the cube a quarter left each time shows F, R, B, L; then the top and bottom.
 const STEPS: { face: Face; top: Face; hint: string }[] = [
@@ -42,7 +43,7 @@ function sampleGrid(data: Uint8ClampedArray): RGB[] {
 }
 
 export const Chip = ({ face }: { face: Face }) => (
-  <span className="inline-flex items-center gap-1.5 font-semibold text-zinc-100">
+  <span className="inline-flex items-center gap-1.5 font-semibold text-chalk">
     <span className="size-3.5 rounded-sm" style={{ background: FACE_COLORS[face] }} />
     {FACE_NAMES[face]}
   </span>
@@ -144,105 +145,112 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
   // Facelet order is URFDLB, scan order is not.
   const finish = () => onDone(classify([...FACES].flatMap((f) => faces[STEPS.findIndex((s) => s.face === f)]!)), faces);
   const current = step === null ? undefined : STEPS[step];
+  const filled = flash ? 100 : steady * 100;
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-4 p-4">
+    <main className="mx-auto flex min-h-dvh max-w-xl flex-col gap-4 p-4 md:py-10">
       <div className="flex items-center justify-between">
-        <button onClick={onCancel} className="text-sm text-zinc-400 hover:text-zinc-100">
-          ← Retour
+        <Back label="Annuler" onClick={onCancel} />
+        <button
+          onClick={() => setMirror((m) => !m)}
+          aria-pressed={mirror}
+          className={`rounded-full border px-3 py-1 text-xs font-semibold ${mirror ? "border-chalk/40 text-chalk" : "border-edge text-mist"}`}
+        >
+          Miroir
         </button>
-        <span className="text-sm text-zinc-400">
-          {step === null ? "Vérification" : `Face ${step + 1} / 6`}
-        </span>
+      </div>
+
+      {/* The 6 faces double as progress: captured, current (ringed), still to do (center only). */}
+      <div className="grid grid-cols-6 gap-2">
+        {STEPS.map((s, i) => (
+          <button
+            key={s.face}
+            onClick={() => goTo(i)}
+            title={`Refaire la face ${feminine(s.face)}`}
+            aria-label={`Refaire la face ${feminine(s.face)}`}
+            aria-current={i === step ? "step" : undefined}
+            className={`grid aspect-square grid-cols-3 gap-px rounded-lg bg-black p-1 ${i === step ? "ring-2 ring-chalk" : ""} ${mirror ? "-scale-x-100" : ""}`}
+          >
+            {Array.from({ length: 9 }, (_, k) => (
+              <span
+                key={k}
+                className="rounded-[2px]"
+                style={{ background: faces[i] ? rgb(faces[i]![k]) : k === 4 ? FACE_COLORS[s.face] : "var(--color-blank)" }}
+              />
+            ))}
+          </button>
+        ))}
       </div>
 
       {error ? (
-        <div className="rounded-xl bg-red-950/60 p-4 text-sm text-red-200">
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
           {error}
-          <button onClick={onManual} className="mt-3 block font-semibold text-white underline">
-            Saisir les couleurs à la main
+          <button onClick={onManual} className="btn btn-main">
+            Saisir les couleurs
           </button>
         </div>
       ) : (
         <>
-          <p className="text-lg leading-snug">
+          <div>
             {current ? (
               <>
-                {faces[step!] ? "Refais cette face." : current.hint}
-                <br />
-                Face <Chip face={current.face} /> vers la caméra, <Chip face={current.top} /> en haut, et ne bouge
-                plus.
+                <h1 className="wide flex items-center gap-2.5 text-2xl">
+                  <span className="size-4 rounded" style={{ background: FACE_COLORS[current.face] }} />
+                  Face {feminine(current.face)}
+                </h1>
+                <p className="mt-1 text-mist">
+                  {faces[step!] ? "Refais cette face." : current.hint} Le {FACE_NAMES[current.top]} en haut, tiens-la
+                  immobile dans le cadre.
+                </p>
               </>
             ) : (
-              "Les 6 faces sont capturées. Une miniature ne ressemble pas à ton cube ? Touche-la pour refaire cette face."
+              <>
+                <h1 className="wide text-2xl">Les 6 faces sont prises</h1>
+                <p className="mt-1 text-mist">Une miniature ne ressemble pas à ton cube ? Touche-la pour refaire cette face.</p>
+              </>
             )}
-          </p>
-          <div className="relative overflow-hidden rounded-2xl bg-black">
+          </div>
+          <div className="relative overflow-hidden rounded-3xl bg-black">
             <video ref={video} playsInline muted className={`block w-full ${mirror ? "-scale-x-100" : ""}`} />
-            <button
-              onClick={() => setMirror((m) => !m)}
-              aria-pressed={mirror}
-              className="absolute top-2 right-2 rounded-lg bg-black/60 px-2.5 py-1 text-xs font-semibold backdrop-blur hover:bg-black/80"
-            >
-              ⇋ Miroir {mirror ? "activé" : "désactivé"}
-            </button>
             {box > 0 && (
               <div
-                className={`absolute top-1/2 left-1/2 grid aspect-square -translate-1/2 grid-cols-3 overflow-hidden rounded-xl ring-2 transition ${
-                  flash ? "bg-emerald-400/40 ring-emerald-400" : "ring-white/80"
+                className={`absolute top-1/2 left-1/2 grid aspect-square -translate-1/2 grid-cols-3 overflow-hidden rounded-2xl ring-2 transition ${
+                  flash ? "bg-place/40 ring-place" : "ring-chalk/90"
                 } ${step === null ? "opacity-40" : ""} ${mirror ? "-scale-x-100" : ""}`}
                 style={{ width: `${box}%` }}
               >
                 {live.map((c, i) => (
-                  <div key={i} className="grid place-items-center border border-white/40">
+                  <div key={i} className="grid place-items-center border border-white/30">
                     <span className="size-4 rounded-full ring-2 ring-white" style={{ background: rgb(c) }} />
                   </div>
                 ))}
-                <div
-                  className="absolute bottom-0 left-1/2 h-1.5 -translate-x-1/2 bg-emerald-400 transition-[width] duration-150"
-                  style={{ width: `${steady * 100}%` }}
-                />
               </div>
+            )}
+            {current && box > 0 && (
+              <p className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 py-1.5 pr-3 pl-1.5 text-sm whitespace-nowrap backdrop-blur">
+                <span
+                  className="size-5 rounded-full [mask:radial-gradient(circle_6px,transparent_98%,#000)]"
+                  style={{ background: `conic-gradient(var(--color-place) ${filled}%, #ffffff30 0)` }}
+                />
+                {flash ? "Capturée" : steady > 0 ? "Ne bouge plus…" : "Place la face dans le cadre"}
+              </p>
             )}
           </div>
           {current ? (
             <button
               onClick={capture}
               disabled={!live.length}
-              className="rounded-xl bg-white/8 py-3 font-semibold ring-1 ring-white/10 hover:bg-white/14 disabled:opacity-40"
+              className="self-center text-sm text-mist underline underline-offset-4 hover:text-chalk disabled:opacity-40"
             >
               Capturer maintenant
             </button>
           ) : (
-            <button onClick={finish} className="rounded-xl bg-white py-3 font-semibold text-black hover:bg-zinc-200">
+            <button onClick={finish} className="btn btn-main">
               Valider les 6 faces
             </button>
           )}
+          <p className="text-center text-xs text-mist">Bonne lumière, sans reflet. Tu pourras corriger chaque case ensuite.</p>
         </>
       )}
-
-      <div className="grid grid-cols-6 gap-2">
-        {STEPS.map((s, i) => (
-          <button
-            key={s.face}
-            onClick={() => goTo(i)}
-            title={`Refaire la face ${FACE_NAMES[s.face]}`}
-            aria-label={`Refaire la face ${FACE_NAMES[s.face]}`}
-            className={`grid aspect-square grid-cols-3 gap-px rounded-md p-1 ${i === step ? "ring-2 ring-white" : "ring-1 ring-white/15"} ${mirror ? "-scale-x-100" : ""}`}
-          >
-            {Array.from({ length: 9 }, (_, k) => (
-              <span
-                key={k}
-                className="rounded-[2px]"
-                style={{ background: faces[i] ? rgb(faces[i]![k]) : k === 4 ? FACE_COLORS[s.face] : "#26272e" }}
-              />
-            ))}
-          </button>
-        ))}
-      </div>
-      <p className="text-center text-xs text-zinc-500">
-        La face est capturée toute seule quand elle reste immobile dans la grille. Bonne lumière, sans reflet : tu
-        pourras encore corriger chaque case après.
-      </p>
-    </div>
+    </main>
   );
 }

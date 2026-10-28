@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { FACE_COLORS, FACE_NAMES, FACES, feminine, type Face } from "./cube";
+import { FACE_COLORS, FACE_NAMES, FACES, feminine, INFLECTED, type Face } from "./cube";
+import { tr } from "./i18n";
 
 // Unfolded cube: [face, grid row, grid column] of each 3x3 block.
 const LAYOUT: [Face, number, number][] = [
@@ -29,7 +30,11 @@ export default function NetEditor({ state, onChange, highlight }: Props) {
                 key={i}
                 disabled={k === 4}
                 onClick={() => paint(i)}
-                aria-label={`Case ${k + 1} de la face ${feminine(face)}`}
+                aria-label={tr({
+                  fr: `Case ${k + 1} de la face ${feminine(face)}`,
+                  nl: `Vakje ${k + 1} van de ${INFLECTED[face]} kant`,
+                  en: `Square ${k + 1} of the ${FACE_NAMES[face]} face`,
+                })}
                 className={`aspect-square rounded-[4px] enabled:hover:ring-2 enabled:hover:ring-chalk ${highlight?.has(i) ? "outline-3 outline-offset-1 outline-amber-400" : ""}`}
                 style={{
                   gridRow: row + Math.floor(k / 3) + 1,
@@ -46,7 +51,7 @@ export default function NetEditor({ state, onChange, highlight }: Props) {
           <button
             key={f}
             onClick={() => setBrush(f as Face)}
-            aria-label={`Pinceau ${FACE_NAMES[f as Face]}`}
+            aria-label={`${tr({ fr: "Pinceau", nl: "Penseel", en: "Brush" })} ${FACE_NAMES[f as Face]}`}
             aria-pressed={brush === f}
             className={`size-10 rounded-[10px] transition ${brush === f ? "ring-2 ring-chalk ring-offset-2 ring-offset-shell" : ""}`}
             style={{ background: FACE_COLORS[f as Face] }}

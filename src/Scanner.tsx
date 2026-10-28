@@ -1,16 +1,30 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Back } from "./Home";
-import { classify, FACE_COLORS, FACE_NAMES, FACES, feminine, vivid, type Face, type RGB } from "./cube";
+import { Back, ENTER_COLORS } from "./Home";
+import { classify, FACE_COLORS, FACE_NAMES, FACES, feminine, INFLECTED, vivid, type Face, type RGB } from "./cube";
+import { capitalize, tr } from "./i18n";
 
 // Turning the cube a quarter left each time shows F, R, B, L; then the top and bottom.
+const AGAIN = tr({ fr: "Encore un quart vers la gauche.", nl: "Nog een kwartslag naar links.", en: "Another quarter to the left." });
 const STEPS: { face: Face; top: Face; hint: string }[] = [
-  { face: "F", top: "U", hint: "Commence par la face avant." },
-  { face: "R", top: "U", hint: "Tourne le cube d'un quart vers la gauche." },
-  { face: "B", top: "U", hint: "Encore un quart vers la gauche." },
-  { face: "L", top: "U", hint: "Encore un quart vers la gauche." },
-  { face: "U", top: "B", hint: "Bascule le cube pour montrer le dessus." },
-  { face: "D", top: "F", hint: "Puis le dessous." },
+  { face: "F", top: "U", hint: tr({ fr: "Commence par la face avant.", nl: "Begin met de voorkant.", en: "Start with the front face." }) },
+  {
+    face: "R",
+    top: "U",
+    hint: tr({ fr: "Tourne le cube d'un quart vers la gauche.", nl: "Draai de kubus een kwartslag naar links.", en: "Turn the cube a quarter to the left." }),
+  },
+  { face: "B", top: "U", hint: AGAIN },
+  { face: "L", top: "U", hint: AGAIN },
+  {
+    face: "U",
+    top: "B",
+    hint: tr({ fr: "Bascule le cube pour montrer le dessus.", nl: "Kantel de kubus om de bovenkant te tonen.", en: "Tip the cube over to show the top." }),
+  },
+  { face: "D", top: "F", hint: tr({ fr: "Puis le dessous.", nl: "Dan de onderkant.", en: "Then the bottom." }) },
 ];
+/** « Face verte », "Green face". */
+const faceTitle = (f: Face) => tr({ fr: `Face ${feminine(f)}`, nl: `${capitalize(INFLECTED[f])} kant`, en: `${capitalize(FACE_NAMES[f])} face` });
+const redoLabel = (f: Face) =>
+  tr({ fr: `Refaire la face ${feminine(f)}`, nl: `De ${INFLECTED[f]} kant opnieuw doen`, en: `Redo the ${FACE_NAMES[f]} face` });
 const GRID = 0.62; // share of the shorter video side covered by the grid
 const SIZE = 90; // sampling canvas side, 30 px per sticker
 // ponytail: fixed thresholds tuned by eye; expose them if some lighting needs it.
@@ -44,10 +58,14 @@ function sampleGrid(data: Uint8ClampedArray): RGB[] {
 
 // Readable on the dark plastic: white as chalk, blue a little lighter than its sticker.
 const TEXT_COLORS: Record<Face, string> = { ...FACE_COLORS, U: "var(--color-chalk)", B: "#4f8ff7" };
-const COLOR_FACES: Record<string, Face> = { blanc: "U", blanche: "U", rouge: "R", vert: "F", verte: "F", jaune: "D", orange: "L", bleu: "B", bleue: "B" };
-const COLOR_WORDS = /(?<!\p{L})(blanche|blanc|rouge|verte|vert|jaune|orange|bleue|bleu)s?(?!\p{L})/giu;
+const COLOR_FACES = tr<Record<string, Face>>({
+  fr: { blanc: "U", blanche: "U", rouge: "R", vert: "F", verte: "F", jaune: "D", orange: "L", bleu: "B", bleue: "B" },
+  nl: { wit: "U", witte: "U", rood: "R", rode: "R", groen: "F", groene: "F", geel: "D", gele: "D", oranje: "L", blauw: "B", blauwe: "B" },
+  en: { white: "U", red: "R", green: "F", yellow: "D", orange: "L", blue: "B" },
+});
+const COLOR_WORDS = new RegExp(`(?<!\\p{L})(${Object.keys(COLOR_FACES).join("|")})s?(?!\\p{L})`, "giu");
 
-/** `text` with every color name in bold and in its face color: « le centre <b>rouge</b> ». */
+/** `text` with every color name in bold and in its face color: « le centre <b>rouge</b> », "the <b>red</b> center". */
 export function Colored({ text }: { text: string }) {
   const parts: ReactNode[] = [];
   let last = 0;
@@ -102,7 +120,13 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
     let stream: MediaStream | undefined;
     let stopped = false;
     if (!navigator.mediaDevices) {
-      setError("La caméra n'est disponible qu'en HTTPS ou sur localhost (lance « pnpm dev:lan » pour un téléphone).");
+      setError(
+        tr({
+          fr: "La caméra n'est disponible qu'en HTTPS ou sur localhost (lance « pnpm dev:lan » pour un téléphone).",
+          nl: "De camera werkt alleen via HTTPS of op localhost (start „pnpm dev:lan” voor een telefoon).",
+          en: "The camera only works over HTTPS or on localhost (run “pnpm dev:lan” for a phone).",
+        }),
+      );
       return;
     }
     navigator.mediaDevices
@@ -114,7 +138,15 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
         video.current!.srcObject = s;
         return video.current!.play();
       })
-      .catch((e: Error) => setError(`Impossible d'ouvrir la caméra : ${e.message}`));
+      .catch((e: Error) =>
+        setError(
+          tr({
+            fr: `Impossible d'ouvrir la caméra : ${e.message}`,
+            nl: `Kan de camera niet openen: ${e.message}`,
+            en: `Couldn't open the camera: ${e.message}`,
+          }),
+        ),
+      );
 
     const canvas = Object.assign(document.createElement("canvas"), { width: SIZE, height: SIZE });
     const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
@@ -169,15 +201,15 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
   const current = step === null ? undefined : STEPS[step];
   const filled = flash ? 100 : steady * 100;
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col gap-4 p-4 md:py-10">
+    <main className="mx-auto flex w-full flex-1 max-w-xl flex-col gap-4 p-4 md:py-10">
       <div className="flex items-center justify-between">
-        <Back label="Annuler" onClick={onCancel} />
+        <Back label={tr({ fr: "Annuler", nl: "Annuleren", en: "Cancel" })} onClick={onCancel} />
         <button
           onClick={() => setMirror((m) => !m)}
           aria-pressed={mirror}
           className={`rounded-full border px-3 py-1 text-xs font-semibold ${mirror ? "border-chalk/40 text-chalk" : "border-edge text-mist"}`}
         >
-          Miroir
+          {tr({ fr: "Miroir", nl: "Spiegelen", en: "Mirror" })}
         </button>
       </div>
 
@@ -187,8 +219,8 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
           <button
             key={s.face}
             onClick={() => goTo(i)}
-            title={`Refaire la face ${feminine(s.face)}`}
-            aria-label={`Refaire la face ${feminine(s.face)}`}
+            title={redoLabel(s.face)}
+            aria-label={redoLabel(s.face)}
             aria-current={i === step ? "step" : undefined}
             className={`grid aspect-square grid-cols-3 gap-px rounded-lg bg-black p-1 ${i === step ? "ring-2 ring-chalk" : ""} ${mirror ? "-scale-x-100" : ""}`}
           >
@@ -207,7 +239,7 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
         <div className="flex flex-col items-start gap-3 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
           {error}
           <button onClick={onManual} className="btn btn-main">
-            Saisir les couleurs
+            {ENTER_COLORS}
           </button>
         </div>
       ) : (
@@ -217,16 +249,28 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
               <>
                 <h1 className="wide flex items-center gap-2.5 text-2xl">
                   <span className="size-4 rounded" style={{ background: FACE_COLORS[current.face] }} />
-                  Face {feminine(current.face)}
+                  {faceTitle(current.face)}
                 </h1>
                 <p className="mt-1 text-mist">
-                  <Colored text={`${faces[step!] ? "Refais cette face." : current.hint} Le ${FACE_NAMES[current.top]} en haut, tiens-la immobile dans le cadre.`} />
+                  <Colored
+                    text={tr({
+                      fr: `${faces[step!] ? "Refais cette face." : current.hint} Le ${FACE_NAMES[current.top]} en haut, tiens-la immobile dans le cadre.`,
+                      nl: `${faces[step!] ? "Doe deze kant opnieuw." : current.hint} ${capitalize(FACE_NAMES[current.top])} boven, houd de kubus stil in het kader.`,
+                      en: `${faces[step!] ? "Redo this face." : current.hint} ${capitalize(FACE_NAMES[current.top])} on top, hold it still in the frame.`,
+                    })}
+                  />
                 </p>
               </>
             ) : (
               <>
-                <h1 className="wide text-2xl">Les 6 faces sont prises</h1>
-                <p className="mt-1 text-mist">Une miniature ne ressemble pas à ton cube ? Touche-la pour refaire cette face.</p>
+                <h1 className="wide text-2xl">{tr({ fr: "Les 6 faces sont prises", nl: "Alle 6 kanten zijn vastgelegd", en: "All 6 faces are in" })}</h1>
+                <p className="mt-1 text-mist">
+                  {tr({
+                    fr: "Une miniature ne ressemble pas à ton cube ? Touche-la pour refaire cette face.",
+                    nl: "Lijkt een miniatuur niet op je kubus? Tik erop om die kant opnieuw te doen.",
+                    en: "A thumbnail doesn't match your cube? Tap it to redo that face.",
+                  })}
+                </p>
               </>
             )}
           </div>
@@ -252,7 +296,11 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
                   className="size-5 rounded-full [mask:radial-gradient(circle_6px,transparent_98%,#000)]"
                   style={{ background: `conic-gradient(var(--color-place) ${filled}%, #ffffff30 0)` }}
                 />
-                {flash ? "Capturée" : steady > 0 ? "Ne bouge plus…" : "Place la face dans le cadre"}
+                {flash
+                  ? tr({ fr: "Capturée", nl: "Vastgelegd", en: "Captured" })
+                  : steady > 0
+                    ? tr({ fr: "Ne bouge plus…", nl: "Niet bewegen…", en: "Hold still…" })
+                    : tr({ fr: "Place la face dans le cadre", nl: "Plaats de kant in het kader", en: "Fit the face in the frame" })}
               </p>
             )}
           </div>
@@ -262,14 +310,20 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
               disabled={!live.length}
               className="self-center text-sm text-mist underline underline-offset-4 hover:text-chalk disabled:opacity-40"
             >
-              Capturer maintenant
+              {tr({ fr: "Capturer maintenant", nl: "Nu vastleggen", en: "Capture now" })}
             </button>
           ) : (
             <button onClick={finish} className="btn btn-main">
-              Valider les 6 faces
+              {tr({ fr: "Valider les 6 faces", nl: "De 6 kanten bevestigen", en: "Confirm the 6 faces" })}
             </button>
           )}
-          <p className="text-center text-xs text-mist">Bonne lumière, sans reflet. Tu pourras corriger chaque case ensuite.</p>
+          <p className="text-center text-xs text-mist">
+            {tr({
+              fr: "Bonne lumière, sans reflet. Tu pourras corriger chaque case ensuite.",
+              nl: "Goed licht, zonder weerspiegeling. Je kunt elk vakje achteraf nog corrigeren.",
+              en: "Good light, no glare. You can fix any square afterwards.",
+            })}
+          </p>
         </>
       )}
     </main>

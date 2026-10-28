@@ -4,6 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { FACE_COLORS, inLayer, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
+import { tr } from "./i18n";
 
 // BoxGeometry material order: +x, -x, +y, -y, +z, -z.
 const SIDES: Vec[] = [
@@ -33,9 +34,9 @@ type View = "start" | "play" | "end";
 
 // Single arrow with a bar for start and end, a plain arrow to play.
 const CONTROLS: [View, string, React.ReactNode][] = [
-  ["start", "Avant le coup", <><rect x="5" y="5" width="2.5" height="14" rx="1" /><path d="M19 5v14L9 12z" /></>],
-  ["play", "Jouer le coup depuis le début", <path d="M7 5v14l12-7z" />],
-  ["end", "Après le coup", <><path d="M5 5v14l10-7z" /><rect x="16.5" y="5" width="2.5" height="14" rx="1" /></>],
+  ["start", tr({ fr: "Avant le coup", nl: "Voor de zet", en: "Before the move" }), <><rect x="5" y="5" width="2.5" height="14" rx="1" /><path d="M19 5v14L9 12z" /></>],
+  ["play", tr({ fr: "Jouer le coup depuis le début", nl: "De zet vanaf het begin afspelen", en: "Play the move from the start" }), <path d="M7 5v14l12-7z" />],
+  ["end", tr({ fr: "Après le coup", nl: "Na de zet", en: "After the move" }), <><path d="M5 5v14l10-7z" /><rect x="16.5" y="5" width="2.5" height="14" rx="1" /></>],
 ];
 
 type Props = { state: string; move?: string; highlight?: Vec; target?: Vec; autoRotate?: boolean };

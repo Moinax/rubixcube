@@ -27,5 +27,8 @@ pnpm test      # move/solver/validation/color-classification checks
 pnpm build
 ```
 
+In French, Dutch or English (`src/i18n.ts`): the browser's language, switchable at
+the top of every screen. Each text sits next to its code as `tr({ fr, nl, en })`.
+
 Assumes the standard color scheme: white opposite yellow, green opposite blue,
 red opposite orange. The guide keeps white on top and green facing you.

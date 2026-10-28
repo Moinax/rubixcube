@@ -1,4 +1,5 @@
 import Cube from "cubejs";
+import { tr } from "./i18n.ts";
 
 // A cube state is 54 face letters in Kociemba facelet order: U1..U9 R1..R9
 // F1..F9 D1..D9 L1..L9 B1..B9, each letter naming the face whose center has
@@ -20,18 +21,17 @@ export const FACE_COLORS: Record<Face, string> = {
   L: "#ff8a1f",
   B: "#1e6fe8",
 };
-export const FACE_NAMES: Record<Face, string> = {
-  U: "blanc",
-  R: "rouge",
-  F: "vert",
-  D: "jaune",
-  L: "orange",
-  B: "bleu",
-};
+export const FACE_NAMES: Record<Face, string> = tr({
+  fr: { U: "blanc", R: "rouge", F: "vert", D: "jaune", L: "orange", B: "bleu" },
+  nl: { U: "wit", R: "rood", F: "groen", D: "geel", L: "oranje", B: "blauw" },
+  en: { U: "white", R: "red", F: "green", D: "yellow", L: "orange", B: "blue" },
+});
 
 const FEMININE: Record<Face, string> = { U: "blanche", R: "rouge", F: "verte", D: "jaune", L: "orange", B: "bleue" };
 /** The color agreeing with a feminine noun: « la face verte », « 8 cases blanches » (orange stays invariable). */
 export const feminine = (f: Face, plural = false) => FEMININE[f] + (plural && f !== "L" ? "s" : "");
+/** The Dutch color before a noun after « de/het », or in the plural: « de groene kant » (oranje stays invariable). */
+export const INFLECTED: Record<Face, string> = { U: "witte", R: "rode", F: "groene", D: "gele", L: "oranje", B: "blauwe" };
 
 // x points right (R), y up (U), z toward you (F).
 export const NORMALS: Record<Face, Vec> = {
@@ -144,19 +144,42 @@ const parity = (p: number[]) =>
   p.reduce((n, a, i) => n + p.slice(i + 1).filter((b) => b < a).length, 0) % 2;
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
 
-/** Why `state` cannot be a real cube, in French, or null when it can. */
+/** Why `state` cannot be a real cube, in the interface language, or null when it can. */
 export function validate(state: string): string | null {
-  for (const f of FACES) {
+  for (const f of FACES as Iterable<Face>) {
     const n = [...state].filter((c) => c === f).length;
-    if (n !== 9) return `Il y a ${n} cases ${feminine(f as Face, n > 1)} au lieu de 9.`;
+    if (n !== 9)
+      return tr({
+        fr: `Il y a ${n} cases ${feminine(f, n > 1)} au lieu de 9.`,
+        nl: n === 1 ? `Er is 1 ${FACE_NAMES[f]} vakje in plaats van 9.` : `Er zijn ${n} ${INFLECTED[f]} vakjes in plaats van 9.`,
+        en: `There ${n === 1 ? "is" : "are"} ${n} ${FACE_NAMES[f]} square${n === 1 ? "" : "s"} instead of 9.`,
+      });
   }
   const cube = Cube.fromString(state);
   if (cube.asString() !== state || new Set(cube.cp).size !== 8 || new Set(cube.ep).size !== 12)
-    return "Certaines pièces n'existent pas ou apparaissent deux fois (encadrées en jaune) : une couleur est mal lue sur l'une d'elles.";
-  if (sum(cube.co) % 3) return "Un coin est tourné sur lui-même : vérifie les couleurs des coins.";
-  if (sum(cube.eo) % 2) return "Une arête est retournée : vérifie les couleurs des arêtes.";
+    return tr({
+      fr: "Certaines pièces n'existent pas ou apparaissent deux fois (encadrées en jaune) : une couleur est mal lue sur l'une d'elles.",
+      nl: "Sommige stukken bestaan niet of komen twee keer voor (geel omlijnd): op een ervan is een kleur verkeerd gelezen.",
+      en: "Some pieces don't exist or appear twice (outlined in yellow): a color is misread on one of them.",
+    });
+  if (sum(cube.co) % 3)
+    return tr({
+      fr: "Un coin est tourné sur lui-même : vérifie les couleurs des coins.",
+      nl: "Een hoekstuk is in zichzelf gedraaid: controleer de kleuren van de hoekstukken.",
+      en: "A corner is twisted in place: check the corner colors.",
+    });
+  if (sum(cube.eo) % 2)
+    return tr({
+      fr: "Une arête est retournée : vérifie les couleurs des arêtes.",
+      nl: "Een randstuk is omgedraaid: controleer de kleuren van de randstukken.",
+      en: "An edge is flipped: check the edge colors.",
+    });
   if (parity(cube.cp) !== parity(cube.ep))
-    return "Deux pièces sont échangées : vérifie les couleurs.";
+    return tr({
+      fr: "Deux pièces sont échangées : vérifie les couleurs.",
+      nl: "Twee stukken zijn verwisseld: controleer de kleuren.",
+      en: "Two pieces are swapped: check the colors.",
+    });
   return null;
 }
 
@@ -171,28 +194,60 @@ export function solve(state: string): string[] {
   return Cube.fromString(state).solve().split(" ").filter(Boolean);
 }
 
-const DIRECTIONS: Record<Face, [string, string, string]> = {
-  U: ["Face du haut", "un quart de tour vers la gauche", "un quart de tour vers la droite"],
-  D: ["Face du bas", "un quart de tour vers la droite", "un quart de tour vers la gauche"],
-  R: ["Face droite", "un quart de tour vers le haut", "un quart de tour vers le bas"],
-  L: ["Face gauche", "un quart de tour vers le bas", "un quart de tour vers le haut"],
-  F: ["Face avant", "un quart de tour dans le sens horaire", "un quart de tour dans le sens anti-horaire"],
-  B: ["Face arrière", "un quart de tour, le haut part vers la gauche", "un quart de tour, le haut part vers la droite"],
-};
+const DIRECTIONS: Record<Face, [string, string, string]> = tr({
+  fr: {
+    U: ["Face du haut", "un quart de tour vers la gauche", "un quart de tour vers la droite"],
+    D: ["Face du bas", "un quart de tour vers la droite", "un quart de tour vers la gauche"],
+    R: ["Face droite", "un quart de tour vers le haut", "un quart de tour vers le bas"],
+    L: ["Face gauche", "un quart de tour vers le bas", "un quart de tour vers le haut"],
+    F: ["Face avant", "un quart de tour dans le sens horaire", "un quart de tour dans le sens anti-horaire"],
+    B: ["Face arrière", "un quart de tour, le haut part vers la gauche", "un quart de tour, le haut part vers la droite"],
+  },
+  nl: {
+    U: ["Bovenkant", "een kwartslag naar links", "een kwartslag naar rechts"],
+    D: ["Onderkant", "een kwartslag naar rechts", "een kwartslag naar links"],
+    R: ["Rechterkant", "een kwartslag omhoog", "een kwartslag omlaag"],
+    L: ["Linkerkant", "een kwartslag omlaag", "een kwartslag omhoog"],
+    F: ["Voorkant", "een kwartslag met de klok mee", "een kwartslag tegen de klok in"],
+    B: ["Achterkant", "een kwartslag, de bovenkant gaat naar links", "een kwartslag, de bovenkant gaat naar rechts"],
+  },
+  en: {
+    U: ["Top face", "a quarter turn to the left", "a quarter turn to the right"],
+    D: ["Bottom face", "a quarter turn to the right", "a quarter turn to the left"],
+    R: ["Right face", "a quarter turn up", "a quarter turn down"],
+    L: ["Left face", "a quarter turn down", "a quarter turn up"],
+    F: ["Front face", "a quarter turn clockwise", "a quarter turn counterclockwise"],
+    B: ["Back face", "a quarter turn, the top going left", "a quarter turn, the top going right"],
+  },
+});
+const HALF_TURN = tr({ fr: "un demi-tour", nl: "een halve slag", en: "a half turn" });
 
-const ROTATION_TEXT: Record<string, [string, string, string]> = {
-  y: ["la face droite vient devant toi", "la face gauche vient devant toi", "la face arrière vient devant toi"],
-  x: ["la face avant monte en haut", "la face du haut vient devant toi", "le bas passe en haut"],
-  z: ["le haut part à droite", "le haut part à gauche", "le bas passe en haut, garde la même face devant toi"],
-};
+const ROTATION_TEXT: Record<string, [string, string, string]> = tr({
+  fr: {
+    y: ["la face droite vient devant toi", "la face gauche vient devant toi", "la face arrière vient devant toi"],
+    x: ["la face avant monte en haut", "la face du haut vient devant toi", "le bas passe en haut"],
+    z: ["le haut part à droite", "le haut part à gauche", "le bas passe en haut, garde la même face devant toi"],
+  },
+  nl: {
+    y: ["de rechterkant komt naar voren", "de linkerkant komt naar voren", "de achterkant komt naar voren"],
+    x: ["de voorkant gaat naar boven", "de bovenkant komt naar voren", "de onderkant gaat naar boven"],
+    z: ["de bovenkant gaat naar rechts", "de bovenkant gaat naar links", "de onderkant gaat naar boven, houd dezelfde kant vooraan"],
+  },
+  en: {
+    y: ["the right face comes to the front", "the left face comes to the front", "the back face comes to the front"],
+    x: ["the front face goes to the top", "the top face comes to the front", "the bottom goes to the top"],
+    z: ["the top goes to the right", "the top goes to the left", "the bottom goes to the top, keep the same face in front"],
+  },
+});
+const TURN_CUBE = tr({ fr: "Tourne tout le cube", nl: "Draai de hele kubus", en: "Turn the whole cube" });
 
-/** French instruction for a move, as seen from the front. */
-export function describeMove(move: string): string {
+/** What a move does, as seen from the front: the face it turns, and how. */
+export function describeMove(move: string): [string, string] {
   const turns = quarterTurns(move);
   const pick = <T,>([cw, ccw, half]: [T, T, T]) => (turns === 2 ? half : turns === 1 ? cw : ccw);
-  if (isRotation(move)) return `Tourne tout le cube : ${pick(ROTATION_TEXT[move[0]])}`;
+  if (isRotation(move)) return [TURN_CUBE, pick(ROTATION_TEXT[move[0]])];
   const [name, cw, ccw] = DIRECTIONS[move[0] as Face];
-  return `${name} : ${pick([cw, ccw, "un demi-tour"])}`;
+  return [name, pick([cw, ccw, HALF_TURN])];
 }
 
 function lab([r, g, b]: RGB): RGB {

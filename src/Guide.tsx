@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import CubeView from "./CubeView";
-import { Back, Chevron } from "./Home";
+import { Back, Chevron, HOME, modeTitle } from "./Home";
 import { Chip, Colored } from "./Scanner";
 import { findPiece, homeOf, planStates, STAGES, type Group } from "./beginner";
 import { describeMove, upright, type Face } from "./cube";
+import { lang, nOf, tr } from "./i18n";
 
 const FACES_EN: [string, string][] = [["R", "Right"], ["L", "Left"], ["U", "Up"], ["D", "Down"], ["F", "Front"], ["B", "Back"]];
 
@@ -12,23 +13,51 @@ function Notation() {
   const letter = (m: string) => <span className="wide text-chalk">{m}</span>;
   return (
     <details className="text-left text-sm text-mist phone:order-1">
-      <summary className="cursor-pointer text-chalk/80">Que veulent dire les lettres ?</summary>
+      <summary className="cursor-pointer text-chalk/80">
+        {tr({ fr: "Que veulent dire les lettres ?", nl: "Wat betekenen de letters?", en: "What do the letters mean?" })}
+      </summary>
       <div className="mt-2 flex flex-col gap-2">
         <p>
-          C'est la notation standard des cubeurs. Chaque lettre est l'initiale anglaise d'une face ; seule, elle
-          veut dire un quart de tour dans le sens des aiguilles d'une montre, comme si tu regardais cette face en face.
+          {tr({
+            fr: "C'est la notation standard des cubeurs. Chaque lettre est l'initiale anglaise d'une face ; seule, elle veut dire un quart de tour dans le sens des aiguilles d'une montre, comme si tu regardais cette face en face.",
+            nl: "Dit is de standaardnotatie van kubers. Elke letter is de Engelse beginletter van een kant; alleen betekent ze een kwartslag met de klok mee, alsof je recht naar die kant kijkt.",
+            en: "This is the standard notation cubers use. Each letter is the initial of a face; on its own, it means a quarter turn clockwise, as if you were looking straight at that face.",
+          })}
         </p>
         <ul className="grid gap-1 sm:grid-cols-2">
           {FACES_EN.map(([m, en]) => (
             <li key={m}>
-              {letter(m)} <span className="opacity-70">({en})</span> : {describeMove(m).replace(" : ", ", ")}
+              {/* The English name only helps where it is not already the face's name. */}
+              {letter(m)} {lang !== "en" && <span className="opacity-70">({en})</span>}
+              {tr({ fr: " : ", nl: ": ", en: ": " })}
+              {describeMove(m).join(", ")}
             </li>
           ))}
         </ul>
         <p>
-          {letter("'")} (prime) : le même quart de tour dans l'autre sens, {letter("R'")} défait {letter("R")}.{" "}
-          {letter("2")} : un demi-tour, {letter("U2")} = {letter("U U")}. {letter("x y z")} : tout le cube tourne
-          dans ta main, comme {letter("R")}, {letter("U")} et {letter("F")}.
+          {tr({
+            fr: (
+              <>
+                {letter("'")} (prime) : le même quart de tour dans l'autre sens, {letter("R'")} défait {letter("R")}.{" "}
+                {letter("2")} : un demi-tour, {letter("U2")} = {letter("U U")}. {letter("x y z")} : tout le cube tourne
+                dans ta main, comme {letter("R")}, {letter("U")} et {letter("F")}.
+              </>
+            ),
+            nl: (
+              <>
+                {letter("'")} (prime): dezelfde kwartslag in de andere richting, {letter("R'")} maakt {letter("R")} ongedaan.{" "}
+                {letter("2")}: een halve slag, {letter("U2")} = {letter("U U")}. {letter("x y z")}: de hele kubus draait
+                in je hand, zoals {letter("R")}, {letter("U")} en {letter("F")}.
+              </>
+            ),
+            en: (
+              <>
+                {letter("'")} (prime): the same quarter turn the other way, {letter("R'")} undoes {letter("R")}.{" "}
+                {letter("2")}: a half turn, {letter("U2")} = {letter("U U")}. {letter("x y z")}: the whole cube turns
+                in your hand, like {letter("R")}, {letter("U")} and {letter("F")}.
+              </>
+            ),
+          })}
         </p>
       </div>
     </details>
@@ -37,13 +66,17 @@ function Notation() {
 
 /** "Face du haut : un quart de tour…" with the face in bold. */
 function MoveText({ move }: { move: string }) {
-  const [face, turn] = describeMove(move).split(" : ");
+  const [face, turn] = describeMove(move);
   return (
     <p>
       <span className="font-semibold text-chalk">{face}</span> <span className="text-mist">{turn}</span>
     </p>
   );
 }
+
+/** « 20 coups », "1 move". */
+const moves = (n: number) =>
+  tr({ fr: `${n} coup${n > 1 ? "s" : ""}`, nl: `${n} ${n === 1 ? "zet" : "zetten"}`, en: `${n} move${n === 1 ? "" : "s"}` });
 
 type GuideProps = {
   start: string;
@@ -83,7 +116,8 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   // Learn and course modes walk one instruction at a time; the fast mode is one long sequence.
   const groupStart = flat.findIndex((f) => f.group === flat[step]?.group);
   const chips = flat.map((f, i) => ({ ...f, i })).filter((f) => !learn || f.group === flat[step]?.group);
-  const position = learn ? `${step - groupStart + 1} sur ${chips.length}` : `${step + 1} sur ${total}`;
+  const [n, of] = learn ? [step - groupStart + 1, chips.length] : [step + 1, total];
+  const position = nOf(n, of);
 
   // Progress: one segment per stage, as long as its moves.
   const current = group?.stage ?? STAGES.length - 1;
@@ -105,18 +139,19 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-4 p-4 pb-28 md:px-8 roomy:pb-6 md:phone:gap-2 md:phone:pt-2 md:phone:pb-20">
+    <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-28 md:px-8 roomy:pb-6 md:phone:gap-2 md:phone:pt-2 md:phone:pb-20">
       <div className="flex items-center justify-between gap-3 text-sm text-mist">
-        <Back label="Accueil" onClick={onHome} />
+        <Back label={HOME} onClick={onHome} />
         <p className="text-right">
-          {course ? (
-            "Cube d'exemple"
-          ) : (
-            <>
-              <Chip face={state[4] as Face} /> en haut, <Chip face={state[22] as Face} /> devant
-              {learn ? "" : ", sans le retourner"}
-            </>
-          )}
+          {course
+            ? tr({ fr: "Cube d'exemple", nl: "Voorbeeldkubus", en: "Sample cube" })
+            : (
+              <>
+                <Chip face={state[4] as Face} /> {tr({ fr: "en haut", nl: "boven", en: "on top" })}, <Chip face={state[22] as Face} />{" "}
+                {tr({ fr: "devant", nl: "vooraan", en: "in front" })}
+                {!learn && tr({ fr: ", sans le retourner", nl: ", zonder hem om te draaien", en: ", without turning it over" })}
+              </>
+            )}
         </p>
       </div>
 
@@ -144,7 +179,9 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
             <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 [&::-webkit-details-marker]:hidden">
               <span className="wide text-lg md:text-xl">{stage.title}</span>
               <span className="flex items-center gap-1 text-sm whitespace-nowrap text-mist">
-                {current === 0 ? "pour commencer" : `étape ${current} sur ${STAGES.length - 1}`}
+                {current === 0
+                  ? tr({ fr: "pour commencer", nl: "om te beginnen", en: "to begin" })
+                  : `${tr({ fr: "étape", nl: "stap", en: "step" })} ${nOf(current, STAGES.length - 1)}`}
                 <Chevron to="down" className="transition group-open:rotate-180" />
               </span>
             </summary>
@@ -158,7 +195,7 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                   >
                     <span className="w-4 text-mist">{i}</span>
                     <span className="flex-1">{s.title}</span>
-                    {firsts[i] < 0 && <span className="text-xs">déjà fait</span>}
+                    {firsts[i] < 0 && <span className="text-xs">{tr({ fr: "déjà fait", nl: "al gedaan", en: "already done" })}</span>}
                   </button>
                 </li>
               ))}
@@ -166,8 +203,8 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
           </details>
         ) : (
           <p className="flex items-baseline justify-between">
-            <span className="wide text-lg md:text-xl">Résoudre mon cube</span>
-            <span className="text-sm text-mist">{total} coups</span>
+            <span className="wide text-lg md:text-xl">{modeTitle("fast")}</span>
+            <span className="text-sm text-mist">{moves(total)}</span>
           </p>
         )}
         {cases.length > 1 && (
@@ -194,11 +231,21 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
         <div className="flex flex-col gap-4">
           {done ? (
             <div>
-              <p className="wide text-4xl">{course ? "Cours terminé" : "Résolu !"}</p>
+              <p className="wide text-4xl">
+                {course
+                  ? tr({ fr: "Cours terminé", nl: "Cursus voltooid", en: "Course complete" })
+                  : tr({ fr: "Résolu !", nl: "Opgelost!", en: "Solved!" })}
+              </p>
               <p className="mt-2 text-mist">
                 {course
-                  ? "Prends ton cube et refais chaque étape : la liste des étapes te ramène à n'importe quel cas."
-                  : total ? `${total} coups, bravo.` : "Ton cube était déjà résolu."}
+                  ? tr({
+                      fr: "Prends ton cube et refais chaque étape : la liste des étapes te ramène à n'importe quel cas.",
+                      nl: "Neem je kubus en doe elke stap opnieuw: via de lijst met stappen kom je terug bij elk geval.",
+                      en: "Grab your cube and redo each step: the step list takes you back to any case.",
+                    })
+                  : total
+                    ? `${moves(total)}${tr({ fr: ", bravo.", nl: ", goed gedaan.", en: ", well done." })}`
+                    : tr({ fr: "Ton cube était déjà résolu.", nl: "Je kubus was al opgelost.", en: "Your cube was already solved." })}
               </p>
             </div>
           ) : (
@@ -215,19 +262,23 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                     <p className="mt-2 flex gap-4 text-xs text-mist">
                       <span className="flex items-center gap-1.5">
                         <i className="size-2.5 rounded-[3px] bg-piece" />
-                        {piece.length === 3 ? "le coin" : "l'arête"}
+                        {piece.length === 3
+                          ? tr({ fr: "le coin", nl: "het hoekstuk", en: "the corner" })
+                          : tr({ fr: "l'arête", nl: "het randstuk", en: "the edge" })}
                       </span>
                       {target && (
                         <span className="flex items-center gap-1.5">
                           <i className="size-2.5 rounded-[3px] bg-place" />
-                          sa place
+                          {tr({ fr: "sa place", nl: "zijn plek", en: "its place" })}
                         </span>
                       )}
                     </p>
                   )}
                   {stage && (
                     <details className="mt-3 border-t border-edge pt-3 text-sm text-mist">
-                      <summary className="cursor-pointer text-chalk/80">Comment ça marche ?</summary>
+                      <summary className="cursor-pointer text-chalk/80">
+                        {tr({ fr: "Comment ça marche ?", nl: "Hoe werkt het?", en: "How does it work?" })}
+                      </summary>
                       <p className="mt-1">
                         <span className="text-chalk">{stage.goal}</span> <Colored text={stage.how} />
                       </p>
@@ -236,7 +287,9 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                 </section>
               )}
               <div>
-                <p className="text-sm text-mist phone:hidden">Coup {position}</p>
+                <p className="text-sm text-mist phone:hidden">
+                  {tr({ fr: "Coup", nl: "Zet", en: "Move" })} {position}
+                </p>
                 <p className="wide text-6xl phone:hidden">{move}</p>
                 <div className="mt-1 phone:mt-0">
                   <MoveText move={move!} />
@@ -248,14 +301,16 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
           {/* A bar fixed under the thumb on phones, with the move in the middle; inline on roomy screens. */}
           <div className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-edge bg-plastic/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur md:phone:pt-1.5 md:phone:pb-1.5 roomy:static roomy:grid-cols-2 roomy:border-0 roomy:bg-transparent roomy:p-0 roomy:backdrop-blur-none">
             <button className="btn btn-ghost max-[380px]:px-2 max-[380px]:text-sm" disabled={step === 0} onClick={() => go(-1)}>
-              Précédent
+              {tr({ fr: "Précédent", nl: "Vorige", en: "Previous" })}
             </button>
             <span className="min-w-14 text-center roomy:hidden">
               <span className="wide block text-3xl leading-none">{move ?? "✓"}</span>
               {!done && <span className="mt-1 block text-[11px] text-mist">{position}</span>}
             </span>
             <button className="btn btn-main max-[380px]:px-2 max-[380px]:text-sm" disabled={done} onClick={() => go(1)}>
-              {step === total - 1 ? "Terminer" : "Suivant"}
+              {step === total - 1
+                ? tr({ fr: "Terminer", nl: "Klaar", en: "Finish" })
+                : tr({ fr: "Suivant", nl: "Volgende", en: "Next" })}
             </button>
           </div>
 
@@ -264,7 +319,7 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
               <li key={i}>
                 <button
                   onClick={() => onStep(i)}
-                  title={describeMove(m)}
+                  title={describeMove(m).join(", ")}
                   className={`min-w-10 rounded-lg px-2 py-1 text-sm font-semibold [font-stretch:125%] ${
                     i === step ? "bg-chalk text-plastic" : i < step ? "bg-shell text-mist/60" : "bg-shell text-chalk"
                   }`}
@@ -280,12 +335,12 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
 
       {!course && (
         <div className="flex justify-center gap-4 text-sm text-mist">
-          <span>Perdu ?</span>
+          <span>{tr({ fr: "Perdu ?", nl: "Kwijt?", en: "Lost?" })}</span>
           <button className="font-semibold text-chalk underline underline-offset-2" onClick={onScan}>
-            Rescanner le cube
+            {tr({ fr: "Rescanner le cube", nl: "Kubus opnieuw scannen", en: "Rescan the cube" })}
           </button>
           <button className="font-semibold text-chalk underline underline-offset-2" onClick={() => onEdit(upright(state))}>
-            Corriger les couleurs
+            {tr({ fr: "Corriger les couleurs", nl: "Kleuren corrigeren", en: "Fix the colors" })}
           </button>
         </div>
       )}

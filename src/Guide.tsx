@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import CubeView from "./CubeView";
 import { Back, Chevron } from "./Home";
-import { Chip } from "./Scanner";
+import { Chip, Colored } from "./Scanner";
 import { findPiece, homeOf, planStates, STAGES, type Group } from "./beginner";
 import { describeMove, upright, type Face } from "./cube";
 
@@ -206,7 +206,11 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
               {(group?.text || stage) && (
                 <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
                   {group?.title && <p className="mb-1 font-semibold">{group.title}</p>}
-                  {group?.text && <p>{group.text}</p>}
+                  {group?.text && (
+                    <p>
+                      <Colored text={group.text} />
+                    </p>
+                  )}
                   {piece && (
                     <p className="mt-2 flex gap-4 text-xs text-mist">
                       <span className="flex items-center gap-1.5">
@@ -225,7 +229,7 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                     <details className="mt-3 border-t border-edge pt-3 text-sm text-mist">
                       <summary className="cursor-pointer text-chalk/80">Comment ça marche ?</summary>
                       <p className="mt-1">
-                        <span className="text-chalk">{stage.goal}</span> {stage.how}
+                        <span className="text-chalk">{stage.goal}</span> <Colored text={stage.how} />
                       </p>
                     </details>
                   )}

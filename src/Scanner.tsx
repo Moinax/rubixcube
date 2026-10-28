@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Back } from "./Home";
 import { classify, FACE_COLORS, FACE_NAMES, FACES, feminine, vivid, type Face, type RGB } from "./cube";
 
@@ -40,6 +40,28 @@ function sampleGrid(data: Uint8ClampedArray): RGB[] {
       }
     return total.map((t) => Math.round(t / n)) as RGB;
   });
+}
+
+// Readable on the dark plastic: white as chalk, blue a little lighter than its sticker.
+const TEXT_COLORS: Record<Face, string> = { ...FACE_COLORS, U: "var(--color-chalk)", B: "#4f8ff7" };
+const COLOR_FACES: Record<string, Face> = { blanc: "U", blanche: "U", rouge: "R", vert: "F", verte: "F", jaune: "D", orange: "L", bleu: "B", bleue: "B" };
+const COLOR_WORDS = /(?<!\p{L})(blanche|blanc|rouge|verte|vert|jaune|orange|bleue|bleu)s?(?!\p{L})/giu;
+
+/** `text` with every color name in bold and in its face color: « le centre <b>rouge</b> ». */
+export function Colored({ text }: { text: string }) {
+  const parts: ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(COLOR_WORDS)) {
+    parts.push(text.slice(last, m.index));
+    parts.push(
+      <b key={m.index} className="font-semibold" style={{ color: TEXT_COLORS[COLOR_FACES[m[1].toLowerCase()]] }}>
+        {m[0]}
+      </b>,
+    );
+    last = m.index + m[0].length;
+  }
+  parts.push(text.slice(last));
+  return <>{parts}</>;
 }
 
 export const Chip = ({ face }: { face: Face }) => (
@@ -198,8 +220,7 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
                   Face {feminine(current.face)}
                 </h1>
                 <p className="mt-1 text-mist">
-                  {faces[step!] ? "Refais cette face." : current.hint} Le {FACE_NAMES[current.top]} en haut, tiens-la
-                  immobile dans le cadre.
+                  <Colored text={`${faces[step!] ? "Refais cette face." : current.hint} Le ${FACE_NAMES[current.top]} en haut, tiens-la immobile dans le cadre.`} />
                 </p>
               </>
             ) : (

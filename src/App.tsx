@@ -3,7 +3,7 @@ import CubeView from "./CubeView";
 import Guide from "./Guide";
 import { Back, Home, InputChoice, type Mode, type Resume } from "./Home";
 import NetEditor from "./NetEditor";
-import Scanner, { type Scan } from "./Scanner";
+import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
 import { COURSE } from "./course";
 import { SOLVED, solve, suspects, validate } from "./cube";
@@ -213,7 +213,7 @@ function Editor({ state, mode, scanned, onChange, onScan, onBack, onSolve }: Edi
             <svg viewBox="0 0 24 24" aria-hidden className="mt-0.5 size-4 flex-none fill-none stroke-current stroke-2">
               <path d={error ? "M12 4l9 16H3zM12 10v4M12 17v.5" : "M5 12.5l4.5 4.5L19 7.5"} />
             </svg>
-            {error ?? "Ce cube est valide."}
+            <span>{error ? <Colored text={error} /> : "Ce cube est valide."}</span>
           </p>
           <NetEditor state={state} onChange={onChange} highlight={error ? suspects(state) : undefined} />
           {!wide && (

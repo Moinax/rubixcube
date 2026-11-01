@@ -62,7 +62,7 @@ const MODES: { id: Mode; title: string; text: string; face: string; marks?: Reco
       nl: "De kortste weg, een twintigtal zetten berekend voor je kubus: niets te onthouden.",
       en: "The shortest path, about twenty moves worked out for your cube: nothing to memorize.",
     }),
-    face: "RUFBLDFRU",
+    face: "UDUDUDUDU", // the end of phase 1: only white and yellow on top
   },
 ];
 const mode = (id: Mode) => MODES.find((m) => m.id === id)!;

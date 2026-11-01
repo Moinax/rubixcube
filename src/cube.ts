@@ -64,6 +64,8 @@ const INDEX = new Map(STICKERS.map((s, i) => [`${s.pos}|${s.normal}`, i]));
 
 /** Facelet index of the sticker on cubie `pos` facing `normal`, if any. */
 export const stickerAt = (pos: Vec, normal: Vec) => INDEX.get(`${pos}|${normal}`);
+/** The color of the center facing `normal`. */
+export const center = (s: string, normal: Vec) => s[stickerAt(normal, normal)!];
 
 const dot = (a: Vec, b: Vec) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 

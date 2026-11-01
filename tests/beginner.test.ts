@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Cube from "cubejs";
-import { algOf, beginnerSolve, findPiece, homeOf, LEFT, RIGHT, SEXY, STAGES, times } from "../src/beginner.ts";
+import { algOf, beginnerSolve, findPiece, homeOf, LEFT, RIGHT, SEXY, slotOf, STAGES, times } from "../src/beginner.ts";
 import { applyMove, simplify, SOLVED, upright } from "../src/cube.ts";
 
 // Solved up to a whole-cube rotation: every face is one color.
@@ -54,4 +54,17 @@ test("each sequence is named, after its setup", () => {
       // The setup keeps its own turns: U then the right insert is not merged into U2.
       if (g.stage === 4) assert.ok([RIGHT, LEFT].includes(alg!.moves), g.text);
     }
+});
+
+test("a place named by its centers is found again on the cube turned", () => {
+  const places = [-1, 0, 1].flatMap((x) => [-1, 0, 1].flatMap((y) => [-1, 0, 1].map((z) => [x, y, z] as [number, number, number])));
+  for (const turn of [[], ["y"], ["x", "z2"]]) {
+    const s = turn.reduce(applyMove, "R U F' L2 D".split(" ").reduce(applyMove, SOLVED));
+    for (const p of places.filter((p) => p.filter(Boolean).length >= 2)) {
+      assert.deepEqual(homeOf(s, slotOf(s, p)), p);
+      // The same place, after one more turn of the whole cube, is where that turn takes it.
+      const y = applyMove(s, "y");
+      assert.deepEqual(homeOf(y, slotOf(s, p)), [0 - p[2] || 0, p[1], p[0]]);
+    }
+  }
 });

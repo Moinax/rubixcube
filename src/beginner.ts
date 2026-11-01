@@ -1,12 +1,12 @@
 import { capitalize, tr } from "./i18n.ts";
-import { applyMove, colorsOf as key, FACE_NAMES, INFLECTED, NORMALS, PIECES, simplify, STICKERS, stickerAt, type Face, type Vec } from "./cube.ts";
+import { applyMove, center, colorsOf as key, FACE_NAMES, INFLECTED, NORMALS, PIECES, simplify, STICKERS, stickerAt, type Face, type Vec } from "./cube.ts";
 
 // Layer-by-layer beginner method, played like a human would: hold the cube
 // yellow up, turn it with y to face the slot you work on, and apply the
 // handful of algorithms the method teaches. Each step is simulated, never searched,
 // except the daisy, which is intuitive anyway.
 
-/** `toHome`: the stage puts each piece in its final place, which the guide outlines. */
+/** `toHome`: the stage puts each piece in its final place. */
 export type Stage = { title: string; goal: string; how: string; toHome?: boolean };
 /** Moves to play with their instruction, and the named sequence they end with; course demos also carry a title and their own start cube. */
 export type Group = { stage: number; text: string; moves: string[]; piece?: string; alg?: Alg; title?: string; from?: string };
@@ -199,7 +199,6 @@ export const play = (state: string, moves: string[]) => moves.reduce(applyMove, 
 // Cubies as their facelet indices, corners and edges only.
 const CUBIES = PIECES.map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));
 
-const center = (s: string, normal: Vec) => s[stickerAt(normal, normal)!];
 const colorAt = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
 export const findPiece = (s: string, piece: string) => CUBIES.find((c) => key(s, c.idx) === piece)!.pos;
 /** The cube before each move of a plan, then after the last; a group with `from` (a course demo) starts from it. */
@@ -212,6 +211,9 @@ export function planStates(start: string, groups: Group[]): string[] {
   return out;
 }
 
+/** The place at `pos`, named by the centers around it: `homeOf` finds it again on the cube turned. */
+export const slotOf = (s: string, pos: Vec) =>
+  (Object.values(NORMALS) as Vec[]).filter((n) => n.some((v, i) => v && v === pos[i])).map((n) => center(s, n)).join("");
 /** Where `piece` belongs: next to the centers of its colors. */
 export const homeOf = (s: string, piece: string) =>
   (Object.values(NORMALS) as Vec[]).filter((n) => piece.includes(center(s, n))).reduce((a, n) => a.map((v, i) => v + n[i]) as Vec, [0, 0, 0] as Vec);
@@ -228,7 +230,9 @@ const placedAt = (s: string, pos: Vec) => {
 };
 const pieces = (s: string, test: (colors: string, pos: Vec) => boolean) =>
   CUBIES.filter((c) => test(key(s, c.idx), c.pos));
-const names = (piece: string) => [...piece].map((c) => FACE_NAMES[c as Face]).join("-");
+/** « blanc-vert-orange »: white or yellow first, as cubers name a piece. */
+export const names = (piece: string) =>
+  [...piece].sort((a, b) => "UDFBRL".indexOf(a) - "UDFBRL".indexOf(b)).map((c) => FACE_NAMES[c as Face]).join("-");
 
 /** Cheapest y^r U^k (r < ys, k < us) for which `ok` holds on the result. */
 function setup(s: string, ok: (s: string) => boolean, ys = 4, us = 4): string[] | undefined {

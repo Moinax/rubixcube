@@ -3,8 +3,11 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { findPiece, homeOf } from "./beginner";
-import { applyMove, FACE_COLORS, inLayer, isRotation, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
+import { applyMove, center, FACE_COLORS, inLayer, isRotation, moveAxis, NORMALS, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
 
 // BoxGeometry material order: +x, -x, +y, -y, +z, -z.
 const SIDES: Vec[] = [
@@ -17,16 +20,26 @@ const SIDES: Vec[] = [
 ];
 const GEOMETRY = new RoundedBoxGeometry(0.96, 0.96, 0.96, 4, 0.14);
 const PLASTIC = new THREE.MeshStandardMaterial({ color: "#1a1b20", roughness: 0.6 });
-const OUTLINE = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.06, 1.06, 1.06));
-const OUTLINE_MATERIAL = new THREE.LineBasicMaterial({ color: "#f0abfc", transparent: true });
-const TARGET = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.12, 1.12, 1.12));
-const TARGET_MATERIAL = new THREE.LineBasicMaterial({ color: "#34d399", transparent: true });
-const DIM = new THREE.MeshStandardMaterial({ color: "#3a3d45", roughness: 0.5 });
-const MATERIALS = new Map<string, THREE.Material>();
-const material = (color: string) => {
-  if (!MATERIALS.has(color))
-    MATERIALS.set(color, new THREE.MeshPhysicalMaterial({ color, roughness: 0.28, clearcoat: 0.6 }));
-  return MATERIALS.get(color)!;
+// Outlines in screen pixels: WebGL draws its own lines 1 px wide, too thin to spot.
+const edges = (size: number) =>
+  new LineSegmentsGeometry().setPositions(new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size)).attributes.position.array as Float32Array);
+const OUTLINE = edges(1.08);
+const PIECE_LINE = new LineMaterial({ color: "#e879f9", linewidth: 4, transparent: true });
+const TARGET = edges(1.12);
+const PLACE_LINE = new LineMaterial({ color: "#34d399", linewidth: 4, transparent: true });
+const GLASS_BOX = new THREE.BoxGeometry(1.1, 1.1, 1.1);
+const GLASS_OPACITY = 0.35;
+const GLASS = new THREE.MeshBasicMaterial({ color: "#34d399", transparent: true, opacity: GLASS_OPACITY, depthWrite: false });
+// Every sticker but the piece's dims together in the spotlight: one material per color, recolored each frame.
+const SHADOW = new THREE.Color("#25272d");
+const sticker = (color: string, opacity = 1) =>
+  new THREE.MeshPhysicalMaterial({ color, roughness: 0.28, clearcoat: 0.6, transparent: opacity < 1, opacity });
+const MATERIALS = new Map<string, THREE.MeshPhysicalMaterial>();
+const BRIGHT = new Map<string, THREE.MeshPhysicalMaterial>();
+const GHOST = new Map<string, THREE.MeshPhysicalMaterial>(); // the flying copy's, faded in and out
+const cached = (map: Map<string, THREE.MeshPhysicalMaterial>, color: string) => {
+  if (!map.has(color)) map.set(color, sticker(color, map === GHOST ? 0 : 1));
+  return map.get(color)!;
 };
 
 const CAMERA: Vec = [4.6, 4, 6.2];
@@ -39,27 +52,49 @@ function bestView(places: Vec[]): [number, number] {
   return ([[1, 1], [-1, 1], [1, -1], [-1, -1]] as [number, number][]).reduce((best, v) => (seen(v) > seen(best) ? v : best));
 }
 
+/** Which way each color of the cubie at `pos` faces, as directions in the frame of the cube `frame`. */
+function facing(s: string, pos: Vec, frame = s) {
+  // `s` may hold the cube turned (x, y, z) from `frame`: the centers say which of its directions is which.
+  const inFrame = (n: Vec) => Object.values(NORMALS).find((m) => center(frame, m) === center(s, n))!;
+  return new Map(
+    SIDES.flatMap((n) => {
+      const i = stickerAt(pos, n);
+      return i === undefined ? [] : [[s[i], new THREE.Vector3(...inFrame(n))] as const];
+    }),
+  );
+}
+/** The turn that takes the piece from how it sits in `s` to how it sits in `end`. */
+function landing(s: string, end: string, piece: string) {
+  const [a, b] = [facing(s, findPiece(s, piece)), facing(end, findPiece(end, piece), s)];
+  const [c1, c2] = [...a.keys()];
+  const basis = (m: typeof a) => new THREE.Matrix4().makeBasis(m.get(c1)!, m.get(c2)!, m.get(c1)!.clone().cross(m.get(c2)!));
+  return new THREE.Quaternion().setFromRotationMatrix(basis(b).multiply(basis(a).transpose()));
+}
+
+const ease = (k: number) => k * k * (3 - 2 * k);
+
 type Props = {
   state: string;
   moves?: string[];
-  preview?: boolean;
+  fly?: string;
   onEnd?: () => void;
   piece?: string;
-  place?: boolean;
-  frame?: boolean;
+  place?: string;
+  spot?: boolean;
   autoRotate?: boolean;
 };
 
 /**
  * Renders `state`; when `moves` are set, plays them one after the other from `state`, then calls `onEnd`.
- * `piece` (its colors) is outlined, and with `place` the place it goes to, in green. A `preview` plays
- * faster with every other piece greyed, and holds its end a moment. `frame` turns the camera toward
- * the piece and its place when they hide, and makes their outlines pulse; without it, the camera
- * comes back in front, where the moves are played from.
+ * `piece` (its colors) is outlined, and `place` (the colors of the centers around it) is a green glass box.
+ * `fly` (the cube the piece's sequence leads to) sends a copy of the piece flying to the place, landing
+ * the way the sequence leaves it, then calls `onEnd`. `spot` dims the rest of the cube, makes the outlines
+ * pulse and turns the camera toward the piece and its place when they hide; without it, the camera comes
+ * back in front, where the moves are played from.
  */
-export default function CubeView({ state, moves, preview, onEnd, piece, place, frame, autoRotate = false }: Props) {
+export default function CubeView({ state, moves, fly, onEnd, piece, place, spot, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; aim?: number; pulse?: boolean }>(null);
+  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; aim?: number; reach?: number; spot?: boolean }>(null);
   const ended = useRef(onEnd);
   ended.current = onEnd;
 
@@ -89,19 +124,32 @@ export default function CubeView({ state, moves, preview, onEnd, piece, place, f
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      PIECE_LINE.resolution.set(w, h);
+      PLACE_LINE.resolution.set(w, h);
     });
     resize.observe(el);
     const turn = new THREE.Spherical();
+    let dim = 0;
     renderer.setAnimationLoop((t) => {
       const ctx = scene.current;
-      if (ctx?.aim !== undefined) {
+      if (ctx?.aim !== undefined || ctx?.reach !== undefined) {
         turn.setFromVector3(camera.position);
-        const d = Math.atan2(Math.sin(ctx.aim - turn.theta), Math.cos(ctx.aim - turn.theta));
+        const d = Math.atan2(Math.sin((ctx.aim ?? turn.theta) - turn.theta), Math.cos((ctx.aim ?? turn.theta) - turn.theta));
+        const r = (ctx.reach ?? turn.radius) - turn.radius;
         turn.theta += Math.abs(d) < 0.003 ? d : d * 0.08;
+        turn.radius += Math.abs(r) < 0.01 ? r : r * 0.08;
         if (Math.abs(d) < 0.003) ctx.aim = undefined;
+        if (Math.abs(r) < 0.01) ctx.reach = undefined;
         camera.position.setFromSpherical(turn);
       }
-      OUTLINE_MATERIAL.opacity = TARGET_MATERIAL.opacity = ctx?.pulse ? 0.7 + 0.3 * Math.cos(t / 180) : 1;
+      const goal = ctx?.spot ? 1 : 0;
+      if (dim !== goal) {
+        dim = Math.abs(goal - dim) < 0.01 ? goal : dim + (goal - dim) * 0.12;
+        for (const [color, m] of MATERIALS) m.color.set(color).lerp(SHADOW, 0.75 * dim);
+      }
+      const breath = ctx?.spot ? 0.8 + 0.2 * Math.cos(t / 200) : 1;
+      PIECE_LINE.opacity = PLACE_LINE.opacity = breath;
+      GLASS.opacity = GLASS_OPACITY * breath;
       controls.update();
       ctx?.onFrame?.(t);
       renderer.render(world, camera);
@@ -116,6 +164,7 @@ export default function CubeView({ state, moves, preview, onEnd, piece, place, f
       renderer.forceContextLoss(); // browsers cap live WebGL contexts, and screens remount this view
       renderer.domElement.remove();
       scene.current = null;
+      for (const [color, m] of MATERIALS) m.color.set(color); // the next view starts undimmed
     };
   }, []);
 
@@ -125,8 +174,8 @@ export default function CubeView({ state, moves, preview, onEnd, piece, place, f
 
   useEffect(() => {
     const ctx = scene.current!;
-    const show = (s: string, i: number) => {
-      const move = moves?.[i];
+    /** The cube `s`, with the cubies that `move` turns in the returned layer. */
+    const build = (s: string, move?: string) => {
       const at = piece && `${findPiece(s, piece)}`;
       const layer = new THREE.Group();
       ctx.root.clear();
@@ -136,58 +185,102 @@ export default function CubeView({ state, moves, preview, onEnd, piece, place, f
           for (const z of [-1, 0, 1]) {
             const pos: Vec = [x, y, z];
             if (!x && !y && !z) continue;
+            const mine = `${pos}` === at;
             const mesh = new THREE.Mesh(
               GEOMETRY,
               SIDES.map((side) => {
                 const i = stickerAt(pos, side);
-                return i === undefined ? PLASTIC : preview && `${pos}` !== at ? DIM : material(FACE_COLORS[s[i] as Face]);
+                return i === undefined ? PLASTIC : cached(mine ? BRIGHT : MATERIALS, FACE_COLORS[s[i] as Face]);
               }),
             );
             mesh.position.set(x, y, z);
-            if (`${pos}` === at) mesh.add(new THREE.LineSegments(OUTLINE, OUTLINE_MATERIAL));
+            if (mine) mesh.add(new LineSegments2(OUTLINE, PIECE_LINE));
             (move && inLayer(move, pos) ? layer : ctx.root).add(mesh);
           }
       // The place stays put while a face turns through it, and only follows the whole cube.
       if (piece && place) {
-        const outline = new THREE.LineSegments(TARGET, TARGET_MATERIAL);
-        outline.position.set(...homeOf(s, piece));
-        (move && isRotation(move) ? layer : ctx.root).add(outline);
+        const glass = new THREE.Group().add(new THREE.Mesh(GLASS_BOX, GLASS), new LineSegments2(TARGET, PLACE_LINE));
+        glass.position.set(...homeOf(s, place));
+        (move && isRotation(move) ? layer : ctx.root).add(glass);
       }
+      return layer;
+    };
 
+    const show = (s: string, i: number) => {
+      const move = moves?.[i];
+      const layer = build(s, move);
       if (!move) {
         ctx.onFrame = undefined;
         return;
       }
       const turns = quarterTurns(move);
       const angle = (-Math.PI / 2) * turns;
-      const duration = (turns === 2 ? 1300 : 850) * (preview ? 0.5 : 1);
-      const hold = preview ? 800 : 0; // a preview shows where it starts, once the camera is back in front, then where it ends
+      const duration = turns === 2 ? 1300 : 850;
       const vector = new THREE.Vector3(...moveAxis(move));
       let start: number | undefined;
       ctx.onFrame = (t) => {
-        start ??= t + (i ? 0 : hold);
-        const k = Math.min(1, Math.max(0, (t - start) / duration));
-        layer.quaternion.setFromAxisAngle(vector, angle * k * k * (3 - 2 * k));
+        start ??= t;
+        const k = Math.min(1, (t - start) / duration);
+        layer.quaternion.setFromAxisAngle(vector, angle * ease(k));
         if (k < 1) return;
         if (i + 1 < moves!.length) return show(applyMove(s, move), i + 1);
-        ctx.onFrame = (now) => {
-          if (now - t < hold * 2) return;
-          ctx.onFrame = undefined;
-          ended.current?.();
-        };
+        ctx.onFrame = undefined;
+        ended.current?.();
       };
     };
-    show(state, 0);
-  }, [state, moves?.join(" "), preview, piece, place]);
+
+    if (!(fly && piece && place)) return show(state, 0);
+    build(state);
+    // A copy of the piece rises, flies around the cube (never through it) to the place, turning on the
+    // way to how the sequence leaves it, stays a moment, then fades.
+    const turnTo = landing(state, fly, piece);
+    const at = findPiece(state, piece);
+    const colors = SIDES.map((side) => stickerAt(at, side)).map((i) => (i === undefined ? undefined : FACE_COLORS[state[i] as Face]));
+    const fade = (o: number) => colors.forEach((c) => c && (cached(GHOST, c).opacity = o));
+    fade(0);
+    const copy = new THREE.Mesh(GEOMETRY, colors.map((c) => (c ? cached(GHOST, c) : PLASTIC))).add(new LineSegments2(OUTLINE, PIECE_LINE));
+    copy.scale.setScalar(1.05); // over the cubie at the place, never inside it
+    const flier = new THREE.Group().add(copy);
+    const [from, to] = [new THREE.Vector3(...at), new THREE.Vector3(...homeOf(state, place))];
+    flier.position.copy(from);
+    ctx.root.add(flier);
+    const [out, still, swing, part] = [from.clone().normalize(), new THREE.Quaternion(), new THREE.Quaternion(), new THREE.Quaternion()];
+    swing.setFromUnitVectors(out, to.clone().normalize());
+    const [RISE, FLY, HOLD, OUT] = [500, 1700, 1400, 500];
+    let start: number | undefined;
+    ctx.onFrame = (t) => {
+      start ??= t;
+      const e = t - start;
+      if (e < RISE) return fade(ease(e / RISE));
+      if (e < RISE + FLY) {
+        const k = ease((e - RISE) / FLY);
+        const reach = THREE.MathUtils.lerp(from.length(), to.length(), k) + 0.9 * Math.sin(Math.PI * k);
+        flier.position.copy(out).applyQuaternion(part.slerpQuaternions(still, swing, k)).multiplyScalar(reach);
+        flier.quaternion.slerpQuaternions(still, turnTo, k);
+        return;
+      }
+      flier.position.copy(to);
+      flier.quaternion.copy(turnTo);
+      if (e < RISE + FLY + HOLD) return;
+      fade(1 - Math.min(1, (e - RISE - FLY - HOLD) / OUT));
+      if (e < RISE + FLY + HOLD + OUT) return;
+      ctx.onFrame = undefined;
+      ctx.root.remove(flier);
+      ended.current?.();
+    };
+  }, [state, moves?.join(" "), fly, piece, place]);
 
   // Only a change of view turns the camera, so it stays wherever the user dragged it in between.
-  const view = frame && piece ? bestView([findPiece(state, piece), ...(place ? [homeOf(state, piece)] : [])]) : [1, 1];
+  const view = spot && piece ? bestView([findPiece(state, piece), ...(place ? [homeOf(state, place)] : [])]) : [1, 1];
   useEffect(() => {
     scene.current!.aim = azimuth(view);
   }, [`${view}`]);
   useEffect(() => {
-    scene.current!.pulse = frame;
-  }, [frame]);
+    const ctx = scene.current!;
+    ctx.spot = spot;
+    // Steps back in the spotlight, to make room for the flying piece around the cube.
+    ctx.reach = new THREE.Vector3(...CAMERA).length() * (spot ? 1.3 : 1);
+  }, [spot]);
 
   return <div ref={host} className="relative h-full w-full touch-none" />;
 }

@@ -61,8 +61,9 @@ type GuideProps = {
 
 /** A move playing from `from`, forward or undone (inverted), and the group it belongs to. */
 type Anim = { from: string; move: string; group: Group };
-/** A stop between moves: the goal before a sequence's first move, the result after a demo's last. */
-type Stop = "goal" | "result" | null;
+/** A stop between moves: the goal before a sequence's first move (then "seen", once its animation played),
+ * the result after a stage's or a demo's last. */
+type Stop = "goal" | "seen" | "result" | null;
 
 const DELAYS = [2, 3, 5, 8];
 const DELAY_KEY = "rubixcube:delay";
@@ -163,21 +164,24 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     setFlying(false);
     if (stop === "result") return newCubeAt(step) ? swap(() => land(step)) : land(step);
     if (stop === "goal") {
-      setStop(null);
-      // The autoplay may skip the flight; a press always shows it.
-      setFlying(!playing || showGoal);
+      // The autoplay may skip the flight; a press always shows it, then stays on the goal until the next press.
+      const fly = !playing || showGoal;
+      setStop(fly ? "seen" : null);
+      setFlying(fly);
       cubeBox.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); // on a phone, the card sits below the cube
       return;
     }
+    if (stop === "seen") return setStop(null);
     setAnim({ from: state, move: flat[step].move, group: group! });
     land(step + 1, resultAt(step + 1) ? "result" : undefined);
     // The autoplay stops at the end of the guide, and of each stage: the next one starts on a press.
     if (step + 1 === total || (resultAt(step + 1) && stageEndAt(step + 1))) setAuto(false);
   };
-  const canBack = step > 0 || (!stop && goalAt(step));
+  const canBack = step > 0 || stop === "seen" || (!stop && goalAt(step));
   const back = () => {
     if (fading) return;
     setFlying(false);
+    if (stop === "seen") return setStop("goal");
     if (stop !== "result" && resultAt(step) && (stop === "goal" || !goalAt(step))) {
       setAnim(null);
       return newCubeAt(step) ? swap(() => setStop("result")) : setStop("result");
@@ -267,6 +271,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   // While a move plays, the outlines follow the piece it works on, from where it starts.
   const worked = anim?.group ?? group;
   const settings = useId();
+  // On the goal, before or after its animation: the readout names the piece and where it goes.
+  const aiming = stop === "goal" || stop === "seen";
   // A result stop that closes a stage, rather than one demo among the stage's cases.
   const stageDone = stop === "result" && stageEndAt(step);
   // What ▶ does from here: show the goal, go on to the next demo, play the move; its size never changes.
@@ -274,17 +280,19 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     ? { icon: "done", title: DONE }
     : stop === "goal"
       ? { icon: "goal", label: tr({ fr: "But", nl: "Doel", en: "Goal" }), title: tr({ fr: "Voir le but", nl: "Bekijk het doel", en: "Show the goal" }) }
-      : stop === "result"
-        ? {
-            icon: "next",
-            label: tr({ fr: "Suite", nl: "Verder", en: "Next" }),
-            title: !stageDone
-              ? tr({ fr: "Exemple suivant", nl: "Volgend voorbeeld", en: "Next example" })
-              : learn
-                ? tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next step" })
-                : tr({ fr: "Phase suivante", nl: "Volgende fase", en: "Next phase" }),
-          }
-        : { icon: "play", label: move, title: `${tr({ fr: "Jouer", nl: "Speel", en: "Play" })} ${move}` };
+      : stop === "seen"
+        ? { icon: "next", label: tr({ fr: "Suite", nl: "Verder", en: "Next" }), title: tr({ fr: "Passer aux coups", nl: "Naar de zetten", en: "On to the moves" }) }
+        : stop === "result"
+          ? {
+              icon: "next",
+              label: tr({ fr: "Suite", nl: "Verder", en: "Next" }),
+              title: !stageDone
+                ? tr({ fr: "Exemple suivant", nl: "Volgend voorbeeld", en: "Next example" })
+                : learn
+                  ? tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next step" })
+                  : tr({ fr: "Phase suivante", nl: "Volgende fase", en: "Next phase" }),
+            }
+          : { icon: "play", label: move, title: `${tr({ fr: "Jouer", nl: "Speel", en: "Play" })} ${move}` };
 
   return (
     <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
@@ -395,12 +403,16 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             state={anim?.from ?? state}
             moves={anim ? [anim.move] : undefined}
             fly={flying ? ends[gi!] : undefined}
-            onEnd={() => (anim ? setAnim(null) : setFlying(false))}
+            onEnd={() => {
+              if (anim) return setAnim(null);
+              setFlying(false);
+              if (auto) setStop(null); // the autoplay goes on to the moves; a press does, otherwise
+            }}
             piece={worked?.piece}
             place={worked && slots.get(worked)!.piece}
             pair={worked?.pair}
             pairPlace={worked && slots.get(worked)!.pair}
-            spot={!anim && (stop === "goal" || flying)}
+            spot={!anim && (stop === "goal" || stop === "seen" || flying)}
           />
         </div>
 
@@ -538,11 +550,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               title={move && tr({ fr: "Ce coup dans le lexique", nl: "Deze zet in de woordenlijst", en: "This move in the glossary" })}
               className="wide min-w-12 flex-none text-left text-4xl leading-none enabled:hover:text-white enabled:hover:underline enabled:hover:decoration-2 enabled:hover:underline-offset-4"
             >
-              {stop === "goal" ? <Icon name="goal" className="size-9 text-piece" /> : (move ?? "✓")}
+              {aiming ? <Icon name="goal" className="size-9 text-piece" /> : (move ?? "✓")}
             </button>
             <div className="min-w-0 text-sm leading-snug">
               <p className="text-xs text-mist">
-                {stop === "goal"
+                {aiming
                   ? tr({ fr: "Objectif", nl: "Doel", en: "Goal" })
                   : stop === "result"
                     ? stageDone
@@ -555,7 +567,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
                 {move && part && ` · ${part}`}
               </p>
-              {stop === "goal" && piece && (
+              {aiming && piece && (
                 <p>
                   <span className="font-semibold">
                     <Colored text={`${pieceName(piece)}${group?.pair ? `${AND}${pieceName(group.pair).toLowerCase()}` : ""}`} />

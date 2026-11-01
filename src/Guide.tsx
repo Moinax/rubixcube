@@ -437,7 +437,7 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                           )}
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {runs.map((r) => (
-                              <span key={r} className={`flex gap-1 ${runs.length > 1 ? "rounded-[10px] p-0.5 ring-1 ring-edge" : ""}`}>
+                              <span key={r} className={`flex flex-wrap gap-1 ${runs.length > 1 ? "rounded-[10px] p-0.5 ring-1 ring-edge" : ""}`}>
                                 {own.slice(r, r + size).map((m, c) => {
                                   const i = first + r + c;
                                   return (

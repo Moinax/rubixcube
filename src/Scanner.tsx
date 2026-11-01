@@ -57,22 +57,34 @@ function sampleGrid(data: Uint8ClampedArray): RGB[] {
 }
 
 // Readable on the dark plastic: white as chalk, blue a little lighter than its sticker.
-const TEXT_COLORS: Record<Face, string> = { ...FACE_COLORS, U: "var(--color-chalk)", B: "#4f8ff7" };
 const COLOR_FACES = tr<Record<string, Face>>({
   fr: { blanc: "U", blanche: "U", rouge: "R", vert: "F", verte: "F", jaune: "D", orange: "L", bleu: "B", bleue: "B" },
   nl: { wit: "U", witte: "U", rood: "R", rode: "R", groen: "F", groene: "F", geel: "D", gele: "D", oranje: "L", blauw: "B", blauwe: "B" },
   en: { white: "U", red: "R", green: "F", yellow: "D", orange: "L", blue: "B" },
 });
-const COLOR_WORDS = new RegExp(`(?<!\\p{L})(${Object.keys(COLOR_FACES).join("|")})s?(?!\\p{L})`, "giu");
+const COLOR = `(?:${Object.keys(COLOR_FACES).join("|")})s?`;
+// A color name, or several joined by hyphens (« blanc-vert-rouge »), as a whole word.
+const COLOR_WORDS = new RegExp(`(?<!\\p{L})${COLOR}(?:-${COLOR})*(?!\\p{L})`, "giu");
+const faceOf = (word: string) => COLOR_FACES[word.toLowerCase().replace(/s$/, "")] ?? COLOR_FACES[word.toLowerCase()];
 
-/** `text` with every color name in bold and in its face color: « le centre <b>rouge</b> », "the <b>red</b> center". */
+/** Small squares of the faces' colors, sitting on the text's baseline. */
+const Swatches = ({ faces }: { faces: Face[] }) => (
+  <span className="mr-[0.3em] inline-flex gap-px align-[-0.08em]">
+    {faces.map((f, i) => (
+      <i key={i} className="inline-block size-[0.8em] rounded-[3px]" style={{ background: FACE_COLORS[f] }} />
+    ))}
+  </span>
+);
+
+/** `text` with every color name shown the same way everywhere: its square of color, then the name in bold. */
 export function Colored({ text }: { text: string }) {
   const parts: ReactNode[] = [];
   let last = 0;
   for (const m of text.matchAll(COLOR_WORDS)) {
     parts.push(text.slice(last, m.index));
     parts.push(
-      <b key={m.index} className="font-semibold" style={{ color: TEXT_COLORS[COLOR_FACES[m[1].toLowerCase()]] }}>
+      <b key={m.index} className="font-semibold whitespace-nowrap text-chalk">
+        <Swatches faces={m[0].split("-").map(faceOf)} />
         {m[0]}
       </b>,
     );
@@ -83,10 +95,10 @@ export function Colored({ text }: { text: string }) {
 }
 
 export const Chip = ({ face }: { face: Face }) => (
-  <span className="inline-flex items-center gap-1.5 font-semibold text-chalk">
-    <span className="size-3.5 rounded-sm" style={{ background: FACE_COLORS[face] }} />
+  <b className="font-semibold whitespace-nowrap text-chalk">
+    <Swatches faces={[face]} />
     {FACE_NAMES[face]}
-  </span>
+  </b>
 );
 
 type Props = {

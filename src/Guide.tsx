@@ -289,8 +289,13 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             ? tr({ fr: "Cube d'exemple", nl: "Voorbeeldkubus", en: "Sample cube" })
             : (
               <>
-                <Chip face={state[4] as Face} /> {tr({ fr: "en haut", nl: "boven", en: "on top" })}, <Chip face={state[22] as Face} />{" "}
-                {tr({ fr: "devant", nl: "vooraan", en: "in front" })}
+                {/* Each color stays with its word when the line wraps on a phone. */}
+                <span className="whitespace-nowrap">
+                  <Chip face={state[4] as Face} /> {tr({ fr: "en haut", nl: "boven", en: "on top" })},
+                </span>{" "}
+                <span className="whitespace-nowrap">
+                  <Chip face={state[22] as Face} /> {tr({ fr: "devant", nl: "vooraan", en: "in front" })}
+                </span>
                 {!learn && tr({ fr: ", sans le retourner", nl: ", zonder hem om te draaien", en: ", without turning it over" })}
               </>
             )}
@@ -531,8 +536,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               {stop === "goal" && piece && (
                 <p>
                   <span className="font-semibold">
-                    {pieceName(piece)}
-                    {group?.pair && `${AND}${pieceName(group.pair).toLowerCase()}`}
+                    <Colored text={`${pieceName(piece)}${group?.pair ? `${AND}${pieceName(group.pair).toLowerCase()}` : ""}`} />
                   </span>{" "}
                   <span className="text-mist">→ {placeOf(group?.pair)}</span>
                 </p>

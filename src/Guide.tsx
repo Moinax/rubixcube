@@ -117,8 +117,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const newCubeAt = (s: number) => states[s] !== ends[flat[s - 1].group];
   /** Whether a stage ends before move `s`, a phase in the fast mode. */
   const stageEndAt = (s: number) => !learn || groups[flat[s].group].stage !== groups[flat[s - 1].group].stage;
-  /** Whether a result stop ends the group before move `s`: a stage is done, or a demo hands over to another cube. */
-  const resultAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group && (newCubeAt(s) || stageEndAt(s));
+  /** Whether a result stop ends the group before move `s`: every sequence ends on one, before the next goal. */
+  const resultAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group;
 
   const [stop, setStop] = useState<Stop>(() => (goalAt(step) ? "goal" : null));
   const done = step === total;
@@ -273,8 +273,15 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const settings = useId();
   // On the goal, before or after its animation: the readout names the piece and where it goes.
   const aiming = stop === "goal" || stop === "seen";
-  // A result stop that closes a stage, rather than one demo among the stage's cases.
-  const stageDone = stop === "result" && stageEndAt(step);
+  // What a result stop closes: a stage (a phase in the fast mode), a demo handing over to another cube, or a sequence.
+  const ending = stop !== "result" ? undefined : stageEndAt(step) ? "stage" : newCubeAt(step) ? "demo" : "sequence";
+  const ENDINGS = {
+    stage: learn
+      ? { label: tr({ fr: "Étape terminée", nl: "Stap klaar", en: "Step done" }), next: tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next step" }) }
+      : { label: tr({ fr: "Phase terminée", nl: "Fase klaar", en: "Phase done" }), next: tr({ fr: "Phase suivante", nl: "Volgende fase", en: "Next phase" }) },
+    demo: { label: tr({ fr: "Résultat", nl: "Resultaat", en: "Result" }), next: tr({ fr: "Exemple suivant", nl: "Volgend voorbeeld", en: "Next example" }) },
+    sequence: { label: tr({ fr: "Séquence terminée", nl: "Reeks klaar", en: "Sequence done" }), next: tr({ fr: "Séquence suivante", nl: "Volgende reeks", en: "Next sequence" }) },
+  };
   // What ▶ does from here: show the goal, go on to the next demo, play the move; its size never changes.
   const next: { icon: keyof typeof ICONS; label?: string; title: string } = done
     ? { icon: "done", title: DONE }
@@ -283,15 +290,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
       : stop === "seen"
         ? { icon: "next", label: tr({ fr: "Suite", nl: "Verder", en: "Next" }), title: tr({ fr: "Passer aux coups", nl: "Naar de zetten", en: "On to the moves" }) }
         : stop === "result"
-          ? {
-              icon: "next",
-              label: tr({ fr: "Suite", nl: "Verder", en: "Next" }),
-              title: !stageDone
-                ? tr({ fr: "Exemple suivant", nl: "Volgend voorbeeld", en: "Next example" })
-                : learn
-                  ? tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next step" })
-                  : tr({ fr: "Phase suivante", nl: "Volgende fase", en: "Next phase" }),
-            }
+          ? { icon: "next", label: tr({ fr: "Suite", nl: "Verder", en: "Next" }), title: ENDINGS[ending!].next }
           : { icon: "play", label: move, title: `${tr({ fr: "Jouer", nl: "Speel", en: "Play" })} ${move}` };
 
   return (
@@ -556,26 +555,24 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               <p className="text-xs text-mist">
                 {aiming
                   ? tr({ fr: "Objectif", nl: "Doel", en: "Goal" })
-                  : stop === "result"
-                    ? stageDone
-                      ? learn
-                        ? tr({ fr: "Étape terminée", nl: "Stap klaar", en: "Step done" })
-                        : tr({ fr: "Phase terminée", nl: "Fase klaar", en: "Phase done" })
-                      : tr({ fr: "Résultat", nl: "Resultaat", en: "Result" })
+                  : ending
+                    ? ENDINGS[ending].label
                     : done
                       ? DONE
                       : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
                 {move && part && ` · ${part}`}
               </p>
-              {aiming && piece && (
+              {(aiming || ending === "sequence") && piece && (
                 <p>
                   <span className="font-semibold">
                     <Colored text={`${pieceName(piece)}${group?.pair ? `${AND}${pieceName(group.pair).toLowerCase()}` : ""}`} />
                   </span>{" "}
-                  <span className="text-mist">→ {placeOf(group?.pair)}</span>
+                  <span className="text-mist">{aiming ? `→ ${placeOf(group?.pair)}` : tr({ fr: "en place ✓", nl: group?.pair ? "op hun plek ✓" : "op zijn plek ✓", en: "in place ✓" })}</span>
                 </p>
               )}
-              {stop === "result" && <p className="font-semibold">{stageDone && learn ? stages[group!.stage].title : group?.title}</p>}
+              {ending && !(ending === "sequence" && piece) && (
+                <p className="font-semibold">{ending === "demo" || !learn ? group?.title : stages[group!.stage].title}</p>
+              )}
               {move && (
                 <div className="md:line-clamp-2">
                   <MoveText move={move} />

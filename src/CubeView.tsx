@@ -80,6 +80,8 @@ type Props = {
   onEnd?: () => void;
   piece?: string;
   place?: string;
+  pair?: string;
+  pairPlace?: string;
   spot?: boolean;
   replay?: number;
   autoRotate?: boolean;
@@ -87,13 +89,14 @@ type Props = {
 
 /**
  * Renders `state`; when `moves` are set, plays them one after the other from `state`, then calls `onEnd`.
- * `piece` (its colors) is outlined, and `place` (the colors of the centers around it) is a green glass box.
- * `fly` (the cube the piece's sequence leads to) sends a copy of the piece flying to the place, landing
+ * `piece` (its colors) is outlined, and `place` (the colors of the centers around it) is a green glass box;
+ * so are `pair`, a second piece that goes with it (an F2L edge), and `pairPlace`.
+ * `fly` (the cube the piece's sequence leads to) sends a copy of each piece flying to its place, landing
  * the way the sequence leaves it, then calls `onEnd`. `spot` dims the rest of the cube, makes the outlines
  * pulse and turns the camera toward the piece and its place when they hide; without it, the camera comes
  * back in front, where the moves are played from. A new `replay` count plays the same moves again.
  */
-export default function CubeView({ state, moves, fly, onEnd, piece, place, spot, replay, autoRotate = false }: Props) {
+export default function CubeView({ state, moves, fly, onEnd, piece, place, pair, pairPlace, spot, replay, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; aim?: number; reach?: number; spot?: boolean }>(null);
   const ended = useRef(onEnd);
@@ -174,11 +177,13 @@ export default function CubeView({ state, moves, fly, onEnd, piece, place, spot,
     scene.current!.controls.autoRotate = autoRotate;
   }, [autoRotate]);
 
+  // The pieces to follow, each with the place it goes to.
+  const tracked = ([[piece, place], [pair, pairPlace]] as [string | undefined, string | undefined][]).filter((t): t is [string, string | undefined] => !!t[0]);
   useEffect(() => {
     const ctx = scene.current!;
     /** The cube `s`, with the cubies that `move` turns in the returned layer. */
     const build = (s: string, move?: string) => {
-      const at = piece && `${findPiece(s, piece)}`;
+      const ats = tracked.map(([p]) => `${findPiece(s, p)}`);
       const layer = new THREE.Group();
       ctx.root.clear();
       ctx.root.add(layer);
@@ -187,7 +192,7 @@ export default function CubeView({ state, moves, fly, onEnd, piece, place, spot,
           for (const z of [-1, 0, 1]) {
             const pos: Vec = [x, y, z];
             if (!x && !y && !z) continue;
-            const mine = `${pos}` === at;
+            const mine = ats.includes(`${pos}`);
             const mesh = new THREE.Mesh(
               GEOMETRY,
               SIDES.map((side) => {
@@ -199,10 +204,11 @@ export default function CubeView({ state, moves, fly, onEnd, piece, place, spot,
             if (mine) mesh.add(new LineSegments2(OUTLINE, PIECE_LINE));
             (move && inLayer(move, pos) ? layer : ctx.root).add(mesh);
           }
-      // The place stays put while a face turns through it, and only follows the whole cube.
-      if (piece && place) {
+      // A place stays put while a face turns through it, and only follows the whole cube.
+      for (const [, slot] of tracked) {
+        if (!slot) continue;
         const glass = new THREE.Group().add(new THREE.Mesh(GLASS_BOX, GLASS), new LineSegments2(TARGET, PLACE_LINE));
-        glass.position.set(...homeOf(s, place));
+        glass.position.set(...homeOf(s, slot));
         (move && isRotation(move) ? layer : ctx.root).add(glass);
       }
       return layer;
@@ -231,49 +237,51 @@ export default function CubeView({ state, moves, fly, onEnd, piece, place, spot,
       };
     };
 
-    if (!(fly && piece && place)) return show(state, 0);
+    const flying = tracked.filter((t): t is [string, string] => !!t[1]);
+    if (!(fly && flying.length)) return show(state, 0);
     build(state);
-    // A copy of the piece rises, flies around the cube (never through it) to the place, turning on the
+    // A copy of each piece rises, flies around the cube (never through it) to its place, turning on the
     // way to how the sequence leaves it, stays a moment, then fades.
-    const turnTo = landing(state, fly, piece);
-    const at = findPiece(state, piece);
-    const colors = SIDES.map((side) => stickerAt(at, side)).map((i) => (i === undefined ? undefined : FACE_COLORS[state[i] as Face]));
-    const fade = (o: number) => colors.forEach((c) => c && (cached(GHOST, c).opacity = o));
+    const colorsOf = (at: Vec) => SIDES.map((side) => stickerAt(at, side)).map((i) => (i === undefined ? undefined : FACE_COLORS[state[i] as Face]));
+    const still = new THREE.Quaternion();
+    const fliers = flying.map(([p, slot]) => {
+      const at = findPiece(state, p);
+      const colors = colorsOf(at);
+      const copy = new THREE.Mesh(GEOMETRY, colors.map((c) => (c ? cached(GHOST, c) : PLASTIC))).add(new LineSegments2(OUTLINE, PIECE_LINE));
+      copy.scale.setScalar(1.05); // over the cubie at the place, never inside it
+      const group = new THREE.Group().add(copy);
+      const [from, to] = [new THREE.Vector3(...at), new THREE.Vector3(...homeOf(state, slot))];
+      group.position.copy(from);
+      ctx.root.add(group);
+      const out = from.clone().normalize();
+      return { group, colors, from, to, out, turnTo: landing(state, fly, p), swing: new THREE.Quaternion().setFromUnitVectors(out, to.clone().normalize()) };
+    });
+    const fade = (o: number) => fliers.forEach(({ colors }) => colors.forEach((c) => c && (cached(GHOST, c).opacity = o)));
     fade(0);
-    const copy = new THREE.Mesh(GEOMETRY, colors.map((c) => (c ? cached(GHOST, c) : PLASTIC))).add(new LineSegments2(OUTLINE, PIECE_LINE));
-    copy.scale.setScalar(1.05); // over the cubie at the place, never inside it
-    const flier = new THREE.Group().add(copy);
-    const [from, to] = [new THREE.Vector3(...at), new THREE.Vector3(...homeOf(state, place))];
-    flier.position.copy(from);
-    ctx.root.add(flier);
-    const [out, still, swing, part] = [from.clone().normalize(), new THREE.Quaternion(), new THREE.Quaternion(), new THREE.Quaternion()];
-    swing.setFromUnitVectors(out, to.clone().normalize());
+    const part = new THREE.Quaternion();
     const [RISE, FLY, HOLD, OUT] = [500, 1700, 1400, 500];
     let start: number | undefined;
     ctx.onFrame = (t) => {
       start ??= t;
       const e = t - start;
       if (e < RISE) return fade(ease(e / RISE));
-      if (e < RISE + FLY) {
-        const k = ease((e - RISE) / FLY);
+      const k = ease(Math.min(1, (e - RISE) / FLY));
+      for (const { group, from, to, out, swing, turnTo } of fliers) {
         const reach = THREE.MathUtils.lerp(from.length(), to.length(), k) + 0.9 * Math.sin(Math.PI * k);
-        flier.position.copy(out).applyQuaternion(part.slerpQuaternions(still, swing, k)).multiplyScalar(reach);
-        flier.quaternion.slerpQuaternions(still, turnTo, k);
-        return;
+        group.position.copy(out).applyQuaternion(part.slerpQuaternions(still, swing, k)).multiplyScalar(reach);
+        group.quaternion.slerpQuaternions(still, turnTo, k);
       }
-      flier.position.copy(to);
-      flier.quaternion.copy(turnTo);
       if (e < RISE + FLY + HOLD) return;
       fade(1 - Math.min(1, (e - RISE - FLY - HOLD) / OUT));
       if (e < RISE + FLY + HOLD + OUT) return;
       ctx.onFrame = undefined;
-      ctx.root.remove(flier);
+      fliers.forEach(({ group }) => ctx.root.remove(group));
       ended.current?.();
     };
-  }, [state, moves?.join(" "), fly, piece, place, replay]);
+  }, [state, moves?.join(" "), fly, piece, place, pair, pairPlace, replay]);
 
   // Only a change of view turns the camera, so it stays wherever the user dragged it in between.
-  const view = spot && piece ? bestView([findPiece(state, piece), ...(place ? [homeOf(state, place)] : [])]) : [1, 1];
+  const view = spot && tracked.length ? bestView(tracked.flatMap(([p, slot]) => [findPiece(state, p), ...(slot ? [homeOf(state, slot)] : [])])) : [1, 1];
   useEffect(() => {
     scene.current!.aim = azimuth(view);
   }, [`${view}`]);

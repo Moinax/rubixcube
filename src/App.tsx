@@ -5,13 +5,14 @@ import { Back, Home, InputChoice, modeTitle, type Mode, type Resume } from "./Ho
 import NetEditor from "./NetEditor";
 import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
+import { CFOP_STAGES, cfopSolve } from "./cfop";
 import { COURSE } from "./course";
 import { phaseTwo, SOLVED, solve, suspects, validate } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** Modes that solve the user's own cube, so need its colors first. */
 type CubeMode = Exclude<Mode, "course">;
-type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number; course?: boolean };
+type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number; course?: boolean; cfop?: boolean };
 type Screen =
   | { name: "home" }
   | { name: "input"; mode: CubeMode }
@@ -53,13 +54,16 @@ function fastPlan(start: string, moves: string[]): Group[] {
   return phases.filter((g) => g.moves.length);
 }
 
+/** The plan of a learning method for a cube: CFOP or the beginner method, and its stages. */
+const method = (cfop?: boolean) => (cfop ? { solve: cfopSolve, stages: CFOP_STAGES } : { solve: beginnerSolve, stages: STAGES });
+
 /** Rebuilds a saved plan from the code, so text updates reach a guide in progress: learn and course plans
  * anew, the fast solution split again from its saved moves (solving anew costs a solver warm-up). The
  * saved plan stays if that fails. */
 function refresh(saved: GuideScreen): GuideScreen {
   try {
     if (!saved.learn) return { ...saved, groups: fastPlan(saved.start, saved.groups.flatMap((g) => g.moves)) };
-    const guide = { ...saved, groups: saved.course ? COURSE : beginnerSolve(saved.start) };
+    const guide = { ...saved, groups: saved.course ? COURSE : method(saved.cfop).solve(saved.start) };
     // The rebuilt plan may split its moves differently: resume on the same cube, the closest match to the saved step.
     const reached = planStates(saved.start, saved.groups)[saved.step];
     const states = planStates(guide.start, guide.groups);
@@ -97,7 +101,7 @@ function resumable(): { guide: GuideScreen; resume: Resume } | undefined {
   const total = groupOfMove.length;
   if (guide.step >= total) return;
   const state = planStates(guide.start, guide.groups)[guide.step];
-  const where = guide.learn ? STAGES[groupOfMove[guide.step].stage].title : modeTitle("fast");
+  const where = guide.learn ? method(guide.cfop).stages[groupOfMove[guide.step].stage].title : modeTitle("fast");
   const n = guide.step + 1;
   return {
     guide,
@@ -134,19 +138,19 @@ export default function App() {
   const saved = useMemo(() => (screen.name === "home" ? resumable() : undefined), [screen.name]);
 
   async function startGuide(edit: Extract<Screen, { name: "edit" }>) {
-    const learn = edit.mode === "learn";
+    const [learn, cfop] = [edit.mode !== "fast", edit.mode === "cfop"];
     setScreen({ name: "solving" });
     await new Promise((r) => setTimeout(r, 50)); // let the spinner paint before the solver blocks
     try {
-      const groups = learn ? beginnerSolve(edit.state) : fastPlan(edit.state, solve(edit.state));
-      setScreen({ name: "guide", start: edit.state, groups, learn, step: 0 });
+      const groups = learn ? method(cfop).solve(edit.state) : fastPlan(edit.state, solve(edit.state));
+      setScreen({ name: "guide", start: edit.state, groups, learn, step: 0, ...(cfop && { cfop }) });
     } catch (e) {
       console.error(e);
       alert(
         tr({
-          fr: "Le calcul de la solution a échoué. Vérifie les couleurs, ou reviens à l'accueil pour essayer l'autre mode.",
-          nl: "Het berekenen van de oplossing is mislukt. Controleer de kleuren, of ga terug naar het begin om de andere modus te proberen.",
-          en: "Working out the solution failed. Check the colors, or go back home to try the other mode.",
+          fr: "Le calcul de la solution a échoué. Vérifie les couleurs, ou reviens à l'accueil pour essayer un autre mode.",
+          nl: "Het berekenen van de oplossing is mislukt. Controleer de kleuren, of ga terug naar het begin om een andere modus te proberen.",
+          en: "Working out the solution failed. Check the colors, or go back home to try another mode.",
         }),
       );
       setScreen(edit);
@@ -201,13 +205,14 @@ export default function App() {
     case "solving":
       return <p className="grid w-full flex-1 place-items-center text-mist">{tr({ fr: "Calcul de la solution…", nl: "Oplossing berekenen…", en: "Working out the solution…" })}</p>;
     case "guide": {
-      const mode = screen.learn ? "learn" : "fast";
+      const mode = screen.cfop ? "cfop" : screen.learn ? "learn" : "fast";
       return (
         <Guide
           start={screen.start}
           groups={screen.groups}
           learn={screen.learn}
           course={screen.course}
+          stages={method(screen.cfop).stages}
           step={screen.step}
           onStep={(step) => setScreen({ ...screen, step })}
           onHome={() => setScreen({ name: "home" })}

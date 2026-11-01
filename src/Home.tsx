@@ -2,7 +2,7 @@ import CubeView from "./CubeView";
 import { applyMove, FACE_COLORS, SOLVED, type Face } from "./cube";
 import { lang, LANGS, setLang, tr, type Lang } from "./i18n";
 
-export type Mode = "fast" | "learn" | "course";
+export type Mode = "fast" | "learn" | "cfop" | "course";
 
 const SHOWCASE = "R U F' L2 D B' R2 U'".split(" ").reduce(applyMove, SOLVED);
 
@@ -41,6 +41,16 @@ const MODES: { id: Mode; title: string; text: string; face: string; marks?: Reco
       en: "The beginner method, every move explained on your own cube.",
     }),
     face: ".U.UUU.U.",
+  },
+  {
+    id: "cfop",
+    title: tr({ fr: "Progresser sur mon cube", nl: "Beter worden op mijn kubus", en: "Level up on my cube" }),
+    text: tr({
+      fr: "La méthode intermédiaire, CFOP en 4 temps : environ 80 coups au lieu de 170, avec les algorithmes des speedcubers.",
+      nl: "De methode voor halfgevorderden, CFOP in 4 stappen: ongeveer 80 zetten in plaats van 170, met de algoritmes van speedcubers.",
+      en: "The intermediate method, 4-look CFOP: about 80 moves instead of 170, with the speedcubers' algorithms.",
+    }),
+    face: "DDDDDDDDD",
   },
   {
     id: "course",

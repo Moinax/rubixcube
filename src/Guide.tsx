@@ -3,7 +3,7 @@ import CubeView from "./CubeView";
 import Lexicon, { type Tab } from "./Lexicon";
 import { Back, Chevron, HOME, modeTitle } from "./Home";
 import { Chip, Colored } from "./Scanner";
-import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group } from "./beginner";
+import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
 import { applyMove, describeMove, FACE_COLORS, invert, upright, type Face } from "./cube";
 import { nOf, tr } from "./i18n";
 
@@ -25,6 +25,22 @@ function pieceName(piece: string) {
     : tr({ fr: `L'arête ${n}`, nl: `Randstuk ${n}`, en: `The ${n} edge` });
 }
 
+/** A piece's colors as swatches, with its name, outlined in the piece's pink. */
+const PieceChip = ({ piece }: { piece: string }) => (
+  <span className="flex items-center gap-1.5 rounded-lg bg-raised py-0.5 pr-2 pl-1 ring-1 ring-piece">
+    <span className="flex gap-px">
+      {pieceColors(piece).map((f) => (
+        <i key={f} className="h-3.5 w-2 rounded-[2px]" style={{ background: FACE_COLORS[f] }} />
+      ))}
+    </span>
+    {pieceName(piece)}
+  </span>
+);
+const AND = tr({ fr: " et ", nl: " en ", en: " and " });
+/** « → sa place », or « → leur place » for a pair. */
+const placeOf = (pair?: string) =>
+  pair ? tr({ fr: "leur place", nl: "hun plek", en: "their place" }) : tr({ fr: "sa place", nl: "zijn plek", en: "its place" });
+
 /** « 20 coups », "1 move". */
 const moves = (n: number) =>
   tr({ fr: `${n} coup${n > 1 ? "s" : ""}`, nl: `${n} ${n === 1 ? "zet" : "zetten"}`, en: `${n} move${n === 1 ? "" : "s"}` });
@@ -34,6 +50,8 @@ type GuideProps = {
   groups: Group[];
   learn: boolean;
   course?: boolean;
+  /** The method's stages: the beginner method's unless told otherwise. */
+  stages?: Stage[];
   step: number;
   onStep: (step: number) => void;
   onHome: () => void;
@@ -79,7 +97,7 @@ const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 // A click leaves the focus where it was, so Space keeps toggling the auto mode.
 const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
-export default function Guide({ start, groups, learn, course, step, onStep, onHome, onScan, onEdit }: GuideProps) {
+export default function Guide({ start, groups, learn, course, stages = STAGES, step, onStep, onHome, onScan, onEdit }: GuideProps) {
   const flat = useMemo(() => groups.flatMap((g, group) => g.moves.map((move) => ({ move, group }))), [groups]);
   const states = useMemo(() => planStates(start, groups), [start, groups]);
   const total = flat.length;
@@ -88,7 +106,10 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
     let i = 0;
     return groups.map((g) => play(states[(i += g.moves.length) - g.moves.length], g.moves));
   }, [groups, states]);
-  const slots = useMemo(() => new Map(groups.map((g, i) => [g, g.piece && slotOf(ends[i], findPiece(ends[i], g.piece))])), [groups, ends]);
+  const slots = useMemo(() => {
+    const slot = (i: number, piece?: string) => piece && slotOf(ends[i], findPiece(ends[i], piece));
+    return new Map(groups.map((g, i) => [g, { piece: slot(i, g.piece), pair: slot(i, g.pair) }]));
+  }, [groups, ends]);
   /** Whether move `s` starts a group with a piece to follow: a goal stop comes first. */
   const goalAt = (s: number) => learn && s < total && flat[s].group !== flat[s - 1]?.group && !!groups[flat[s].group].piece;
   /** Whether the group ending before move `s` hands over to another cube (a new demo): a result stop ends it. */
@@ -216,13 +237,13 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   }, [auto, step, stop, wait, flying, fading, lexicon]);
 
   // Progress: one segment per stage (per phase in the fast mode), as long as its moves.
-  const current = group?.stage ?? STAGES.length - 1;
-  const firsts = STAGES.map((_, i) => flat.findIndex((f) => groups[f.group].stage === i));
+  const current = group?.stage ?? stages.length - 1;
+  const firsts = stages.map((_, i) => flat.findIndex((f) => groups[f.group].stage === i));
   const segments = learn
-    ? STAGES.map((s, i) => ({ title: s.title, first: firsts[i], count: flat.filter((f) => groups[f.group].stage === i).length }))
+    ? stages.map((s, i) => ({ title: s.title, first: firsts[i], count: flat.filter((f) => groups[f.group].stage === i).length }))
     : groups.map((g, i) => ({ title: g.title, first: flat.findIndex((f) => f.group === i), count: g.moves.length }));
   const reached = done ? segments.length : learn ? current : flat[step].group;
-  const stage = learn ? STAGES[current] : undefined;
+  const stage = learn ? stages[current] : undefined;
   // The stage list is a popover: it closes on any step change, a tap outside it, or Escape.
   const picker = useRef<HTMLDetailsElement>(null);
   const closePicker = () => picker.current?.removeAttribute("open");
@@ -299,12 +320,12 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
               <span className="flex items-center gap-1 text-sm whitespace-nowrap text-mist">
                 {current === 0
                   ? tr({ fr: "pour commencer", nl: "om te beginnen", en: "to begin" })
-                  : `${tr({ fr: "étape", nl: "stap", en: "step" })} ${nOf(current, STAGES.length - 1)}`}
+                  : `${tr({ fr: "étape", nl: "stap", en: "step" })} ${nOf(current, stages.length - 1)}`}
                 <Chevron to="down" className="transition group-open:rotate-180" />
               </span>
             </summary>
             <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60 md:left-auto md:w-80">
-              {STAGES.map((s, i) => (
+              {stages.map((s, i) => (
                 <li key={s.title}>
                   <button
                     disabled={firsts[i] < 0}
@@ -353,7 +374,9 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
             fly={flying ? ends[gi!] : undefined}
             onEnd={() => (anim ? setAnim(null) : setFlying(false))}
             piece={worked?.piece}
-            place={worked && slots.get(worked)}
+            place={worked && slots.get(worked)!.piece}
+            pair={worked?.pair}
+            pairPlace={worked && slots.get(worked)!.pair}
             spot={!anim && (stop === "goal" || flying)}
           />
         </div>
@@ -385,21 +408,15 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                   {tr({ fr: "Le but", nl: "Het doel", en: "The goal" })}
                   {learn && group.stage > 0 && group.title && <span className="font-normal tracking-normal normal-case"> · {group.title}</span>}
                 </p>
-                <p className="wide mt-1 text-lg leading-snug">{learn && group.stage > 0 ? STAGES[group.stage].goal : (group.title ?? stage?.goal)}</p>
+                <p className="wide mt-1 text-lg leading-snug">{learn && group.stage > 0 ? stages[group.stage].goal : (group.title ?? stage?.goal)}</p>
                 {piece && (
                   <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                    <span className="flex items-center gap-1.5 rounded-lg bg-raised py-0.5 pr-2 pl-1 ring-1 ring-piece">
-                      <span className="flex gap-px">
-                        {pieceColors(piece).map((f) => (
-                          <i key={f} className="h-3.5 w-2 rounded-[2px]" style={{ background: FACE_COLORS[f] }} />
-                        ))}
-                      </span>
-                      {pieceName(piece)}
-                    </span>
+                    <PieceChip piece={piece} />
+                    {group.pair && <PieceChip piece={group.pair} />}
                     <span className="text-mist">→</span>
                     <span className="flex items-center gap-1.5 rounded-lg bg-raised py-0.5 pr-2 pl-1 ring-1 ring-place">
                       <i className="h-3.5 w-3.5 rounded-[2px] bg-place" />
-                      {tr({ fr: "sa place", nl: "zijn plek", en: "its place" })}
+                      {placeOf(group.pair)}
                     </span>
                   </p>
                 )}
@@ -513,8 +530,11 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
               </p>
               {stop === "goal" && piece && (
                 <p>
-                  <span className="font-semibold">{pieceName(piece)}</span>{" "}
-                  <span className="text-mist">{tr({ fr: "→ sa place", nl: "→ zijn plek", en: "→ its place" })}</span>
+                  <span className="font-semibold">
+                    {pieceName(piece)}
+                    {group?.pair && `${AND}${pieceName(group.pair).toLowerCase()}`}
+                  </span>{" "}
+                  <span className="text-mist">→ {placeOf(group?.pair)}</span>
                 </p>
               )}
               {stop === "result" && <p className="font-semibold">{group?.title}</p>}

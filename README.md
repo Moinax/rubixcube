@@ -2,7 +2,7 @@
 
 A Rubik's Cube solver and teacher. *Résous ton cube, coup par coup.*
 
-Pick a mode first. The two that solve your own cube then ask for it: scan it
+Pick a mode first. The three that solve your own cube then ask for it: scan it
 with the camera, or type its colors in. Then follow the moves one by one on an
 animated 3D cube:
 
@@ -13,7 +13,12 @@ animated 3D cube:
   split into 8 stages (daisy, white cross, white corners, middle layer, yellow
   cross, yellow edges, yellow corners placed then oriented), each with the rule
   it teaches and the piece it works on outlined in 3D.
-- **Course** (no scan): the same method taught case by case (`src/course.ts`),
+- **Level up**: 4-look CFOP (`src/cfop.ts`), ~80 moves: the white cross straight
+  on the bottom (searched edge by edge), the first two layers pair by pair (top
+  turns and the triggers R U R' / F' U F), then the last layer in two looks for
+  its orientation (yellow cross, 7 corner cases) and two for its permutation
+  (T or Y perm, then U, H or Z perm). Face turns only, no wide or slice moves.
+- **Course** (no scan): the beginner method taught case by case (`src/course.ts`),
   each case a demo cube built backwards from its algorithm, to recognise on
   your own cube.
 
@@ -33,4 +38,5 @@ In French, Dutch or English (`src/i18n.ts`): the browser's language, switchable 
 the top of every screen. Each text sits next to its code as `tr({ fr, nl, en })`.
 
 Assumes the standard color scheme: white opposite yellow, green opposite blue,
-red opposite orange. The guide keeps white on top and green facing you.
+red opposite orange. The guide starts white on top and green facing you, then
+turns the cube over: both methods build the white at the bottom, yellow on top.

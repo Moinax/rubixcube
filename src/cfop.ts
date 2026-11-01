@@ -6,7 +6,6 @@ import {
   findPiece,
   homeOf,
   makeGroup,
-  names,
   pieces,
   play,
   same,
@@ -356,9 +355,9 @@ export function cfopSolve(start: string): Group[] {
     emit(
       2,
       tr({
-        fr: `Le coin ${names(corner)} et l'arête ${names(edge)} vont ensemble : leur place est en bas, entre les centres ${front} et ${right}.`,
-        nl: `Het hoekstuk ${names(corner)} en het randstuk ${names(edge)} horen samen: hun plek is onderaan, tussen het ${INFLECTED[f]} en het ${INFLECTED[rt]} middenstuk.`,
-        en: `The ${names(corner)} corner and the ${names(edge)} edge go together: their place is at the bottom, between the ${front} and ${right} centers.`,
+        fr: `Ils vont ensemble : leur place est en bas, entre les centres ${front} et ${right}.`,
+        nl: `Ze horen samen: hun plek is onderaan, tussen het ${INFLECTED[f]} en het ${INFLECTED[rt]} middenstuk.`,
+        en: `They go together: their place is at the bottom, between the ${front} and ${right} centers.`,
       }),
       [
         [

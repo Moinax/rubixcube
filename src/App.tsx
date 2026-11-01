@@ -56,6 +56,8 @@ function fastPlan(start: string, moves: string[]): Group[] {
   return phases.filter((g) => g.moves.length);
 }
 
+/** The two courses of the basics, reading the moves or holding the cube, each with its stages. */
+const courseOf = (hands?: boolean) => (hands ? { groups: HANDS, stages: HAND_STAGES } : { groups: COURSE, stages: STAGES });
 /** The plan of a learning method for a cube: CFOP or the beginner method, and its stages. */
 const method = (cfop?: boolean) => (cfop ? { solve: cfopSolve, stages: CFOP_STAGES } : { solve: beginnerSolve, stages: STAGES });
 
@@ -65,7 +67,7 @@ const method = (cfop?: boolean) => (cfop ? { solve: cfopSolve, stages: CFOP_STAG
 function refresh(saved: GuideScreen): GuideScreen {
   try {
     if (!saved.learn) return { ...saved, groups: fastPlan(saved.start, saved.groups.flatMap((g) => g.moves)) };
-    const guide = { ...saved, groups: saved.course ? (saved.hands ? HANDS : COURSE) : method(saved.cfop).solve(saved.start) };
+    const guide = { ...saved, groups: saved.course ? courseOf(saved.hands).groups : method(saved.cfop).solve(saved.start) };
     // The rebuilt plan may split its moves differently, or turn the cube elsewhere: resume on the same cube,
     // however it is held, the closest match to the saved step.
     const reached = planStates(saved.start, saved.groups)[saved.step];
@@ -179,13 +181,10 @@ export default function App() {
     case "basics":
       return (
         <BasicsChoice
-          onPick={(part) =>
-            setScreen(
-              part === "hands"
-                ? { name: "guide", start: HANDS[0].from!, groups: HANDS, learn: true, step: 0, course: true, hands: true }
-                : { name: "guide", start: COURSE[0].from!, groups: COURSE, learn: true, step: 0, course: true },
-            )
-          }
+          onPick={(part) => {
+            const { groups } = courseOf(part === "hands");
+            setScreen({ name: "guide", start: groups[0].from!, groups, learn: true, step: 0, course: true, ...(part === "hands" && { hands: true }) });
+          }}
           onBack={() => setScreen({ name: "home" })}
         />
       );
@@ -230,7 +229,7 @@ export default function App() {
           groups={screen.groups}
           learn={screen.learn}
           course={screen.course}
-          stages={screen.hands ? HAND_STAGES : method(screen.cfop).stages}
+          stages={screen.course ? courseOf(screen.hands).stages : method(screen.cfop).stages}
           step={screen.step}
           onStep={(step) => setScreen({ ...screen, step })}
           onHome={() => setScreen({ name: "home" })}

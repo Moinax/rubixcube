@@ -367,8 +367,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             place={worked && slots.get(worked)!.piece}
             pair={worked?.pair}
             pairPlace={worked && slots.get(worked)!.pair}
-            grip={worked?.grip}
-            next={move}
+            grip={!!worked?.fingers}
+            next={worked?.fingers && move}
           />
         </div>
 
@@ -416,7 +416,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                     <Colored text={group.text} />
                   </p>
                 )}
-                {group.grip && (
+                {group.fingers && (
                   <p className="mt-2 flex gap-4 text-sm">
                     <span className="flex items-center gap-1.5">
                       <i className="size-3 rounded-full" style={{ background: THUMB_COLOR }} />

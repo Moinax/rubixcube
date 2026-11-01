@@ -309,20 +309,25 @@ export const HAND_STAGES: Stage[] = [
   }),
 ];
 
-/** A lesson on the held cube: a text per step, and the finger of each move. */
-const hand = (texts: Texts, fingers: Record<Lang, string[]>, moves: string[], split: number[]): Group => ({
+export type Finger = "left thumb" | "right thumb" | "left index" | "right index";
+/** The fingers that make `move` and travel with the face it turns: a wrist takes its thumb and index along. */
+export function riders(move: string): Finger[] {
+  if (move[0] === "R") return ["right thumb", "right index"];
+  if (move[0] === "L") return ["left thumb", "left index"];
+  if (move[0] === "U") return [move[1] === "'" ? "left index" : "right index"];
+  return [];
+}
+
+/** A lesson on the held cube: a text per step, and the name of the finger that makes each move. */
+const hand = (texts: Texts, fingers: Record<Lang, string>[], moves: string[], split: number[]): Group => ({
   ...group(0, texts, moves, YELLOW_UP, undefined, split),
-  fingers: tr(fingers),
-  grip: true,
+  fingers: fingers.map(tr),
 });
 
 const WRIST = { fr: "poignet droit", nl: "rechterpols", en: "right wrist" };
 const RIGHT_INDEX = { fr: "index droit", nl: "rechterwijsvinger", en: "right index" };
 const LEFT_INDEX = { fr: "index gauche", nl: "linkerwijsvinger", en: "left index" };
 const LEFT_WRIST = { fr: "poignet gauche", nl: "linkerpols", en: "left wrist" };
-/** The fingers of a lesson's moves, in each language. */
-const fingersOf = (...names: Record<Lang, string>[]) =>
-  Object.fromEntries((["fr", "nl", "en"] as Lang[]).map((l) => [l, names.map((n) => n[l])])) as Record<Lang, string[]>;
 
 export const HANDS: Group[] = [
   hand(
@@ -331,7 +336,7 @@ export const HANDS: Group[] = [
       nl: ["De basisgreep", "Houd de kubus met je vingertoppen, niet in je handpalmen: de duimen op de voorkant, de wijsvingers bovenop, de andere vingers achteraan. Tussen elke zet keer je terug naar deze greep.", "De rechterpols draait naar boven; de rechterduim glijdt mee met de kant.", "Vanuit de basisgreep draait de rechterpols naar beneden: de rechterduim gaat mee naar onderen."],
       en: ["The home grip", "Hold the cube at your fingertips, not in your palms: thumbs on the front face, index fingers on top, the other fingers behind. You come back to this grip between moves.", "Your right wrist turns upward; the right thumb slides along with the face.", "From the home grip, your right wrist turns downward: the right thumb goes down with the face."],
     },
-    fingersOf(WRIST, WRIST),
+    [WRIST, WRIST],
     ["R", "R'"],
     [1, 1],
   ),
@@ -341,7 +346,7 @@ export const HANDS: Group[] = [
       nl: ["De bovenkant, met de wijsvingers", "De bovenkant draai je met één duw van een wijsvinger, zonder de rest van je hand te bewegen.", "De rechterwijsvinger duwt de bovenkant.", "De linkerwijsvinger duwt de bovenkant de andere kant op.", "De rechterwijsvinger duwt twee keer na elkaar, of de wijsvinger en dan de middelvinger."],
       en: ["The top, with the index fingers", "You turn the top with one push of an index finger, without moving the rest of your hand.", "Your right index finger pushes the top.", "Your left index finger pushes the top the other way.", "Your right index finger pushes twice in a row, or the index then the middle finger."],
     },
-    fingersOf(RIGHT_INDEX, LEFT_INDEX, { fr: "index droit ×2", nl: "rechterwijsvinger ×2", en: "right index ×2" }),
+    [RIGHT_INDEX, LEFT_INDEX, { fr: "index droit ×2", nl: "rechterwijsvinger ×2", en: "right index ×2" }],
     ["U", "U'", "U2"],
     [1, 1, 1],
   ),
@@ -351,7 +356,7 @@ export const HANDS: Group[] = [
       nl: ["Links, met de pols", "Het spiegelbeeld van R: nu draait de linkerpols.", "De linkerpols draait naar beneden; de linkerduim glijdt mee met de kant.", "Vanuit de greep draait de linkerpols naar boven: de linkerduim gaat mee naar boven."],
       en: ["The left, with the wrist", "The mirror of R: this time your left wrist turns.", "Your left wrist turns downward; the left thumb slides along with the face.", "From the grip, your left wrist turns upward: the left thumb goes up with the face."],
     },
-    fingersOf(LEFT_WRIST, LEFT_WRIST),
+    [LEFT_WRIST, LEFT_WRIST],
     ["L", "L'"],
     [1, 1],
   ),
@@ -361,7 +366,7 @@ export const HANDS: Group[] = [
       nl: ["De sexy move zonder los te laten", "De vier zetten volgen elkaar op zonder van greep te wisselen: pols, rechterwijsvinger, pols, linkerwijsvinger.", "De rechterpols gaat omhoog.", "De rechterwijsvinger duwt de bovenkant.", "De rechterpols gaat terug omlaag.", "De linkerwijsvinger duwt de bovenkant.", "Nog een keer, zonder te stoppen: zo wordt het een vanzelfsprekende beweging."],
       en: ["The sexy move without letting go", "The four moves flow without changing grip: wrist, right index, wrist, left index.", "Your right wrist goes up.", "Your right index finger pushes the top.", "Your right wrist comes back down.", "Your left index finger pushes the top.", "Once more, without stopping: the move becomes second nature."],
     },
-    fingersOf(WRIST, RIGHT_INDEX, WRIST, LEFT_INDEX, WRIST, RIGHT_INDEX, WRIST, LEFT_INDEX),
+    [WRIST, RIGHT_INDEX, WRIST, LEFT_INDEX, WRIST, RIGHT_INDEX, WRIST, LEFT_INDEX],
     times(SEXY, 2),
     [1, 1, 1, 1, 4],
   ),

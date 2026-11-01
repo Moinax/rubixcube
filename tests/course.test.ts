@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { beginnerSolve, planStates, STAGES } from "../src/beginner.ts";
 import { cfopSolve } from "../src/cfop.ts";
-import { COURSE, HAND_STAGES, HANDS } from "../src/course.ts";
+import { COURSE, HAND_STAGES, HANDS, riders } from "../src/course.ts";
 import { applyMove, colorsOf, PIECES, SOLVED, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
 
 const at = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
@@ -93,5 +93,13 @@ test("each move of the hands lessons names its finger, on the cube held yellow u
     assert.equal(center(g.from!, [0, 1, 0]), "D", g.title);
     assert.ok(g.stage < HAND_STAGES.length);
   }
-  assert.ok(HANDS.every((g) => g.grip));
+  // The finger the bar names is the one the cube shows playing.
+  const named: Record<string, string[]> = {
+    "poignet droit": ["right thumb", "right index"],
+    "poignet gauche": ["left thumb", "left index"],
+    "index droit": ["right index"],
+    "index droit ×2": ["right index"],
+    "index gauche": ["left index"],
+  };
+  for (const g of HANDS) g.moves.forEach((m, i) => assert.deepEqual(riders(m), named[g.fingers![i]], `${g.title} ${m}`));
 });

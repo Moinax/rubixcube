@@ -7,6 +7,7 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { findPiece, homeOf } from "./beginner";
+import { riders, type Finger } from "./course";
 import { applyMove, FACE_COLORS, inLayer, isRotation, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
 
 // BoxGeometry material order: +x, -x, +y, -y, +z, -z.
@@ -35,24 +36,17 @@ const FINGER = new THREE.CircleGeometry(0.2, 32);
 export const THUMB_COLOR = "#e879f9";
 export const INDEX_COLOR = "#34d399";
 const [THUMB, INDEX] = [THUMB_COLOR, INDEX_COLOR].map((color) => new THREE.MeshBasicMaterial({ color }));
-// A finger that has to lift off for the next move, so it doesn't block the face; and the ring of the one that plays.
-const LIFTED = new Map([THUMB, INDEX].map((m) => [m, new THREE.MeshBasicMaterial({ color: m.color, transparent: true, opacity: 0.25 })]));
+// A finger that has to lift off for the next move fades, so it doesn't block the face; the one that plays gets a ring.
+const fingerLook = (solid: THREE.MeshBasicMaterial) => ({ solid, faded: new THREE.MeshBasicMaterial({ color: solid.color, transparent: true, opacity: 0.25 }) });
+const [THUMB_LOOK, INDEX_LOOK] = [fingerLook(THUMB), fingerLook(INDEX)];
 const RING = new THREE.RingGeometry(0.25, 0.31, 40);
 const RING_MATERIAL = new THREE.MeshBasicMaterial({ color: "#f3f2ee" });
-type Finger = "left thumb" | "right thumb" | "left index" | "right index";
-const GRIP: [finger: Finger, pos: Vec, normal: Vec, material: THREE.MeshBasicMaterial][] = [
-  ["left thumb", [-1, -1, 1], [0, 0, 1], THUMB],
-  ["right thumb", [1, -1, 1], [0, 0, 1], THUMB],
-  ["left index", [-1, 1, -1], [0, 1, 0], INDEX],
-  ["right index", [1, 1, -1], [0, 1, 0], INDEX],
+const GRIP: [finger: Finger, pos: Vec, normal: Vec, look: typeof THUMB_LOOK][] = [
+  ["left thumb", [-1, -1, 1], [0, 0, 1], THUMB_LOOK],
+  ["right thumb", [1, -1, 1], [0, 0, 1], THUMB_LOOK],
+  ["left index", [-1, 1, -1], [0, 1, 0], INDEX_LOOK],
+  ["right index", [1, 1, -1], [0, 1, 0], INDEX_LOOK],
 ];
-/** The fingers that make `move` and travel with the face it turns: a wrist takes its thumb and index along. */
-function riders(move: string): Finger[] {
-  if (move[0] === "R") return ["right thumb", "right index"];
-  if (move[0] === "L") return ["left thumb", "left index"];
-  if (move[0] === "U") return [move[1] === "'" ? "left index" : "right index"];
-  return [];
-}
 const MATERIALS = new Map<string, THREE.MeshPhysicalMaterial>();
 const material = (color: string) => {
   if (!MATERIALS.has(color)) MATERIALS.set(color, new THREE.MeshPhysicalMaterial({ color, roughness: 0.28, clearcoat: 0.6 }));
@@ -181,7 +175,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
           const [plays, inTheWay] = [!!coming && riders(coming).includes(finger), !!coming && inLayer(coming, pos)];
           const lifts = inTheWay && !plays;
           if (lifts && move) continue;
-          const dot = new THREE.Mesh(FINGER, lifts ? LIFTED.get(look)! : look);
+          const dot = new THREE.Mesh(FINGER, lifts ? look.faded : look.solid);
           if (plays) dot.add(new THREE.Mesh(RING, RING_MATERIAL)).scale.setScalar(1.3);
           dot.position.set(...pos).addScaledVector(new THREE.Vector3(...normal), 0.52);
           dot.lookAt(dot.position.clone().add(new THREE.Vector3(...normal)));

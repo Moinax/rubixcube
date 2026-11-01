@@ -23,9 +23,8 @@ export type Group = {
   alg?: Alg;
   title?: string;
   from?: string;
-  /** The finger or wrist that makes each move, and whether to show where the fingers rest (the "hands" lessons). */
+  /** The finger or wrist that makes each move, in the lessons on holding the cube, where the grip shows too. */
   fingers?: string[];
-  grip?: boolean;
 };
 
 export const STAGES: Stage[] = tr<Stage[]>({

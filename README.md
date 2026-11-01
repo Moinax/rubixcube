@@ -7,9 +7,12 @@ that solve your own cube then ask for it: scan it with the camera, type its
 colors in, or take a random scramble (handy for testing). Then follow the moves
 one by one on an animated 3D cube:
 
-- **Learn the basics** (no scan): the notation, then the beginner method taught
-  case by case (`src/course.ts`), each case a demo cube built backwards from its
-  algorithm, to recognise on your own cube.
+- **Learn the basics** (no scan), in two parts (`src/course.ts`): reading the
+  moves, the notation then the beginner method case by case, each case a demo
+  cube built backwards from its algorithm, to recognise on your own cube; or
+  holding the cube, the home grip marked on the 3D cube and the finger or wrist
+  that makes R, L, U and the sexy move, the fingers riding with the face they
+  turn.
 - **Beginner method**: layer by layer (`src/beginner.ts`), ~170 moves split into
   8 stages (daisy, white cross, white corners, middle layer, yellow cross, yellow
   edges, yellow corners placed then oriented), each with the rule it teaches and

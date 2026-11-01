@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import CubeView from "./CubeView";
 import { Back, Chevron, HOME, modeTitle } from "./Home";
 import { Chip, Colored } from "./Scanner";
 import { findPiece, homeOf, planStates, STAGES, type Group } from "./beginner";
-import { describeMove, upright, type Face } from "./cube";
+import { applyMove, describeMove, invert, upright, type Face } from "./cube";
 import { lang, nOf, tr } from "./i18n";
 
 const FACES_EN: [string, string][] = [["R", "Right"], ["L", "Left"], ["U", "Up"], ["D", "Down"], ["F", "Front"], ["B", "Back"]];
@@ -90,24 +90,83 @@ type GuideProps = {
   onEdit: (state: string) => void;
 };
 
+/** A move playing from `from`, forward or undone (inverted), and the group it belongs to. */
+type Anim = { from: string; move: string; group: Group };
+
+const DELAYS = [2, 3, 5, 8];
+const DELAY_KEY = "rubixcube:delay";
+
+const ICONS = {
+  back: (
+    <>
+      <rect x="5" y="5" width="2.5" height="14" rx="1" />
+      <path d="M19 5v14L9 12z" />
+    </>
+  ),
+  auto: <path d="M3.5 5v14l8.5-7zM12 5v14l8.5-7z" />,
+  pause: <path d="M6 5h4v14H6zM14 5h4v14h-4z" />,
+  play: <path d="M7 5v14l12-7z" />,
+  done: <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />,
+};
+const Icon = ({ name }: { name: keyof typeof ICONS }) => (
+  <svg viewBox="0 0 24 24" className="size-5 flex-none" fill="currentColor" aria-hidden>
+    {ICONS[name]}
+  </svg>
+);
+const DONE = tr({ fr: "Terminé", nl: "Klaar", en: "Done" });
+// A click leaves the focus where it was, so Space keeps toggling the auto mode.
+const keepFocus = (e: React.MouseEvent) => e.preventDefault();
+
 export default function Guide({ start, groups, learn, course, step, onStep, onHome, onScan, onEdit }: GuideProps) {
   const flat = useMemo(() => groups.flatMap((g, group) => g.moves.map((move) => ({ move, group }))), [groups]);
   const states = useMemo(() => planStates(start, groups), [start, groups]);
   const total = flat.length;
   const done = step === total;
-  const go = (delta: number) => onStep(Math.min(total, Math.max(0, step + delta)));
   const move = flat[step]?.move;
   const group = done ? undefined : groups[flat[step].group];
   const state = states[step];
 
+  // The cube rests on `state`; a step forward or back plays its move, while the texts already show where it lands.
+  const [anim, setAnim] = useState<Anim | null>(null);
+  const [auto, setAuto] = useState(false);
+  const [delay, setDelay] = useState(() => Number(localStorage.getItem(DELAY_KEY)) || 5);
+  const jump = (to: number) => {
+    setAnim(null);
+    onStep(to);
+  };
+  const forward = () => {
+    if (done) return;
+    setAnim({ from: state, move: flat[step].move, group: group! });
+    onStep(step + 1);
+    if (step + 1 === total) setAuto(false);
+  };
+  const back = () => {
+    if (!step) return;
+    const { move: m, group: g } = flat[step - 1];
+    // From the end of that move: a course demo may start right after it, on another cube.
+    setAnim({ from: applyMove(states[step - 1], m), move: invert([m])[0], group: groups[g] });
+    onStep(step - 1);
+  };
+  const toggleAuto = () => {
+    setAuto(!auto);
+    if (!auto) forward(); // starts right away, then waits between moves
+  };
+  const chooseDelay = (d: number) => {
+    setDelay(d);
+    localStorage.setItem(DELAY_KEY, String(d));
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closePicker();
       // A focused button already handles Space itself.
       if (e.key === " " && (e.target as Element).closest("button, summary")) return;
-      if (e.key === " ") e.preventDefault();
-      if (e.key === "ArrowRight" || e.key === " ") go(1);
-      if (e.key === "ArrowLeft") go(-1);
-      if (e.key === "Escape") closePicker();
+      if (e.key === " ") {
+        e.preventDefault();
+        if (!done) toggleAuto();
+      }
+      if (e.key === "ArrowRight") forward();
+      if (e.key === "ArrowLeft") back();
     };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
@@ -118,6 +177,14 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   const chips = flat.map((f, i) => ({ ...f, i })).filter((f) => !learn || f.group === flat[step]?.group);
   const [n, of] = learn ? [step - groupStart + 1, chips.length] : [step + 1, total];
   const position = nOf(n, of);
+
+  // An instruction gets twice the time to be read before its first move.
+  const wait = delay * 1000 * (learn && step === groupStart && group?.text ? 2 : 1);
+  useEffect(() => {
+    if (!auto) return;
+    const timer = setTimeout(forward, wait);
+    return () => clearTimeout(timer);
+  }, [auto, step, wait]);
 
   // Progress: one segment per stage, as long as its moves.
   const current = group?.stage ?? STAGES.length - 1;
@@ -134,12 +201,18 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
     return () => removeEventListener("pointerdown", outside);
   }, []);
 
+  /** Where the piece of `g` goes in cube `s`, for the stages that put pieces in their final place. */
+  const placeOf = (g: Group | undefined, s: string) => (learn && g?.piece && STAGES[g.stage].toHome ? homeOf(s, g.piece) : undefined);
   const piece = group?.piece;
-  const target = stage?.toHome && piece ? homeOf(state, piece) : undefined;
+  const target = placeOf(group, state);
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
+  // While a move plays, the outlines follow the piece it works on, from where it starts.
+  const shown = anim?.from ?? state;
+  const worked = anim?.group ?? group;
+  const settings = useId();
 
   return (
-    <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-28 md:px-8 roomy:pb-6 md:phone:gap-2 md:phone:pt-2 md:phone:pb-20">
+    <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
       <div className="flex items-center justify-between gap-3 text-sm text-mist">
         <Back label={HOME} onClick={onHome} />
         <p className="text-right">
@@ -158,14 +231,16 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
       <div className="flex flex-col gap-2">
         <div className="flex gap-[3px]">
           {learn ? (
-            STAGES.map((_, i) =>
+            STAGES.map((s, i) =>
               counts[i] ? (
-                <span key={i} className="h-1.5 overflow-hidden rounded-full bg-edge" style={{ flexGrow: counts[i] }}>
-                  <span
-                    className={`block h-full ${i < current || done ? "bg-mist/70" : "bg-chalk"}`}
-                    style={{ width: i < current || done ? "100%" : i === current ? `${(100 * (step - firsts[i])) / counts[i]}%` : 0 }}
-                  />
-                </span>
+                <button key={i} onClick={() => jump(firsts[i])} onMouseDown={keepFocus} title={s.title} aria-label={s.title} className="-my-2 min-w-0 py-2" style={{ flexGrow: counts[i] }}>
+                  <span className="block h-1.5 overflow-hidden rounded-full bg-edge">
+                    <span
+                      className={`block h-full ${i < current || done ? "bg-mist/70" : "bg-chalk"}`}
+                      style={{ width: i < current || done ? "100%" : i === current ? `${(100 * (step - firsts[i])) / counts[i]}%` : 0 }}
+                    />
+                  </span>
+                </button>
               ) : null,
             )
           ) : (
@@ -190,7 +265,7 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                 <li key={s.title}>
                   <button
                     disabled={firsts[i] < 0}
-                    onClick={() => onStep(firsts[i])}
+                    onClick={() => jump(firsts[i])}
                     className={`flex w-full items-baseline gap-2 rounded-xl px-3 py-2 text-left text-sm enabled:hover:bg-edge disabled:text-mist/60 ${i === current ? "bg-edge font-semibold" : ""}`}
                   >
                     <span className="w-4 text-mist">{i}</span>
@@ -212,7 +287,8 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
             {cases.map(({ g, first }) => (
               <li key={first} className="shrink-0">
                 <button
-                  onClick={() => onStep(first)}
+                  onClick={() => jump(first)}
+                  onMouseDown={keepFocus}
                   className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${g === group ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
                 >
                   {g.title}
@@ -224,8 +300,14 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
       </div>
 
       <div className="grid flex-1 items-center gap-6 md:grid-cols-2 md:gap-10">
-        <div className="aspect-square max-h-[42dvh] w-full justify-self-center md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-10rem)] md:phone:self-start">
-          <CubeView state={state} move={move} highlight={piece ? findPiece(state, piece) : undefined} target={target} />
+        <div className="aspect-square max-h-[40dvh] w-full justify-self-center md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start">
+          <CubeView
+            state={shown}
+            move={anim?.move}
+            onEnd={() => setAnim(null)}
+            highlight={worked?.piece ? findPiece(shown, worked.piece) : undefined}
+            target={placeOf(worked, shown)}
+          />
         </div>
 
         <div className="flex flex-col gap-4">
@@ -249,76 +331,50 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
               </p>
             </div>
           ) : (
-            <>
-              {(group?.text || stage) && (
-                <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
-                  {group?.title && <p className="mb-1 font-semibold">{group.title}</p>}
-                  {group?.text && (
-                    <p>
-                      <Colored text={group.text} />
-                    </p>
-                  )}
-                  {piece && (
-                    <p className="mt-2 flex gap-4 text-xs text-mist">
+            (group?.text || stage) && (
+              <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
+                {group?.title && <p className="mb-1 font-semibold">{group.title}</p>}
+                {group?.text && (
+                  <p>
+                    <Colored text={group.text} />
+                  </p>
+                )}
+                {piece && (
+                  <p className="mt-2 flex gap-4 text-xs text-mist">
+                    <span className="flex items-center gap-1.5">
+                      <i className="size-2.5 rounded-[3px] bg-piece" />
+                      {piece.length === 3
+                        ? tr({ fr: "le coin", nl: "het hoekstuk", en: "the corner" })
+                        : tr({ fr: "l'arête", nl: "het randstuk", en: "the edge" })}
+                    </span>
+                    {target && (
                       <span className="flex items-center gap-1.5">
-                        <i className="size-2.5 rounded-[3px] bg-piece" />
-                        {piece.length === 3
-                          ? tr({ fr: "le coin", nl: "het hoekstuk", en: "the corner" })
-                          : tr({ fr: "l'arête", nl: "het randstuk", en: "the edge" })}
+                        <i className="size-2.5 rounded-[3px] bg-place" />
+                        {tr({ fr: "sa place", nl: "zijn plek", en: "its place" })}
                       </span>
-                      {target && (
-                        <span className="flex items-center gap-1.5">
-                          <i className="size-2.5 rounded-[3px] bg-place" />
-                          {tr({ fr: "sa place", nl: "zijn plek", en: "its place" })}
-                        </span>
-                      )}
+                    )}
+                  </p>
+                )}
+                {stage && (
+                  <details className="mt-3 border-t border-edge pt-3 text-sm text-mist">
+                    <summary className="cursor-pointer text-chalk/80">
+                      {tr({ fr: "Comment ça marche ?", nl: "Hoe werkt het?", en: "How does it work?" })}
+                    </summary>
+                    <p className="mt-1">
+                      <span className="text-chalk">{stage.goal}</span> <Colored text={stage.how} />
                     </p>
-                  )}
-                  {stage && (
-                    <details className="mt-3 border-t border-edge pt-3 text-sm text-mist">
-                      <summary className="cursor-pointer text-chalk/80">
-                        {tr({ fr: "Comment ça marche ?", nl: "Hoe werkt het?", en: "How does it work?" })}
-                      </summary>
-                      <p className="mt-1">
-                        <span className="text-chalk">{stage.goal}</span> <Colored text={stage.how} />
-                      </p>
-                    </details>
-                  )}
-                </section>
-              )}
-              <div>
-                <p className="text-sm text-mist phone:hidden">
-                  {tr({ fr: "Coup", nl: "Zet", en: "Move" })} {position}
-                </p>
-                <p className="wide text-6xl phone:hidden">{move}</p>
-                <div className="mt-1 phone:mt-0">
-                  <MoveText move={move!} />
-                </div>
-              </div>
-            </>
+                  </details>
+                )}
+              </section>
+            )
           )}
 
-          {/* A bar fixed under the thumb on phones, with the move in the middle; inline on roomy screens. */}
-          <div className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-edge bg-plastic/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur md:phone:pt-1.5 md:phone:pb-1.5 roomy:static roomy:grid-cols-2 roomy:border-0 roomy:bg-transparent roomy:p-0 roomy:backdrop-blur-none">
-            <button className="btn btn-ghost max-[380px]:px-2 max-[380px]:text-sm" disabled={step === 0} onClick={() => go(-1)}>
-              {tr({ fr: "Précédent", nl: "Vorige", en: "Previous" })}
-            </button>
-            <span className="min-w-14 text-center roomy:hidden">
-              <span className="wide block text-3xl leading-none">{move ?? "✓"}</span>
-              {!done && <span className="mt-1 block text-[11px] text-mist">{position}</span>}
-            </span>
-            <button className="btn btn-main max-[380px]:px-2 max-[380px]:text-sm" disabled={done} onClick={() => go(1)}>
-              {step === total - 1
-                ? tr({ fr: "Terminer", nl: "Klaar", en: "Finish" })
-                : tr({ fr: "Suivant", nl: "Volgende", en: "Next" })}
-            </button>
-          </div>
-
-          <ol className="flex flex-wrap gap-1.5 phone:order-1">
+          <ol className="flex flex-wrap gap-1.5">
             {chips.map(({ move: m, i }) => (
               <li key={i}>
                 <button
-                  onClick={() => onStep(i)}
+                  onClick={() => jump(i)}
+                  onMouseDown={keepFocus}
                   title={describeMove(m).join(", ")}
                   className={`min-w-10 rounded-lg px-2 py-1 text-sm font-semibold [font-stretch:125%] ${
                     i === step ? "bg-chalk text-plastic" : i < step ? "bg-shell text-mist/60" : "bg-shell text-chalk"
@@ -344,6 +400,99 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
           </button>
         </div>
       )}
+
+      {/* The player, pinned to the bottom: its buttons never move or resize, so a pointer can rest on ▶. */}
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+        <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 py-3 md:grid md:h-18 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-6 md:px-8 md:py-0">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="wide min-w-12 flex-none text-4xl leading-none">{move ?? "✓"}</span>
+            <div className="min-w-0 text-sm leading-snug">
+              <p className="text-xs text-mist">
+                {done ? DONE : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
+              </p>
+              {move && (
+                <div className="md:line-clamp-2">
+                  <MoveText move={move} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-2">
+            <div className="flex gap-1 rounded-full bg-white/8 p-1 ring-1 ring-white/15">
+              <button
+                onClick={back}
+                onMouseDown={keepFocus}
+                disabled={!step}
+                title={tr({ fr: "Coup précédent (←)", nl: "Vorige zet (←)", en: "Previous move (←)" })}
+                aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
+                className="grid h-10 w-12 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
+              >
+                <Icon name="back" />
+              </button>
+              <button
+                onClick={toggleAuto}
+                onMouseDown={keepFocus}
+                disabled={done}
+                aria-pressed={auto}
+                title={tr({ fr: "Lecture automatique (espace)", nl: "Automatisch afspelen (spatie)", en: "Autoplay (space)" })}
+                aria-label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })}
+                className={`relative grid h-10 w-12 place-items-center rounded-full text-zinc-200 disabled:opacity-30 ${auto ? "bg-white/12" : "enabled:hover:bg-white/15"}`}
+              >
+                {auto && (
+                  <svg viewBox="0 0 48 40" className="absolute inset-0" aria-hidden>
+                    <rect key={`${step}|${wait}`} x="1.5" y="1.5" width="45" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
+                  </svg>
+                )}
+                <Icon name={auto ? "pause" : "auto"} />
+              </button>
+              <button
+                onClick={forward}
+                onMouseDown={keepFocus}
+                disabled={done}
+                title={tr({ fr: "Jouer le coup (→)", nl: "Zet spelen (→)", en: "Play the move (→)" })}
+                aria-label={done ? DONE : `${tr({ fr: "Jouer", nl: "Speel", en: "Play" })} ${move}`}
+                className="flex h-10 w-24 items-center justify-center gap-1.5 rounded-full bg-chalk text-plastic enabled:hover:bg-white disabled:opacity-40"
+              >
+                <Icon name={done ? "done" : "play"} />
+                {!done && <span className="wide w-7 text-left text-base">{move}</span>}
+              </button>
+            </div>
+            <button
+              popoverTarget={settings}
+              onMouseDown={keepFocus}
+              title={tr({ fr: "Durée par coup en lecture automatique", nl: "Duur per zet bij automatisch afspelen", en: "Time per move in autoplay" })}
+              className={`h-8 w-12 rounded-full border text-xs font-semibold ${auto ? "border-place text-chalk" : "border-edge text-mist hover:text-chalk"}`}
+            >
+              {delay} s
+            </button>
+            <div
+              id={settings}
+              popover="auto"
+              className="inset-auto bottom-40 left-1/2 m-0 w-64 -translate-x-1/2 rounded-2xl border border-edge bg-shell p-3 text-chalk shadow-2xl shadow-black/60 md:bottom-20"
+            >
+              <p className="mb-2 text-xs text-mist">{tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })}</p>
+              <div className="flex gap-1 rounded-xl bg-plastic p-1">
+                {DELAYS.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => chooseDelay(d)}
+                    onMouseDown={keepFocus}
+                    aria-pressed={d === delay}
+                    className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${d === delay ? "bg-chalk text-plastic" : "text-mist hover:text-chalk"}`}
+                  >
+                    {d} s
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <p className="hidden text-right text-xs text-mist pointer-fine:md:block">
+            {tr({ fr: "← → coup par coup · espace : auto", nl: "← → zet per zet · spatie: auto", en: "← → move by move · space: auto" })}
+          </p>
+        </div>
+      </div>
     </main>
   );
 }

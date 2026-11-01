@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { FACE_COLORS, inLayer, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
-import { tr } from "./i18n";
+import { FACE_COLORS, inLayer, isRotation, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
 
 // BoxGeometry material order: +x, -x, +y, -y, +z, -z.
 const SIDES: Vec[] = [
@@ -28,32 +27,14 @@ const material = (color: string) => {
   return MATERIALS.get(color)!;
 };
 
-const PAUSE = 700; // the start position stays in view this long before the move plays
+type Props = { state: string; move?: string; onEnd?: () => void; highlight?: Vec; target?: Vec; autoRotate?: boolean };
 
-type View = "start" | "play" | "end";
-
-// Single arrow with a bar for start and end, a plain arrow to play.
-const CONTROLS: [View, string, React.ReactNode][] = [
-  ["start", tr({ fr: "Avant le coup", nl: "Voor de zet", en: "Before the move" }), <><rect x="5" y="5" width="2.5" height="14" rx="1" /><path d="M19 5v14L9 12z" /></>],
-  ["play", tr({ fr: "Jouer le coup depuis le début", nl: "De zet vanaf het begin afspelen", en: "Play the move from the start" }), <path d="M7 5v14l12-7z" />],
-  ["end", tr({ fr: "Après le coup", nl: "Na de zet", en: "After the move" }), <><path d="M5 5v14l10-7z" /><rect x="16.5" y="5" width="2.5" height="14" rx="1" /></>],
-];
-
-type Props = { state: string; move?: string; highlight?: Vec; target?: Vec; autoRotate?: boolean };
-
-/** Renders `state`; when `move` is set, plays it once from `state`, with controls to hold its start or end, or play it again. `highlight` outlines one cubie, `target` (in green) the place it goes to. */
-export default function CubeView({ state, move, highlight, target, autoRotate = false }: Props) {
+/** Renders `state`; when `move` is set, plays it once from `state`, then calls `onEnd`. `highlight` outlines one cubie, `target` (in green) the place it goes to. */
+export default function CubeView({ state, move, onEnd, highlight, target, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; show?: (view: View) => void }>(null);
-  const progress = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState<View>("play");
-  // A new move starts playing: reset during render rather than from the effect.
-  const scene3d = `${state}|${move}|${highlight}|${target}`; // what the effect below rebuilds on
-  const [shown, setShown] = useState(scene3d);
-  if (shown !== scene3d) {
-    setShown(scene3d);
-    setView("play");
-  }
+  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void }>(null);
+  const ended = useRef(onEnd);
+  ended.current = onEnd;
 
   useEffect(() => {
     const el = host.current!;
@@ -125,9 +106,14 @@ export default function CubeView({ state, move, highlight, target, autoRotate = 
           );
           mesh.position.set(x, y, z);
           if (highlight && `${pos}` === `${highlight}`) mesh.add(new THREE.LineSegments(OUTLINE, OUTLINE_MATERIAL));
-          if (target && `${pos}` === `${target}`) mesh.add(new THREE.LineSegments(TARGET, TARGET_MATERIAL));
           (move && inLayer(move, pos) ? layer : ctx.root).add(mesh);
         }
+    // The place stays put while a face turns through it, and only follows the whole cube.
+    if (target) {
+      const place = new THREE.LineSegments(TARGET, TARGET_MATERIAL);
+      place.position.set(...target);
+      (move && isRotation(move) ? layer : ctx.root).add(place);
+    }
 
     if (!axis) {
       ctx.onFrame = undefined;
@@ -138,48 +124,15 @@ export default function CubeView({ state, move, highlight, target, autoRotate = 
     const duration = turns === 2 ? 1300 : 850;
     const vector = new THREE.Vector3(...axis);
     let start: number | undefined;
-    let pinned: number | undefined; // 0 or 1 holds the start or the end of the move
-    ctx.show = (next) => {
-      pinned = next === "start" ? 0 : next === "end" ? 1 : undefined;
-      start = undefined; // playing restarts from the start position, held for PAUSE
-      setView(next);
-    };
     ctx.onFrame = (t) => {
       start ??= t;
-      const k = pinned ?? Math.min(1, Math.max(0, (t - start - PAUSE) / duration));
+      const k = Math.min(1, (t - start) / duration);
       layer.quaternion.setFromAxisAngle(vector, angle * k * k * (3 - 2 * k));
-      progress.current?.style.setProperty("width", `${k * 100}%`);
-      if (pinned === undefined && k === 1) {
-        pinned = 1;
-        setView("end");
-      }
+      if (k < 1) return;
+      ctx.onFrame = undefined;
+      ended.current?.();
     };
   }, [state, move, `${highlight}`, `${target}`]);
 
-  return (
-    <div className="flex h-full w-full flex-col items-center gap-2">
-      <div ref={host} className="relative min-h-0 w-full flex-1 touch-none" />
-      {move && (
-        <div className="relative flex gap-1 overflow-hidden rounded-full bg-white/8 p-1 ring-1 ring-white/15">
-          {CONTROLS.map(([id, label, icon]) => (
-            <button
-              key={id}
-              onClick={() => scene.current?.show?.(id)}
-              title={label}
-              aria-label={label}
-              aria-pressed={view === id}
-              className={`grid h-9 w-11 place-items-center rounded-full transition ${
-                view === id ? "bg-white text-black" : "text-zinc-200 hover:bg-white/15"
-              }`}
-            >
-              <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden>
-                {icon}
-              </svg>
-            </button>
-          ))}
-          <div ref={progress} className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-emerald-400" />
-        </div>
-      )}
-    </div>
-  );
+  return <div ref={host} className="relative h-full w-full touch-none" />;
 }

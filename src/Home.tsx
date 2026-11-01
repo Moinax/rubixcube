@@ -26,9 +26,9 @@ const MODES: { id: Mode; title: string; text: string; face: string; marks?: Reco
     id: "fast",
     title: tr({ fr: "Résoudre mon cube", nl: "Mijn kubus oplossen", en: "Solve my cube" }),
     text: tr({
-      fr: "Le chemin le plus court, une vingtaine de coups.",
-      nl: "De kortste weg, een twintigtal zetten.",
-      en: "The shortest path, about twenty moves.",
+      fr: "Le chemin le plus court : une vingtaine de coups, calculés par la méthode de Kociemba.",
+      nl: "De kortste weg: een twintigtal zetten, berekend met de methode van Kociemba.",
+      en: "The shortest path: about twenty moves, worked out with Kociemba's method.",
     }),
     face: "RUFBLDFRU",
   },

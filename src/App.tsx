@@ -6,7 +6,7 @@ import NetEditor from "./NetEditor";
 import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
 import { COURSE } from "./course";
-import { SOLVED, solve, suspects, validate } from "./cube";
+import { phaseTwo, SOLVED, solve, suspects, validate } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** Modes that solve the user's own cube, so need its colors first. */
@@ -25,22 +25,51 @@ type Screen =
 const STORAGE_KEY = "rubixcube";
 const GUIDE_KEY = "rubixcube:guide";
 
-/** Rebuilds a saved learn or course plan from the code, so text updates reach a guide in progress;
- * the saved plan stays if that fails. The fast solution has no texts and costs a solver warm-up. */
+/** The fast solution in the two phases of Kociemba's method, each with what it does. */
+function fastPlan(start: string, moves: string[]): Group[] {
+  const k = phaseTwo(start, moves);
+  const phases: Group[] = [
+    {
+      stage: 0,
+      title: tr({ fr: "Phase 1 : tout remettre dans le bon sens", nl: "Fase 1: alles in de goede richting", en: "Phase 1: every piece the right way round" }),
+      text: tr({
+        fr: "La méthode de Kociemba, calculée pour ton cube : aucune séquence à retenir. Cette phase tourne chaque pièce dans le bon sens. À la fin, le haut et le bas ne montrent plus que du blanc et du jaune, et les 4 arêtes sans blanc ni jaune sont dans la couronne du milieu. Le cube a encore l'air mélangé, c'est normal.",
+        nl: "De methode van Kociemba, berekend voor jouw kubus: geen reeksen om te onthouden. Deze fase draait elk stuk in de goede richting. Op het einde tonen boven- en onderkant alleen nog wit en geel, en zitten de 4 randstukken zonder wit of geel in de middelste laag. De kubus ziet er nog door elkaar uit, dat is normaal.",
+        en: "Kociemba's method, worked out for your cube: no sequence to learn. This phase turns every piece the right way round. At the end, the top and bottom show only white and yellow, and the 4 edges without white or yellow sit in the middle layer. The cube still looks scrambled, that's normal.",
+      }),
+      moves: moves.slice(0, k),
+    },
+    {
+      stage: 0,
+      title: tr({ fr: "Phase 2 : tout remettre en place", nl: "Fase 2: alles op zijn plek", en: "Phase 2: every piece in its place" }),
+      text: tr({
+        fr: "Plus que des quarts de tour du haut et du bas, et des demi-tours des côtés : ces coups gardent chaque pièce dans le bon sens et la ramènent à sa place.",
+        nl: "Alleen nog kwartslagen van boven- en onderkant, en halve slagen van de zijkanten: die zetten houden elk stuk in de goede richting en brengen het naar zijn plek.",
+        en: "Only quarter turns of the top and bottom, and half turns of the sides: these moves keep every piece the right way round and bring it home.",
+      }),
+      moves: moves.slice(k),
+    },
+  ];
+  return phases.filter((g) => g.moves.length);
+}
+
+/** Rebuilds a saved plan from the code, so text updates reach a guide in progress: learn and course plans
+ * anew, the fast solution split again from its saved moves (solving anew costs a solver warm-up). The
+ * saved plan stays if that fails. */
 function refresh(saved: GuideScreen): GuideScreen {
-  if (!saved.learn) return saved;
-  let guide = saved;
   try {
-    guide = { ...saved, groups: saved.course ? COURSE : beginnerSolve(saved.start) };
+    if (!saved.learn) return { ...saved, groups: fastPlan(saved.start, saved.groups.flatMap((g) => g.moves)) };
+    const guide = { ...saved, groups: saved.course ? COURSE : beginnerSolve(saved.start) };
+    // The rebuilt plan may split its moves differently: resume on the same cube, the closest match to the saved step.
+    const reached = planStates(saved.start, saved.groups)[saved.step];
+    const states = planStates(guide.start, guide.groups);
+    const matches = states.flatMap((s, i) => (s === reached ? [i] : []));
+    if (matches.length) return { ...guide, step: matches.reduce((a, b) => (Math.abs(b - saved.step) < Math.abs(a - saved.step) ? b : a)) };
+    return { ...guide, step: Math.min(saved.step, states.length - 1) };
   } catch (e) {
     console.error(e);
+    return saved;
   }
-  // The rebuilt plan may split its moves differently: resume on the same cube, the closest match to the saved step.
-  const reached = planStates(saved.start, saved.groups)[saved.step];
-  const states = planStates(guide.start, guide.groups);
-  const matches = states.flatMap((s, i) => (s === reached ? [i] : []));
-  if (matches.length) return { ...guide, step: matches.reduce((a, b) => (Math.abs(b - saved.step) < Math.abs(a - saved.step) ? b : a)) };
-  return { ...guide, step: Math.min(saved.step, states.length - 1) };
 }
 
 function load<T>(key: string): T | undefined {
@@ -109,7 +138,7 @@ export default function App() {
     setScreen({ name: "solving" });
     await new Promise((r) => setTimeout(r, 50)); // let the spinner paint before the solver blocks
     try {
-      const groups = learn ? beginnerSolve(edit.state) : [{ stage: 0, text: "", moves: solve(edit.state) }];
+      const groups = learn ? beginnerSolve(edit.state) : fastPlan(edit.state, solve(edit.state));
       setScreen({ name: "guide", start: edit.state, groups, learn, step: 0 });
     } catch (e) {
       console.error(e);

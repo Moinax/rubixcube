@@ -218,10 +218,13 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
     return () => clearTimeout(timer);
   }, [auto, step, wait, preview]);
 
-  // Progress: one segment per stage, as long as its moves.
+  // Progress: one segment per stage (per phase in the fast mode), as long as its moves.
   const current = group?.stage ?? STAGES.length - 1;
   const firsts = STAGES.map((_, i) => flat.findIndex((f) => groups[f.group].stage === i));
-  const counts = STAGES.map((_, i) => flat.filter((f) => groups[f.group].stage === i).length);
+  const segments = learn
+    ? STAGES.map((s, i) => ({ title: s.title, first: firsts[i], count: flat.filter((f) => groups[f.group].stage === i).length }))
+    : groups.map((g, i) => ({ title: g.title, first: flat.findIndex((f) => f.group === i), count: g.moves.length }));
+  const reached = done ? segments.length : learn ? current : flat[step].group;
   const stage = learn ? STAGES[current] : undefined;
   // The stage list is a popover: it closes on any step change, a tap outside it, or Escape.
   const picker = useRef<HTMLDetailsElement>(null);
@@ -260,24 +263,19 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
 
       <div className="flex flex-col gap-2">
         <div className="flex gap-[3px]">
-          {learn ? (
-            STAGES.map((s, i) =>
-              counts[i] ? (
-                <button key={i} onClick={() => jump(firsts[i])} onMouseDown={keepFocus} title={s.title} aria-label={s.title} className="-my-2 min-w-0 py-2" style={{ flexGrow: counts[i] }}>
-                  <span className="block h-1.5 overflow-hidden rounded-full bg-edge">
-                    <span
-                      className={`block h-full ${i < current || done ? "bg-mist/70" : "bg-chalk"}`}
-                      style={{ width: i < current || done ? "100%" : i === current ? `${(100 * (step - firsts[i])) / counts[i]}%` : 0 }}
-                    />
-                  </span>
-                </button>
-              ) : null,
-            )
-          ) : (
-            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-edge">
-              <span className="block h-full bg-chalk" style={{ width: `${(100 * step) / Math.max(total, 1)}%` }} />
-            </span>
+          {segments.map(({ title, first, count }, i) =>
+            count ? (
+              <button key={i} onClick={() => jump(first)} onMouseDown={keepFocus} title={title} aria-label={title} className="-my-2 min-w-0 py-2" style={{ flexGrow: count }}>
+                <span className="block h-1.5 overflow-hidden rounded-full bg-edge">
+                  <span
+                    className={`block h-full ${i < reached ? "bg-mist/70" : "bg-chalk"}`}
+                    style={{ width: i < reached ? "100%" : i === reached ? `${(100 * (step - first)) / count}%` : 0 }}
+                  />
+                </span>
+              </button>
+            ) : null,
           )}
+          {!total && <span className="h-1.5 flex-1 rounded-full bg-edge" />}
         </div>
         {stage ? (
           <details ref={picker} className="group relative">
@@ -365,11 +363,13 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
           ) : (
             (group?.text || stage) && (
               <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
-                {learn && (
+                {(learn || group?.title) && (
                   <p className="mb-1.5 flex items-baseline gap-2">
-                    <span className="rounded-md bg-piece px-1.5 py-px text-[11px] font-bold tracking-wide text-plastic uppercase">
-                      {tr({ fr: "Objectif", nl: "Doel", en: "Goal" })}
-                    </span>
+                    {learn && (
+                      <span className="rounded-md bg-piece px-1.5 py-px text-[11px] font-bold tracking-wide text-plastic uppercase">
+                        {tr({ fr: "Objectif", nl: "Doel", en: "Goal" })}
+                      </span>
+                    )}
                     {group?.title && <span className="font-semibold">{group.title}</span>}
                   </p>
                 )}

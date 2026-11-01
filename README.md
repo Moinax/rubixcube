@@ -6,7 +6,9 @@ Pick a mode first. The two that solve your own cube then ask for it: scan it
 with the camera, or type its colors in. Then follow the moves one by one on an
 animated 3D cube:
 
-- **Fast**: the shortest solution cubejs finds (~20 moves).
+- **Fast**: the shortest solution cubejs finds (~20 moves), split into the two
+  phases of Kociemba's method (`phaseTwo` in `src/cube.ts`): every piece turned
+  the right way round, then put in its place with U, D and half turns only.
 - **Learn**: the layer-by-layer beginner method (`src/beginner.ts`), ~170 moves
   split into 8 stages (daisy, white cross, white corners, middle layer, yellow
   cross, yellow edges, yellow corners placed then oriented), each with the rule

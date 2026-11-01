@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Cube from "cubejs";
-import { applyMove, classify, FACES, feminine, SOLVED, solve, suspects, validate, vivid, type Face, type RGB } from "../src/cube.ts";
+import { applyMove, classify, FACES, feminine, phaseTwo, SOLVED, solve, suspects, validate, vivid, type Face, type RGB } from "../src/cube.ts";
 
 const MOVES = [...FACES].flatMap((f) => [f, f + "'", f + "2"]);
 
@@ -77,4 +77,17 @@ test("vivid tells cube faces from a person, on real webcam frames", () => {
 test("feminine agrees colors with feminine nouns, orange stays invariable", () => {
   assert.deepEqual([..."URFDLB"].map((f) => feminine(f as Face)), ["blanche", "rouge", "verte", "jaune", "orange", "bleue"]);
   assert.deepEqual([..."URFDLB"].map((f) => feminine(f as Face, true)), ["blanches", "rouges", "vertes", "jaunes", "orange", "bleues"]);
+});
+
+test("Kociemba's solution splits where only U, D and half turns are left", () => {
+  for (let i = 0; i < 10; i++) {
+    const state = Cube.random().asString();
+    const moves = solve(state);
+    const k = phaseTwo(state, moves);
+    assert.ok(k > 0 && k < moves.length, `${k} of ${moves.length}`);
+    assert.ok(moves.slice(k).every((m) => "UD".includes(m[0]) || m[1] === "2"));
+  }
+  // Scrambled with second-phase moves only: nothing to orient.
+  assert.equal(phaseTwo(["U'", "R2"].reduce(applyMove, SOLVED), ["R2", "U"]), 0);
+  assert.equal(phaseTwo(applyMove(SOLVED, "R"), ["R'"]), 1);
 });

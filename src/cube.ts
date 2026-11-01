@@ -194,6 +194,24 @@ export function solve(state: string): string[] {
   return Cube.fromString(state).solve().split(" ").filter(Boolean);
 }
 
+/**
+ * Where the second phase of Kociemba's solution starts: from there on, only quarter turns of U and D
+ * and half turns of the sides, on a cube that phase one left with every piece the right way round
+ * (U and D show only their two colors, and the 4 middle edges sit in the middle layer, their F or B
+ * color on F or B). Cubejs returns both phases as one sequence.
+ */
+export function phaseTwo(start: string, moves: string[]): number {
+  const oriented = (s: string) =>
+    [...s.slice(0, 9), ...s.slice(27, 36)].every((c) => c === "U" || c === "D") && [21, 23, 48, 50].every((i) => s[i] === "F" || s[i] === "B");
+  const keeps = (m: string) => m[0] === "U" || m[0] === "D" || quarterTurns(m) === 2;
+  // The earliest oriented cube within the moves that all keep it so, at the end of the solution.
+  let i = moves.length;
+  while (i && keeps(moves[i - 1])) i--;
+  let s = moves.slice(0, i).reduce(applyMove, start);
+  for (; i < moves.length && !oriented(s); i++) s = applyMove(s, moves[i]);
+  return i;
+}
+
 const DIRECTIONS: Record<Face, [string, string, string]> = tr({
   fr: {
     U: ["Face du haut", "un quart de tour vers la gauche", "un quart de tour vers la droite"],

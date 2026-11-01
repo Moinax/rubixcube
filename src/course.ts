@@ -1,4 +1,4 @@
-import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group } from "./beginner.ts";
+import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group, type Stage } from "./beginner.ts";
 import { invert as undo, SOLVED } from "./cube.ts";
 import { tr, type Lang } from "./i18n.ts";
 
@@ -296,5 +296,74 @@ export const COURSE: Group[] = [
     YELLOW_UP,
     undefined,
     [8, 1, 16, 1],
+  ),
+];
+
+// How to hold the cube and which finger makes each move: the fingertricks most cubers start with. Only the
+// safe ones (wrists for R and L, index fingers for U), on the cube held as the method holds it.
+export const HAND_STAGES: Stage[] = [
+  tr({
+    fr: { title: "Tenir le cube", goal: "Tenir le cube au bout des doigts, et tourner sans changer de prise.", why: "Chaque coup se fait d'un doigt ou d'un poignet, puis tu reviens à la même prise." },
+    nl: { title: "De kubus vasthouden", goal: "De kubus met je vingertoppen vasthouden, en draaien zonder van greep te wisselen.", why: "Elke zet doe je met één vinger of één pols, en dan keer je terug naar dezelfde greep." },
+    en: { title: "Holding the cube", goal: "Hold the cube at your fingertips, and turn without changing your grip.", why: "Each move takes one finger or one wrist, then you come back to the same grip." },
+  }),
+];
+
+/** A lesson on the held cube: a text per step, and the finger of each move. */
+const hand = (texts: Texts, fingers: Record<Lang, string[]>, moves: string[], split: number[], grip = false): Group => ({
+  ...group(0, texts, moves, YELLOW_UP, undefined, split),
+  fingers: tr(fingers),
+  ...(grip && { grip }),
+});
+
+const WRIST = { fr: "poignet droit", nl: "rechterpols", en: "right wrist" };
+const RIGHT_INDEX = { fr: "index droit", nl: "rechterwijsvinger", en: "right index" };
+const LEFT_INDEX = { fr: "index gauche", nl: "linkerwijsvinger", en: "left index" };
+const LEFT_WRIST = { fr: "poignet gauche", nl: "linkerpols", en: "left wrist" };
+/** The fingers of a lesson's moves, in each language. */
+const fingersOf = (...names: Record<Lang, string>[]) =>
+  Object.fromEntries((["fr", "nl", "en"] as Lang[]).map((l) => [l, names.map((n) => n[l])])) as Record<Lang, string[]>;
+
+export const HANDS: Group[] = [
+  hand(
+    {
+      fr: ["La prise de base", "Tiens le cube au bout des doigts, pas dans les paumes : les pouces sur la face avant, les index sur le dessus, les autres doigts derrière. Tu reviens à cette prise entre chaque coup.", "Le poignet droit tourne vers le haut ; le pouce droit glisse avec la face.", "Le poignet revient, et tu retrouves la prise de base."],
+      nl: ["De basisgreep", "Houd de kubus met je vingertoppen, niet in je handpalmen: de duimen op de voorkant, de wijsvingers bovenop, de andere vingers achteraan. Tussen elke zet keer je terug naar deze greep.", "De rechterpols draait naar boven; de rechterduim glijdt mee met de kant.", "De pols draait terug, en je bent weer in de basisgreep."],
+      en: ["The home grip", "Hold the cube at your fingertips, not in your palms: thumbs on the front face, index fingers on top, the other fingers behind. You come back to this grip between moves.", "Your right wrist turns upward; the right thumb slides along with the face.", "Your wrist turns back, and you're in the home grip again."],
+    },
+    fingersOf(WRIST, WRIST),
+    ["R", "R'"],
+    [1, 1],
+    true,
+  ),
+  hand(
+    {
+      fr: ["Le haut, avec les index", "Le haut se tourne d'une poussée de l'index, sans bouger le reste de la main.", "L'index droit pousse le haut.", "L'index gauche pousse le haut dans l'autre sens.", "L'index droit pousse deux fois de suite, ou l'index puis le majeur."],
+      nl: ["De bovenkant, met de wijsvingers", "De bovenkant draai je met één duw van een wijsvinger, zonder de rest van je hand te bewegen.", "De rechterwijsvinger duwt de bovenkant.", "De linkerwijsvinger duwt de bovenkant de andere kant op.", "De rechterwijsvinger duwt twee keer na elkaar, of de wijsvinger en dan de middelvinger."],
+      en: ["The top, with the index fingers", "You turn the top with one push of an index finger, without moving the rest of your hand.", "Your right index finger pushes the top.", "Your left index finger pushes the top the other way.", "Your right index finger pushes twice in a row, or the index then the middle finger."],
+    },
+    fingersOf(RIGHT_INDEX, LEFT_INDEX, { fr: "index droit ×2", nl: "rechterwijsvinger ×2", en: "right index ×2" }),
+    ["U", "U'", "U2"],
+    [1, 1, 1],
+  ),
+  hand(
+    {
+      fr: ["La gauche, avec le poignet", "Le miroir de R : cette fois, c'est le poignet gauche qui tourne.", "Le poignet gauche tourne vers le bas ; le pouce gauche glisse avec la face.", "Le poignet gauche remonte, et tu retrouves la prise."],
+      nl: ["Links, met de pols", "Het spiegelbeeld van R: nu draait de linkerpols.", "De linkerpols draait naar beneden; de linkerduim glijdt mee met de kant.", "De linkerpols draait terug omhoog, en je bent weer in de greep."],
+      en: ["The left, with the wrist", "The mirror of R: this time your left wrist turns.", "Your left wrist turns downward; the left thumb slides along with the face.", "Your left wrist turns back up, and you're in the grip again."],
+    },
+    fingersOf(LEFT_WRIST, LEFT_WRIST),
+    ["L", "L'"],
+    [1, 1],
+  ),
+  hand(
+    {
+      fr: ["Le sexy move sans lâcher le cube", "Les quatre coups s'enchaînent sans changer de prise : poignet, index droit, poignet, index gauche.", "Le poignet droit monte.", "L'index droit pousse le haut.", "Le poignet droit redescend.", "L'index gauche pousse le haut.", "Encore une fois, sans t'arrêter : le geste devient naturel."],
+      nl: ["De sexy move zonder los te laten", "De vier zetten volgen elkaar op zonder van greep te wisselen: pols, rechterwijsvinger, pols, linkerwijsvinger.", "De rechterpols gaat omhoog.", "De rechterwijsvinger duwt de bovenkant.", "De rechterpols gaat terug omlaag.", "De linkerwijsvinger duwt de bovenkant.", "Nog een keer, zonder te stoppen: zo wordt het een vanzelfsprekende beweging."],
+      en: ["The sexy move without letting go", "The four moves flow without changing grip: wrist, right index, wrist, left index.", "Your right wrist goes up.", "Your right index finger pushes the top.", "Your right wrist comes back down.", "Your left index finger pushes the top.", "Once more, without stopping: the move becomes second nature."],
+    },
+    fingersOf(WRIST, RIGHT_INDEX, WRIST, LEFT_INDEX, WRIST, RIGHT_INDEX, WRIST, LEFT_INDEX),
+    times(SEXY, 2),
+    [1, 1, 1, 1, 4],
   ),
 ];

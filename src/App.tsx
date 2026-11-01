@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import CubeView from "./CubeView";
 import Guide from "./Guide";
-import { Back, Home, InputChoice, modeTitle, type Mode, type Resume } from "./Home";
+import { Back, BasicsChoice, Home, InputChoice, modeTitle, type Mode, type Resume } from "./Home";
 import NetEditor from "./NetEditor";
 import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
 import { CFOP_STAGES, cfopSolve } from "./cfop";
-import { COURSE } from "./course";
+import { COURSE, HAND_STAGES, HANDS } from "./course";
 import { phaseTwo, randomCube, SOLVED, solve, suspects, upright, validate } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** Modes that solve the user's own cube, so need its colors first. */
 type CubeMode = Exclude<Mode, "course">;
-type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number; course?: boolean; cfop?: boolean };
+/** `hands`: the course on holding the cube, rather than on reading the moves. */
+type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number; course?: boolean; hands?: boolean; cfop?: boolean };
 type Screen =
   | { name: "home" }
+  | { name: "basics" }
   | { name: "input"; mode: CubeMode }
   | { name: "scan"; mode: CubeMode; scan?: Scan }
   | { name: "edit"; mode: CubeMode; state: string; scan?: Scan }
@@ -63,7 +65,7 @@ const method = (cfop?: boolean) => (cfop ? { solve: cfopSolve, stages: CFOP_STAG
 function refresh(saved: GuideScreen): GuideScreen {
   try {
     if (!saved.learn) return { ...saved, groups: fastPlan(saved.start, saved.groups.flatMap((g) => g.moves)) };
-    const guide = { ...saved, groups: saved.course ? COURSE : method(saved.cfop).solve(saved.start) };
+    const guide = { ...saved, groups: saved.course ? (saved.hands ? HANDS : COURSE) : method(saved.cfop).solve(saved.start) };
     // The rebuilt plan may split its moves differently, or turn the cube elsewhere: resume on the same cube,
     // however it is held, the closest match to the saved step.
     const reached = planStates(saved.start, saved.groups)[saved.step];
@@ -169,11 +171,22 @@ export default function App() {
           onResume={() => saved && setScreen(saved.guide)}
           onMode={(mode) =>
             setScreen(
-              mode === "course"
-                ? { name: "guide", start: COURSE[0].from!, groups: COURSE, learn: true, step: 0, course: true }
-                : { name: "input", mode },
+              mode === "course" ? { name: "basics" } : { name: "input", mode },
             )
           }
+        />
+      );
+    case "basics":
+      return (
+        <BasicsChoice
+          onPick={(part) =>
+            setScreen(
+              part === "hands"
+                ? { name: "guide", start: HANDS[0].from!, groups: HANDS, learn: true, step: 0, course: true, hands: true }
+                : { name: "guide", start: COURSE[0].from!, groups: COURSE, learn: true, step: 0, course: true },
+            )
+          }
+          onBack={() => setScreen({ name: "home" })}
         />
       );
     case "input":
@@ -217,7 +230,7 @@ export default function App() {
           groups={screen.groups}
           learn={screen.learn}
           course={screen.course}
-          stages={method(screen.cfop).stages}
+          stages={screen.hands ? HAND_STAGES : method(screen.cfop).stages}
           step={screen.step}
           onStep={(step) => setScreen({ ...screen, step })}
           onHome={() => setScreen({ name: "home" })}

@@ -27,9 +27,9 @@ const MODES: { id: Mode; title: string; text: string; face: string; marks?: Reco
     id: "course",
     title: tr({ fr: "Apprendre les bases", nl: "De basis leren", en: "Learn the basics" }),
     text: tr({
-      fr: "Sans ton cube : la notation, puis chaque cas de la méthode débutant sur un cube d'exemple. Pas de scan.",
-      nl: "Zonder je kubus: de notatie, daarna elk geval van de beginnersmethode op een voorbeeldkubus. Geen scan.",
-      en: "Without your cube: the notation, then each case of the beginner method on a sample cube. No scan.",
+      fr: "Lire les coups et chaque cas de la méthode débutant sur un cube d'exemple, ou tenir le cube et le tourner du bout des doigts. Pas de scan.",
+      nl: "De zetten lezen en elk geval van de beginnersmethode op een voorbeeldkubus, of de kubus vasthouden en met je vingertoppen draaien. Geen scan.",
+      en: "Read the moves and each case of the beginner method on a sample cube, or hold the cube and turn it at your fingertips. No scan.",
     }),
     face: ".........",
     marks: { 5: "piece", 8: "place" },
@@ -140,7 +140,7 @@ export function Home({ resume, onResume, onMode }: HomeProps) {
               <Chevron />
             </button>
           )}
-          <h1 className="wide pt-2 text-2xl md:text-3xl">{tr({ fr: "Que veux-tu faire ?", nl: "Wat wil je doen?", en: "What do you want to do?" })}</h1>
+          <h1 className="wide pt-2 text-2xl md:text-3xl">{tr({ fr: "Que veux-tu faire\u00a0?", nl: "Wat wil je doen?", en: "What do you want to do?" })}</h1>
           <ul className="overflow-hidden rounded-2xl border border-edge">
             {MODES.map((m) => (
               <li key={m.id} className="border-edge not-first:border-t">
@@ -237,6 +237,48 @@ export function InputChoice({ mode: id, onScan, onManual, onRandom, onBack }: In
           en: "The camera image stays on your device, nothing is sent.",
         })}
       </p>
+    </main>
+  );
+}
+
+type BasicsProps = { onPick: (part: "moves" | "hands") => void; onBack: () => void };
+
+/** The basics come in two parts, each on its own: reading the moves, or holding the cube. */
+export function BasicsChoice({ onPick, onBack }: BasicsProps) {
+  const parts: ["moves" | "hands", string, string][] = [
+    [
+      "moves",
+      tr({ fr: "Lire les coups", nl: "De zetten lezen", en: "Reading the moves" }),
+      tr({
+        fr: "Les lettres R, U, F…, puis chaque cas de la méthode débutant, sur un cube d'exemple.",
+        nl: "De letters R, U, F…, daarna elk geval van de beginnersmethode, op een voorbeeldkubus.",
+        en: "The letters R, U, F…, then each case of the beginner method, on a sample cube.",
+      }),
+    ],
+    [
+      "hands",
+      tr({ fr: "Tenir le cube", nl: "De kubus vasthouden", en: "Holding the cube" }),
+      tr({
+        fr: "Où poser les doigts, et quel doigt fait chaque coup. Cinq minutes, ton cube en main.",
+        nl: "Waar je je vingers legt, en welke vinger elke zet doet. Vijf minuten, met je kubus in de hand.",
+        en: "Where your fingers rest, and which finger makes each move. Five minutes, your cube in hand.",
+      }),
+    ],
+  ];
+  return (
+    <main className="mx-auto flex w-full flex-1 max-w-2xl flex-col gap-5 p-5 md:justify-center md:p-10">
+      <div>
+        <Back label={HOME} onClick={onBack} />
+      </div>
+      <h1 className="wide text-3xl">{tr({ fr: "Par quoi commencer\u00a0?", nl: "Waarmee begin je?", en: "Where to start?" })}</h1>
+      <div className="grid gap-3 md:grid-cols-2">
+        {parts.map(([id, title, text]) => (
+          <button key={id} onClick={() => onPick(id)} className="grid gap-1.5 rounded-2xl border border-edge bg-shell p-5 text-left hover:bg-raised">
+            <span className="text-lg font-bold">{title}</span>
+            <span className="text-sm text-mist">{text}</span>
+          </button>
+        ))}
+      </div>
     </main>
   );
 }

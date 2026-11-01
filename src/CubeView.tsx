@@ -29,6 +29,18 @@ const TARGET = edges(1.12);
 const PLACE_LINE = new LineMaterial({ color: "#34d399", linewidth: 4 });
 const GLASS_BOX = new THREE.BoxGeometry(1.1, 1.1, 1.1);
 const GLASS = new THREE.MeshBasicMaterial({ color: "#34d399", transparent: true, opacity: 0.35, depthWrite: false });
+// Where the fingers rest in the home grip, on the cube held yellow up: the thumbs low on the front face,
+// the index fingers on the top's back corners.
+const FINGER = new THREE.CircleGeometry(0.2, 32);
+export const THUMB_COLOR = "#e879f9";
+export const INDEX_COLOR = "#34d399";
+const [THUMB, INDEX] = [THUMB_COLOR, INDEX_COLOR].map((color) => new THREE.MeshBasicMaterial({ color }));
+const GRIP: [pos: Vec, normal: Vec, finger: THREE.Material][] = [
+  [[-1, -1, 1], [0, 0, 1], THUMB],
+  [[1, -1, 1], [0, 0, 1], THUMB],
+  [[-1, 1, -1], [0, 1, 0], INDEX],
+  [[1, 1, -1], [0, 1, 0], INDEX],
+];
 const MATERIALS = new Map<string, THREE.MeshPhysicalMaterial>();
 const material = (color: string) => {
   if (!MATERIALS.has(color)) MATERIALS.set(color, new THREE.MeshPhysicalMaterial({ color, roughness: 0.28, clearcoat: 0.6 }));
@@ -48,6 +60,7 @@ type Props = {
   pair?: string;
   pairPlace?: string;
   replay?: number;
+  grip?: boolean;
   autoRotate?: boolean;
 };
 
@@ -55,9 +68,9 @@ type Props = {
  * Renders `state`; when `moves` are set, plays them one after the other from `state`, then calls `onEnd`.
  * `piece` (its colors) is outlined, and `place` (the colors of the centers around it) is a green glass box;
  * so are `pair`, a second piece that goes with it (an F2L edge), and `pairPlace`. A new `replay` count
- * plays the same moves again.
+ * plays the same moves again. `grip` marks where the fingers rest in the home grip.
  */
-export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, autoRotate = false }: Props) {
+export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void }>(null);
   const ended = useRef(onEnd);
@@ -143,6 +156,14 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
             if (mine) mesh.add(new LineSegments2(OUTLINE, PIECE_LINE));
             (move && inLayer(move, pos) ? layer : ctx.root).add(mesh);
           }
+      // The fingers stay where they rest while a face turns under them.
+      if (grip)
+        for (const [pos, normal, finger] of GRIP) {
+          const dot = new THREE.Mesh(FINGER, finger);
+          dot.position.set(...pos).addScaledVector(new THREE.Vector3(...normal), 0.52);
+          dot.lookAt(dot.position.clone().add(new THREE.Vector3(...normal)));
+          ctx.root.add(dot);
+        }
       // A place stays put while a face turns through it, and only follows the whole cube.
       for (const [, slot] of tracked) {
         if (!slot) continue;
@@ -177,7 +198,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     };
 
     show(state, 0);
-  }, [state, moves?.join(" "), piece, place, pair, pairPlace, replay]);
+  }, [state, moves?.join(" "), piece, place, pair, pairPlace, replay, grip]);
 
   return <div ref={host} className="relative h-full w-full touch-none" />;
 }

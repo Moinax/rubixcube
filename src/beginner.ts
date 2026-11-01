@@ -13,7 +13,20 @@ export type Step = { text: string; count: number };
 /** Moves to play: `text` says where the piece stands and where it goes, `steps` how to get it there, and the
  * named sequence they end with; `pair` is the edge that goes with the piece (a corner) into its slot; course
  * demos also carry a title and their own start cube. */
-export type Group = { stage: number; text: string; moves: string[]; steps?: Step[]; piece?: string; pair?: string; alg?: Alg; title?: string; from?: string };
+export type Group = {
+  stage: number;
+  text: string;
+  moves: string[];
+  steps?: Step[];
+  piece?: string;
+  pair?: string;
+  alg?: Alg;
+  title?: string;
+  from?: string;
+  /** The finger or wrist that makes each move, and whether to show where the fingers rest (the "hands" lessons). */
+  fingers?: string[];
+  grip?: boolean;
+};
 
 export const STAGES: Stage[] = tr<Stage[]>({
   fr: [

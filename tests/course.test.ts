@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { beginnerSolve, planStates, STAGES } from "../src/beginner.ts";
 import { cfopSolve } from "../src/cfop.ts";
-import { COURSE } from "../src/course.ts";
+import { COURSE, HAND_STAGES, HANDS } from "../src/course.ts";
 import { applyMove, colorsOf, PIECES, SOLVED, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
 
 const at = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
@@ -84,4 +84,14 @@ test("each group's steps share out its moves, in the course and in a beginner or
     assert.ok(g.steps?.length && g.steps.every((s) => s.count > 0 && s.text), g.text);
     assert.equal(g.steps.reduce((n, s) => n + s.count, 0), g.moves.length, g.text);
   }
+});
+
+test("each move of the hands lessons names its finger, on the cube held yellow up", () => {
+  for (const g of HANDS) {
+    assert.equal(g.fingers?.length, g.moves.length, g.title);
+    assert.equal(g.steps!.reduce((n, s) => n + s.count, 0), g.moves.length, g.title);
+    assert.equal(center(g.from!, [0, 1, 0]), "D", g.title);
+    assert.ok(g.stage < HAND_STAGES.length);
+  }
+  assert.ok(HANDS[0].grip && HANDS.slice(1).every((g) => !g.grip));
 });

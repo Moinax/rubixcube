@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import CubeView from "./CubeView";
+import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { type Tab } from "./Lexicon";
 import { Back, Chevron, HOME, modeTitle } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
@@ -8,11 +8,17 @@ import { applyMove, describeMove, invert, upright, type Face } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** "Face du haut : un quart de tour…" with the face in bold. */
-function MoveText({ move }: { move: string }) {
+function MoveText({ move, finger }: { move: string; finger?: string }) {
   const [face, turn] = describeMove(move);
   return (
     <p>
       <span className="font-semibold text-chalk">{face}</span> <span className="text-mist">{turn}</span>
+      {finger && (
+        <>
+          <span className="text-mist"> · </span>
+          <span className="font-semibold text-chalk">{finger}</span>
+        </>
+      )}
     </p>
   );
 }
@@ -361,6 +367,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             place={worked && slots.get(worked)!.piece}
             pair={worked?.pair}
             pairPlace={worked && slots.get(worked)!.pair}
+            grip={worked?.grip}
           />
         </div>
 
@@ -406,6 +413,18 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 {group.text && (
                   <p className="mt-2 text-mist">
                     <Colored text={group.text} />
+                  </p>
+                )}
+                {group.grip && (
+                  <p className="mt-2 flex gap-4 text-sm">
+                    <span className="flex items-center gap-1.5">
+                      <i className="size-3 rounded-full" style={{ background: THUMB_COLOR }} />
+                      {tr({ fr: "les pouces", nl: "de duimen", en: "the thumbs" })}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <i className="size-3 rounded-full" style={{ background: INDEX_COLOR }} />
+                      {tr({ fr: "les index", nl: "de wijsvingers", en: "the index fingers" })}
+                    </span>
                   </p>
                 )}
 
@@ -514,7 +533,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               )}
               {move && (
                 <div className="md:line-clamp-2">
-                  <MoveText move={move} />
+                  <MoveText move={move} finger={group?.fingers?.[step - groupStart]} />
                 </div>
               )}
             </div>

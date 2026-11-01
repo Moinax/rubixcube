@@ -35,12 +35,20 @@ const FINGER = new THREE.CircleGeometry(0.2, 32);
 export const THUMB_COLOR = "#e879f9";
 export const INDEX_COLOR = "#34d399";
 const [THUMB, INDEX] = [THUMB_COLOR, INDEX_COLOR].map((color) => new THREE.MeshBasicMaterial({ color }));
-const GRIP: [pos: Vec, normal: Vec, finger: THREE.Material][] = [
-  [[-1, -1, 1], [0, 0, 1], THUMB],
-  [[1, -1, 1], [0, 0, 1], THUMB],
-  [[-1, 1, -1], [0, 1, 0], INDEX],
-  [[1, 1, -1], [0, 1, 0], INDEX],
+type Finger = "left thumb" | "right thumb" | "left index" | "right index";
+const GRIP: [finger: Finger, pos: Vec, normal: Vec, material: THREE.Material][] = [
+  ["left thumb", [-1, -1, 1], [0, 0, 1], THUMB],
+  ["right thumb", [1, -1, 1], [0, 0, 1], THUMB],
+  ["left index", [-1, 1, -1], [0, 1, 0], INDEX],
+  ["right index", [1, 1, -1], [0, 1, 0], INDEX],
 ];
+/** The fingers that make `move` and travel with the face it turns: a wrist takes its thumb and index along. */
+function riders(move: string): Finger[] {
+  if (move[0] === "R") return ["right thumb", "right index"];
+  if (move[0] === "L") return ["left thumb", "left index"];
+  if (move[0] === "U") return [move[1] === "'" ? "left index" : "right index"];
+  return [];
+}
 const MATERIALS = new Map<string, THREE.MeshPhysicalMaterial>();
 const material = (color: string) => {
   if (!MATERIALS.has(color)) MATERIALS.set(color, new THREE.MeshPhysicalMaterial({ color, roughness: 0.28, clearcoat: 0.6 }));
@@ -133,6 +141,8 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
   const tracked = ([[piece, place], [pair, pairPlace]] as [string | undefined, string | undefined][]).filter((t): t is [string, string | undefined] => !!t[0]);
   useEffect(() => {
     const ctx = scene.current!;
+    // The fingers that travel with the turning face, and where each rests in the grip.
+    let riding: { dot: THREE.Object3D; home: THREE.Vector3; facing: THREE.Quaternion }[] = [];
     /** The cube `s`, with the cubies that `move` turns in the returned layer. */
     const build = (s: string, move?: string) => {
       const ats = tracked.map(([p]) => `${findPiece(s, p)}`);
@@ -156,13 +166,16 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
             if (mine) mesh.add(new LineSegments2(OUTLINE, PIECE_LINE));
             (move && inLayer(move, pos) ? layer : ctx.root).add(mesh);
           }
-      // The fingers stay where they rest while a face turns under them.
+      // The fingers making the move ride with the face they turn; the others stay where they rest.
+      riding = [];
       if (grip)
-        for (const [pos, normal, finger] of GRIP) {
-          const dot = new THREE.Mesh(FINGER, finger);
+        for (const [finger, pos, normal, look] of GRIP) {
+          const dot = new THREE.Mesh(FINGER, look);
           dot.position.set(...pos).addScaledVector(new THREE.Vector3(...normal), 0.52);
           dot.lookAt(dot.position.clone().add(new THREE.Vector3(...normal)));
-          ctx.root.add(dot);
+          const rides = move && riders(move).includes(finger) && inLayer(move, pos);
+          (rides ? layer : ctx.root).add(dot);
+          if (rides) riding.push({ dot, home: dot.position.clone(), facing: dot.quaternion.clone() });
         }
       // A place stays put while a face turns through it, and only follows the whole cube.
       for (const [, slot] of tracked) {
@@ -192,8 +205,27 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
         layer.quaternion.setFromAxisAngle(vector, angle * ease(k));
         if (k < 1) return;
         if (i + 1 < moves!.length) return show(applyMove(s, move), i + 1);
-        ctx.onFrame = undefined;
-        ended.current?.();
+        if (!riding.length) {
+          ctx.onFrame = undefined;
+          return ended.current?.();
+        }
+        // The fingers glide back to the grip before the next move.
+        const back = riding.map(({ dot, home, facing }) => {
+          const [from, turned] = [dot.getWorldPosition(new THREE.Vector3()), dot.getWorldQuaternion(new THREE.Quaternion())];
+          ctx.root.add(dot);
+          return { dot, from, turned, home, facing };
+        });
+        const landed = t;
+        ctx.onFrame = (now) => {
+          const r = ease(Math.min(1, (now - landed) / 350));
+          for (const { dot, from, turned, home, facing } of back) {
+            dot.position.lerpVectors(from, home, r);
+            dot.quaternion.slerpQuaternions(turned, facing, r);
+          }
+          if (r < 1) return;
+          ctx.onFrame = undefined;
+          ended.current?.();
+        };
       };
     };
 

@@ -310,10 +310,10 @@ export const HAND_STAGES: Stage[] = [
 ];
 
 /** A lesson on the held cube: a text per step, and the finger of each move. */
-const hand = (texts: Texts, fingers: Record<Lang, string[]>, moves: string[], split: number[], grip = false): Group => ({
+const hand = (texts: Texts, fingers: Record<Lang, string[]>, moves: string[], split: number[]): Group => ({
   ...group(0, texts, moves, YELLOW_UP, undefined, split),
   fingers: tr(fingers),
-  ...(grip && { grip }),
+  grip: true,
 });
 
 const WRIST = { fr: "poignet droit", nl: "rechterpols", en: "right wrist" };
@@ -327,14 +327,13 @@ const fingersOf = (...names: Record<Lang, string>[]) =>
 export const HANDS: Group[] = [
   hand(
     {
-      fr: ["La prise de base", "Tiens le cube au bout des doigts, pas dans les paumes : les pouces sur la face avant, les index sur le dessus, les autres doigts derrière. Tu reviens à cette prise entre chaque coup.", "Le poignet droit tourne vers le haut ; le pouce droit glisse avec la face.", "Le poignet revient, et tu retrouves la prise de base."],
-      nl: ["De basisgreep", "Houd de kubus met je vingertoppen, niet in je handpalmen: de duimen op de voorkant, de wijsvingers bovenop, de andere vingers achteraan. Tussen elke zet keer je terug naar deze greep.", "De rechterpols draait naar boven; de rechterduim glijdt mee met de kant.", "De pols draait terug, en je bent weer in de basisgreep."],
-      en: ["The home grip", "Hold the cube at your fingertips, not in your palms: thumbs on the front face, index fingers on top, the other fingers behind. You come back to this grip between moves.", "Your right wrist turns upward; the right thumb slides along with the face.", "Your wrist turns back, and you're in the home grip again."],
+      fr: ["La prise de base", "Tiens le cube au bout des doigts, pas dans les paumes : les pouces sur la face avant, les index sur le dessus, les autres doigts derrière. Tu reviens à cette prise entre chaque coup.", "Le poignet droit tourne vers le haut ; le pouce droit glisse avec la face.", "Depuis la prise de base, le poignet droit tourne vers le bas : le pouce droit descend avec la face."],
+      nl: ["De basisgreep", "Houd de kubus met je vingertoppen, niet in je handpalmen: de duimen op de voorkant, de wijsvingers bovenop, de andere vingers achteraan. Tussen elke zet keer je terug naar deze greep.", "De rechterpols draait naar boven; de rechterduim glijdt mee met de kant.", "Vanuit de basisgreep draait de rechterpols naar beneden: de rechterduim gaat mee naar onderen."],
+      en: ["The home grip", "Hold the cube at your fingertips, not in your palms: thumbs on the front face, index fingers on top, the other fingers behind. You come back to this grip between moves.", "Your right wrist turns upward; the right thumb slides along with the face.", "From the home grip, your right wrist turns downward: the right thumb goes down with the face."],
     },
     fingersOf(WRIST, WRIST),
     ["R", "R'"],
     [1, 1],
-    true,
   ),
   hand(
     {
@@ -348,9 +347,9 @@ export const HANDS: Group[] = [
   ),
   hand(
     {
-      fr: ["La gauche, avec le poignet", "Le miroir de R : cette fois, c'est le poignet gauche qui tourne.", "Le poignet gauche tourne vers le bas ; le pouce gauche glisse avec la face.", "Le poignet gauche remonte, et tu retrouves la prise."],
-      nl: ["Links, met de pols", "Het spiegelbeeld van R: nu draait de linkerpols.", "De linkerpols draait naar beneden; de linkerduim glijdt mee met de kant.", "De linkerpols draait terug omhoog, en je bent weer in de greep."],
-      en: ["The left, with the wrist", "The mirror of R: this time your left wrist turns.", "Your left wrist turns downward; the left thumb slides along with the face.", "Your left wrist turns back up, and you're in the grip again."],
+      fr: ["La gauche, avec le poignet", "Le miroir de R : cette fois, c'est le poignet gauche qui tourne.", "Le poignet gauche tourne vers le bas ; le pouce gauche glisse avec la face.", "Depuis la prise, le poignet gauche tourne vers le haut : le pouce gauche monte avec la face."],
+      nl: ["Links, met de pols", "Het spiegelbeeld van R: nu draait de linkerpols.", "De linkerpols draait naar beneden; de linkerduim glijdt mee met de kant.", "Vanuit de greep draait de linkerpols naar boven: de linkerduim gaat mee naar boven."],
+      en: ["The left, with the wrist", "The mirror of R: this time your left wrist turns.", "Your left wrist turns downward; the left thumb slides along with the face.", "From the grip, your left wrist turns upward: the left thumb goes up with the face."],
     },
     fingersOf(LEFT_WRIST, LEFT_WRIST),
     ["L", "L'"],

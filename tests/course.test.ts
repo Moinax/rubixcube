@@ -93,5 +93,5 @@ test("each move of the hands lessons names its finger, on the cube held yellow u
     assert.equal(center(g.from!, [0, 1, 0]), "D", g.title);
     assert.ok(g.stage < HAND_STAGES.length);
   }
-  assert.ok(HANDS[0].grip && HANDS.slice(1).every((g) => !g.grip));
+  assert.ok(HANDS.every((g) => g.grip));
 });

@@ -190,6 +190,9 @@ export function validate(state: string): string | null {
 
 let solverReady = false;
 
+/** A cube scrambled at random, held white up, green in front. */
+export const randomCube = () => Cube.random().asString();
+
 /** Shortest-ish (Kociemba two-phase, ≤ 22 moves) solution of a valid state. */
 export function solve(state: string): string[] {
   if (state === SOLVED) return [];

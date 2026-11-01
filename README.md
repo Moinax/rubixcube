@@ -2,25 +2,27 @@
 
 A Rubik's Cube solver and teacher. *Résous ton cube, coup par coup.*
 
-Pick a mode first. The three that solve your own cube then ask for it: scan it
-with the camera, or type its colors in. Then follow the moves one by one on an
-animated 3D cube:
+Pick a mode first, from the first steps to the shortest solution. The three
+that solve your own cube then ask for it: scan it with the camera, type its
+colors in, or take a random scramble (handy for testing). Then follow the moves
+one by one on an animated 3D cube:
 
-- **Fast**: the shortest solution cubejs finds (~20 moves), split into the two
-  phases of Kociemba's method (`phaseTwo` in `src/cube.ts`): every piece turned
-  the right way round, then put in its place with U, D and half turns only.
-- **Learn**: the layer-by-layer beginner method (`src/beginner.ts`), ~170 moves
-  split into 8 stages (daisy, white cross, white corners, middle layer, yellow
-  cross, yellow edges, yellow corners placed then oriented), each with the rule
-  it teaches and the piece it works on outlined in 3D.
-- **Level up**: 4-look CFOP (`src/cfop.ts`), ~80 moves: the white cross straight
-  on the bottom (searched edge by edge), the first two layers pair by pair (top
-  turns and the triggers R U R' / F' U F), then the last layer in two looks for
-  its orientation (yellow cross, 7 corner cases) and two for its permutation
-  (T or Y perm, then U, H or Z perm). Face turns only, no wide or slice moves.
-- **Course** (no scan): the beginner method taught case by case (`src/course.ts`),
-  each case a demo cube built backwards from its algorithm, to recognise on
-  your own cube.
+- **Learn the basics** (no scan): the notation, then the beginner method taught
+  case by case (`src/course.ts`), each case a demo cube built backwards from its
+  algorithm, to recognise on your own cube.
+- **Beginner method**: layer by layer (`src/beginner.ts`), ~170 moves split into
+  8 stages (daisy, white cross, white corners, middle layer, yellow cross, yellow
+  edges, yellow corners placed then oriented), each with the rule it teaches and
+  the piece it works on outlined in 3D.
+- **Intermediate method**: 4-look CFOP (`src/cfop.ts`), ~80 moves: the white
+  cross straight on the bottom (searched edge by edge), the first two layers pair
+  by pair (top turns and the triggers R U R' / F' U F), then the last layer in two
+  looks for its orientation (yellow cross, 7 corner cases) and two for its
+  permutation (T or Y perm, then U, H or Z perm). Face turns only, no wide or
+  slice moves.
+- **Kociemba's method**: the shortest solution cubejs finds (~20 moves), split
+  into its two phases (`phaseTwo` in `src/cube.ts`): every piece turned the right
+  way round, then put in its place with U, D and half turns only.
 
 - Solver: [cubejs](https://github.com/ldez/cubejs) (Kociemba two-phase, ≤ 22 moves),
   patched in `patches/` so its `this.Cube` lookup survives bundling.

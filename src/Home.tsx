@@ -21,47 +21,48 @@ function MiniFace({ cells, marks = {}, small }: { cells: string; marks?: Record<
   );
 }
 
+// From the first steps to the shortest solution.
 const MODES: { id: Mode; title: string; text: string; face: string; marks?: Record<number, "piece" | "place"> }[] = [
   {
-    id: "fast",
-    title: tr({ fr: "Résoudre mon cube", nl: "Mijn kubus oplossen", en: "Solve my cube" }),
+    id: "course",
+    title: tr({ fr: "Apprendre les bases", nl: "De basis leren", en: "Learn the basics" }),
     text: tr({
-      fr: "Le chemin le plus court : une vingtaine de coups, calculés par la méthode de Kociemba.",
-      nl: "De kortste weg: een twintigtal zetten, berekend met de methode van Kociemba.",
-      en: "The shortest path: about twenty moves, worked out with Kociemba's method.",
+      fr: "Sans ton cube : la notation, puis chaque cas de la méthode débutant sur un cube d'exemple. Pas de scan.",
+      nl: "Zonder je kubus: de notatie, daarna elk geval van de beginnersmethode op een voorbeeldkubus. Geen scan.",
+      en: "Without your cube: the notation, then each case of the beginner method on a sample cube. No scan.",
     }),
-    face: "RUFBLDFRU",
+    face: ".........",
+    marks: { 5: "piece", 8: "place" },
   },
   {
     id: "learn",
-    title: tr({ fr: "Apprendre sur mon cube", nl: "Leren op mijn kubus", en: "Learn on my cube" }),
+    title: tr({ fr: "Méthode débutant", nl: "Beginnersmethode", en: "Beginner method" }),
     text: tr({
-      fr: "La méthode débutant, chaque geste expliqué sur ton propre cube.",
-      nl: "De beginnersmethode, elke beweging uitgelegd op je eigen kubus.",
-      en: "The beginner method, every move explained on your own cube.",
+      fr: "Couche par couche, environ 170 coups : chaque geste expliqué sur ton propre cube.",
+      nl: "Laag per laag, ongeveer 170 zetten: elke beweging uitgelegd op je eigen kubus.",
+      en: "Layer by layer, about 170 moves: every move explained on your own cube.",
     }),
     face: ".U.UUU.U.",
   },
   {
     id: "cfop",
-    title: tr({ fr: "Progresser sur mon cube", nl: "Beter worden op mijn kubus", en: "Level up on my cube" }),
+    title: tr({ fr: "Méthode intermédiaire", nl: "Methode voor halfgevorderden", en: "Intermediate method" }),
     text: tr({
-      fr: "La méthode intermédiaire, CFOP en 4 temps : environ 80 coups au lieu de 170, avec les algorithmes des speedcubers.",
-      nl: "De methode voor halfgevorderden, CFOP in 4 stappen: ongeveer 80 zetten in plaats van 170, met de algoritmes van speedcubers.",
-      en: "The intermediate method, 4-look CFOP: about 80 moves instead of 170, with the speedcubers' algorithms.",
+      fr: "CFOP en 4 temps, environ 80 coups, avec les algorithmes des speedcubers.",
+      nl: "CFOP in 4 stappen, ongeveer 80 zetten, met de algoritmes van speedcubers.",
+      en: "4-look CFOP, about 80 moves, with the speedcubers' algorithms.",
     }),
     face: "DDDDDDDDD",
   },
   {
-    id: "course",
-    title: tr({ fr: "Apprendre sans mon cube", nl: "Leren zonder mijn kubus", en: "Learn without my cube" }),
+    id: "fast",
+    title: tr({ fr: "Méthode de Kociemba", nl: "Methode van Kociemba", en: "Kociemba's method" }),
     text: tr({
-      fr: "Le cours cas par cas, sur un cube d'exemple. Pas de scan.",
-      nl: "De cursus geval per geval, op een voorbeeldkubus. Geen scan.",
-      en: "The course case by case, on a sample cube. No scan.",
+      fr: "Le chemin le plus court, une vingtaine de coups calculés pour ton cube : rien à retenir.",
+      nl: "De kortste weg, een twintigtal zetten berekend voor je kubus: niets te onthouden.",
+      en: "The shortest path, about twenty moves worked out for your cube: nothing to memorize.",
     }),
-    face: ".........",
-    marks: { 5: "piece", 8: "place" },
+    face: "RUFBLDFRU",
   },
 ];
 const mode = (id: Mode) => MODES.find((m) => m.id === id)!;
@@ -162,10 +163,10 @@ export function Home({ resume, onResume, onMode }: HomeProps) {
   );
 }
 
-type InputProps = { mode: Mode; onScan: () => void; onManual: () => void; onBack: () => void };
+type InputProps = { mode: Mode; onScan: () => void; onManual: () => void; onRandom: () => void; onBack: () => void };
 
 /** For the modes that need the user's cube: scan it, or type its colors in. */
-export function InputChoice({ mode: id, onScan, onManual, onBack }: InputProps) {
+export function InputChoice({ mode: id, onScan, onManual, onRandom, onBack }: InputProps) {
   const m = mode(id);
   return (
     <main className="mx-auto flex w-full flex-1 max-w-2xl flex-col gap-5 p-5 md:justify-center md:p-10">
@@ -219,6 +220,12 @@ export function InputChoice({ mode: id, onScan, onManual, onBack }: InputProps) 
           </span>
         </button>
       </div>
+      <p className="text-sm text-mist">
+        {tr({ fr: "Pas de cube sous la main ? ", nl: "Geen kubus bij de hand? ", en: "No cube at hand? " })}
+        <button onClick={onRandom} className="font-semibold text-chalk underline underline-offset-2">
+          {tr({ fr: "Prendre un cube mélangé au hasard", nl: "Neem een willekeurig gemengde kubus", en: "Take a randomly scrambled cube" })}
+        </button>
+      </p>
       <p className="mt-auto flex items-start gap-2 text-xs text-mist md:mt-2">
         <svg viewBox="0 0 24 24" aria-hidden className="size-3.5 flex-none fill-none stroke-current stroke-2">
           <rect x="5" y="11" width="14" height="9" rx="2" />

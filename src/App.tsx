@@ -7,7 +7,7 @@ import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
 import { CFOP_STAGES, cfopSolve } from "./cfop";
 import { COURSE } from "./course";
-import { phaseTwo, SOLVED, solve, suspects, validate } from "./cube";
+import { phaseTwo, randomCube, SOLVED, solve, suspects, validate } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** Modes that solve the user's own cube, so need its colors first. */
@@ -178,6 +178,7 @@ export default function App() {
           mode={screen.mode}
           onScan={() => setScreen({ name: "scan", mode: screen.mode })}
           onManual={() => setScreen({ name: "edit", mode: screen.mode, state: SOLVED })}
+          onRandom={() => setScreen({ name: "edit", mode: screen.mode, state: randomCube() })}
           onBack={() => setScreen({ name: "home" })}
         />
       );

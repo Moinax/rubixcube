@@ -36,7 +36,6 @@ const PieceChip = ({ piece }: { piece: string }) => (
     {pieceName(piece)}
   </span>
 );
-const AND = tr({ fr: " et ", nl: " en ", en: " and " });
 /** « → sa place », or « → leur place » for a pair. */
 const placeOf = (pair?: string) =>
   pair ? tr({ fr: "leur place", nl: "hun plek", en: "their place" }) : tr({ fr: "sa place", nl: "zijn plek", en: "its place" });
@@ -61,7 +60,7 @@ type GuideProps = {
 
 /** A move playing from `from`, forward or undone (inverted), and the group it belongs to. */
 type Anim = { from: string; move: string; group: Group };
-/** A stop between moves: the result after a sequence's last, before the next one starts. */
+/** A stop between moves: the result of a course demo, before the next demo's cube fades in. */
 type Stop = "result" | null;
 
 const DELAYS = [2, 3, 5, 8];
@@ -107,8 +106,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const newCubeAt = (s: number) => states[s] !== ends[flat[s - 1].group];
   /** Whether a stage ends before move `s`, a phase in the fast mode. */
   const stageEndAt = (s: number) => !learn || groups[flat[s].group].stage !== groups[flat[s - 1].group].stage;
-  /** Whether a result stop ends the group before move `s`: every sequence ends on one, before the next starts. */
-  const resultAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group;
+  /** Whether a result stop ends the group before move `s`: only when the next one starts on another cube (a new
+   * demo). Otherwise the last move leads straight to the next sequence, its piece and place already outlined. */
+  const resultAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group && newCubeAt(s);
+  /** Whether move `s` starts a new stage (a phase, in the fast mode). */
+  const stageStartAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group && stageEndAt(s);
 
   const [stop, setStop] = useState<Stop>(null);
   const done = step === total;
@@ -151,7 +153,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     setAnim({ from: state, move: flat[step].move, group: group! });
     land(step + 1, resultAt(step + 1) ? "result" : undefined);
     // The autoplay stops at the end of the guide, and of each stage: the next one starts on a press.
-    if (step + 1 === total || (resultAt(step + 1) && stageEndAt(step + 1))) setAuto(false);
+    if (step + 1 === total || stageStartAt(step + 1)) setAuto(false);
   };
   const back = () => {
     if (fading || !step) return;
@@ -235,14 +237,13 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   // While a move plays, the outlines follow the piece it works on, from where it starts.
   const worked = anim?.group ?? group;
   const settings = useId();
-  // What a result stop closes: a stage (a phase in the fast mode), a demo handing over to another cube, or a sequence.
-  const ending = stop !== "result" ? undefined : stageEndAt(step) ? "stage" : newCubeAt(step) ? "demo" : "sequence";
+  // What a result stop closes: the last demo of a stage, or one demo among its cases.
+  const ending = stop !== "result" ? undefined : stageEndAt(step) ? "stage" : "demo";
   const ENDINGS = {
     stage: learn
       ? { label: tr({ fr: "Étape terminée", nl: "Stap klaar", en: "Step done" }), next: tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next step" }) }
       : { label: tr({ fr: "Phase terminée", nl: "Fase klaar", en: "Phase done" }), next: tr({ fr: "Phase suivante", nl: "Volgende fase", en: "Next phase" }) },
     demo: { label: tr({ fr: "Résultat", nl: "Resultaat", en: "Result" }), next: tr({ fr: "Exemple suivant", nl: "Volgend voorbeeld", en: "Next example" }) },
-    sequence: { label: tr({ fr: "Séquence terminée", nl: "Reeks klaar", en: "Sequence done" }), next: tr({ fr: "Séquence suivante", nl: "Volgende reeks", en: "Next sequence" }) },
   };
   // What ▶ does from here: go on past a result, or play the move; its size never changes.
   const next: { icon: keyof typeof ICONS; label?: string; title: string } = done
@@ -511,15 +512,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
                 {move && part && ` · ${part}`}
               </p>
-              {ending === "sequence" && piece && (
-                <p>
-                  <span className="font-semibold">
-                    <Colored text={`${pieceName(piece)}${group?.pair ? `${AND}${pieceName(group.pair).toLowerCase()}` : ""}`} />
-                  </span>{" "}
-                  <span className="text-mist">{tr({ fr: "en place ✓", nl: group?.pair ? "op hun plek ✓" : "op zijn plek ✓", en: "in place ✓" })}</span>
-                </p>
-              )}
-              {ending && !(ending === "sequence" && piece) && (
+              {ending && (
                 <p className="font-semibold">{ending === "demo" || !learn ? group?.title : stages[group!.stage].title}</p>
               )}
               {move && (

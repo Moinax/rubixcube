@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Cube from "cubejs";
-import { algOf, beginnerSolve, findPiece, homeOf, LEFT, RIGHT, SEXY, slotOf, STAGES, times } from "../src/beginner.ts";
+import { algOf, beginnerSolve, facing, findPiece, homeOf, LEFT, RIGHT, SEXY, slotOf, STAGES, times } from "../src/beginner.ts";
 import { applyMove, simplify, SOLVED, upright } from "../src/cube.ts";
 
 // Solved up to a whole-cube rotation: every face is one color.
@@ -67,4 +67,15 @@ test("a place named by its centers is found again on the cube turned", () => {
       assert.deepEqual(homeOf(y, slotOf(s, p)), [0 - p[2] || 0, p[1], p[0]]);
     }
   }
+});
+
+test("a cube turn brings the faces to turn in front, and the moves seen from there do the same", () => {
+  const s = "R U F' L2 D B' R2 U' F2 L".split(" ").reduce(applyMove, SOLVED);
+  for (const moves of [["B2"], ["L'", "U", "B"], ["F", "R'"], ["D", "L2"]]) {
+    const [turn, seen] = facing(moves);
+    // Turning the cube, then the moves named from the new front, leaves it as the moves would, turned.
+    assert.equal([...turn, ...seen].reduce(applyMove, s), [...moves, ...turn].reduce(applyMove, s), moves.join(" "));
+  }
+  assert.deepEqual(facing(["B2"]), [["y", "y"], ["F2"]]);
+  assert.deepEqual(facing(["R", "U"]), [[], ["R", "U"]]);
 });

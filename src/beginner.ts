@@ -384,6 +384,20 @@ export function algOf(moves: string[]): Alg | undefined {
 export const same = (a: Vec, b: Vec) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 export const turns = (m: string, n: number) => Array(n % 4).fill(m) as string[];
 export const play = (state: string, moves: string[]) => moves.reduce(applyMove, state);
+// After a y, the face that was on the right is in front, and so on round: each face's new name.
+const AFTER_Y: Record<string, string> = { R: "F", F: "L", L: "B", B: "R" };
+const turned = (moves: string[], r: number) =>
+  moves.map((m) => Array.from({ length: r }).reduce<string>((f) => AFTER_Y[f] ?? f, m[0]) + m.slice(1));
+// Turning the back blind is hard for a beginner, the left a little less, and the front is the easiest to watch.
+const BLIND: Record<string, number> = { B: 4, L: 2, R: 1 };
+/** The cube turn (none, y, y2 or y') that brings the faces `moves` turns in front of you or to the right,
+ * with the same moves named from there: what was B2 at the back becomes y2 then F2. */
+export function facing(moves: string[]): [turn: string[], moves: string[]] {
+  // Turning the cube costs a move too: never worth it for a face already on the right.
+  const cost = (r: number) => +(r > 0) + turned(moves, r).reduce((n, m) => n + (BLIND[m[0]] ?? 0), 0);
+  const r = [1, 2, 3].reduce((best, r) => (cost(r) < cost(best) ? r : best), 0);
+  return [turns("y", r), turned(moves, r)];
+}
 /** The cube as the method holds it, solved: yellow on top, green in front. */
 export const YELLOW_UP = applyMove(SOLVED, "z2");
 
@@ -519,7 +533,7 @@ export function beginnerSolve(start: string): Group[] {
     const done = whiteEdges.filter((e) => isPetal(s, e));
     const edge = whiteEdges.find((e) => !done.includes(e));
     if (!edge) break;
-    const moves = search(s, (t) => isPetal(t, edge) && done.every((e) => isPetal(t, e)));
+    const [hold, moves] = facing(search(s, (t) => isPetal(t, edge) && done.every((e) => isPetal(t, e))));
     const pos = findPiece(s, edge);
     const where = pos[1] === 0 ? "middle" : pos[1] === 1 ? "top" : colorAt(s, pos, DOWN) === W ? "down" : "bottom";
     // A turn of the top first frees the spot it lands in.
@@ -532,6 +546,14 @@ export function beginnerSolve(start: string): Group[] {
         en: `It is ${{ down: "at the bottom, white facing down", bottom: "at the bottom, white on the side", middle: "in the middle layer", top: "on top, but white on the side" }[where]}. It has to reach the top, white facing up, as a petal around the yellow center.`,
       }),
       [
+        [
+          tr({
+            fr: "Tourne le cube pour avoir devant toi ou à droite les faces à tourner : tu verras ce qu'elles font.",
+            nl: "Draai de kubus zodat de kanten die je draait vooraan of rechts zitten: zo zie je wat ze doen.",
+            en: "Turn the cube so the faces to turn are in front of you or on the right: you'll see what they do.",
+          }),
+          hold,
+        ],
         [
           tr({
             fr: "Tourne le haut pour libérer la place où elle va arriver : aucun pétale ne sera délogé.",
@@ -580,6 +602,8 @@ export function beginnerSolve(start: string): Group[] {
       return pos[1] === 1 && colorAt(t, pos, SIDE_FACES.find(([f]) => f === face)![1]) === other;
     })!;
     const color = FACE_NAMES[other];
+    // Its face comes in front of you first, where the half turn is easy to watch.
+    const [hold, drop] = facing([face + "2"]);
     emit(
       2,
       tr({
@@ -588,6 +612,14 @@ export function beginnerSolve(start: string): Group[] {
         en: `This petal has to drop into its place: at the bottom, under the ${color} center, white underneath.`,
       }),
       [
+        [
+          tr({
+            fr: `Tourne le cube pour avoir le centre ${color} devant toi.`,
+            nl: `Draai de kubus zodat het ${INFLECTED[other]} middenstuk vooraan staat.`,
+            en: `Turn the cube to have the ${color} center in front of you.`,
+          }),
+          hold,
+        ],
         [
           tr({
             fr: `Tourne le haut jusqu'à ce que le ${color} du pétale soit juste au-dessus du centre ${color}.`,
@@ -602,7 +634,7 @@ export function beginnerSolve(start: string): Group[] {
             nl: "Draai die kant een halve slag: het blaadje zakt, met wit onderaan.",
             en: "Give that face a half turn: the petal drops, white at the bottom.",
           }),
-          [face + "2"],
+          drop,
         ],
       ],
       edge,

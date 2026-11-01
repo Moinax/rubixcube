@@ -11,8 +11,9 @@ export type Stage = { title: string; goal: string; why: string; toHome?: boolean
 /** One part of a group's moves, with what to do: the setup, then the sequence. */
 export type Step = { text: string; count: number };
 /** Moves to play: `text` says where the piece stands and where it goes, `steps` how to get it there, and the
- * named sequence they end with; course demos also carry a title and their own start cube. */
-export type Group = { stage: number; text: string; moves: string[]; steps?: Step[]; piece?: string; alg?: Alg; title?: string; from?: string };
+ * named sequence they end with; `pair` is the edge that goes with the piece (a corner) into its slot; course
+ * demos also carry a title and their own start cube. */
+export type Group = { stage: number; text: string; moves: string[]; steps?: Step[]; piece?: string; pair?: string; alg?: Alg; title?: string; from?: string };
 
 export const STAGES: Stage[] = tr<Stage[]>({
   fr: [
@@ -168,11 +169,25 @@ export const FLIP = "F R U R' U' F'".split(" ");
 export const SUNE = "R U R' U R U2 R' U".split(" ");
 export const CYCLE = "U R U' L' U R' U' L".split(" ");
 export const TWIST = "R' D' R D".split(" ");
+// CFOP's last layer (see cfop.ts): face turns only, no wide or slice moves.
+export const FLIP_L = "F U R U' R' F'".split(" ");
+export const ANTISUNE = "R U2 R' U' R U' R'".split(" ");
+export const OLL_H = "R U R' U R U' R' U R U2 R'".split(" ");
+export const OLL_PI = "R U2 R2 U' R2 U' R2 U2 R".split(" ");
+export const HEADLIGHTS = "R2 D R' U2 R D' R' U2 R'".split(" ");
+export const CHAMELEON = "L F R' F' L' F R F'".split(" ");
+export const BOWTIE = "F R' F' L F R F' L'".split(" ");
+export const T_PERM = "R U R' U' R' F R2 U' R' U' R U R' F'".split(" ");
+export const Y_PERM = "F R U' R' U' R U R' F' R U R' U' R' F R F'".split(" ");
+export const UA_PERM = "R U' R U R U R U' R' U' R2".split(" ");
+export const UB_PERM = "R2 U R U R' U' R' U' R' U R'".split(" ");
+export const H_PERM = "R2 U2 R U2 R2 U2 R2 U2 R U2 R2".split(" ");
+export const Z_PERM = "R' U' R U' R U R U' R' U R U R2 U' R' U2".split(" ");
 
 /** `moves` played `n` times in a row. */
 export const times = (moves: string[], n: number) => Array<string[]>(n).fill(moves).flat();
 
-/** The named sequences of the method and what each does, longest first: a longer one never hides behind a shorter one's name. */
+/** The named sequences of both methods and what each does, the beginner method's first. */
 export const ALGS: [moves: string[], name: string, use: string][] = [
   [
     RIGHT,
@@ -233,31 +248,152 @@ export const ALGS: [moves: string[], name: string, use: string][] = [
       en: "Twists the top right front corner; the bottom gets scrambled, then fixes itself once every corner is done.",
     }),
   ],
+  [
+    FLIP_L,
+    tr({ fr: "F sexy inversé F'", nl: "F omgekeerde sexy F'", en: "F reverse sexy F'" }),
+    tr({
+      fr: "CFOP : fait d'un L jaune, tenu derrière à gauche, la croix jaune d'un coup.",
+      nl: "CFOP: maakt van een gele L, achteraan links, in één keer het gele kruis.",
+      en: "CFOP: turns a yellow L, held at the back left, straight into the yellow cross.",
+    }),
+  ],
+  [
+    ANTISUNE,
+    "Antisune",
+    tr({
+      fr: "CFOP : un seul coin jaune en haut, tenu derrière à droite ; tout le dessus devient jaune.",
+      nl: "CFOP: één hoekstuk met geel boven, rechtsachter; de hele bovenkant wordt geel.",
+      en: "CFOP: one corner yellow on top, held at the back right; the whole top turns yellow.",
+    }),
+  ],
+  [
+    OLL_H,
+    "H",
+    tr({
+      fr: "CFOP : aucun coin jaune en haut, les jaunes face à face à gauche et à droite.",
+      nl: "CFOP: geen hoekstuk met geel boven, het geel tegenover elkaar links en rechts.",
+      en: "CFOP: no corner yellow on top, the yellows facing each other left and right.",
+    }),
+  ],
+  [
+    OLL_PI,
+    "Pi",
+    tr({
+      fr: "CFOP : aucun coin jaune en haut, deux jaunes côte à côte sur la face de gauche.",
+      nl: "CFOP: geen hoekstuk met geel boven, twee keer geel naast elkaar op de linkerkant.",
+      en: "CFOP: no corner yellow on top, two yellows side by side on the left face.",
+    }),
+  ],
+  [
+    HEADLIGHTS,
+    tr({ fr: "phares", nl: "koplampen", en: "headlights" }),
+    tr({
+      fr: "CFOP : deux coins jaunes en haut derrière, les deux autres montrent leur jaune devant toi.",
+      nl: "CFOP: twee hoekstukken met geel boven achteraan, de andere twee tonen hun geel naar je toe.",
+      en: "CFOP: two corners yellow on top at the back, the other two show their yellow facing you.",
+    }),
+  ],
+  [
+    CHAMELEON,
+    tr({ fr: "caméléon", nl: "kameleon", en: "chameleon" }),
+    tr({
+      fr: "CFOP : deux coins jaunes en haut à droite, les deux autres montrent leur jaune devant et derrière.",
+      nl: "CFOP: twee hoekstukken met geel boven rechts, de andere twee tonen hun geel voor en achter.",
+      en: "CFOP: two corners yellow on top on the right, the other two show their yellow front and back.",
+    }),
+  ],
+  [
+    BOWTIE,
+    tr({ fr: "nœud papillon", nl: "strikje", en: "bowtie" }),
+    tr({
+      fr: "CFOP : deux coins jaunes en haut, en diagonale, devant à droite et derrière à gauche.",
+      nl: "CFOP: twee hoekstukken met geel boven, in diagonaal, rechtsvoor en linksachter.",
+      en: "CFOP: two corners yellow on top, diagonally, at the front right and the back left.",
+    }),
+  ],
+  [
+    T_PERM,
+    "T-perm",
+    tr({
+      fr: "CFOP : échange les deux coins de droite (et deux arêtes) ; les phares se tiennent à gauche.",
+      nl: "CFOP: wisselt de twee hoekstukken rechts (en twee randstukken); de koplampen zitten links.",
+      en: "CFOP: swaps the two corners on the right (and two edges); hold the headlights on the left.",
+    }),
+  ],
+  [
+    Y_PERM,
+    "Y-perm",
+    tr({
+      fr: "CFOP : échange deux coins en diagonale, de n'importe quel côté.",
+      nl: "CFOP: wisselt twee hoekstukken in diagonaal, vanaf eender welke kant.",
+      en: "CFOP: swaps two diagonal corners, from any side.",
+    }),
+  ],
+  [
+    UA_PERM,
+    "Ua-perm",
+    tr({
+      fr: "CFOP : face complète derrière, les trois autres arêtes tournent dans le sens inverse des aiguilles d'une montre.",
+      nl: "CFOP: complete kant achteraan, de drie andere randstukken draaien tegen de klok in.",
+      en: "CFOP: complete face at the back, the other three edges go round counterclockwise.",
+    }),
+  ],
+  [
+    UB_PERM,
+    "Ub-perm",
+    tr({
+      fr: "CFOP : face complète derrière, les trois autres arêtes tournent dans le sens des aiguilles d'une montre.",
+      nl: "CFOP: complete kant achteraan, de drie andere randstukken draaien met de klok mee.",
+      en: "CFOP: complete face at the back, the other three edges go round clockwise.",
+    }),
+  ],
+  [
+    H_PERM,
+    "H-perm",
+    tr({
+      fr: "CFOP : échange les arêtes d'en face, deux à deux, de n'importe quel côté.",
+      nl: "CFOP: wisselt de randstukken die tegenover elkaar staan, twee aan twee, vanaf elke kant.",
+      en: "CFOP: swaps opposite edges, two by two, from any side.",
+    }),
+  ],
+  [
+    Z_PERM,
+    "Z-perm",
+    tr({
+      fr: "CFOP : échange les arêtes voisines deux à deux : devant avec gauche, derrière avec droite.",
+      nl: "CFOP: wisselt naburige randstukken twee aan twee: voor met links, achter met rechts.",
+      en: "CFOP: swaps neighboring edges two by two: front with left, back with right.",
+    }),
+  ],
 ];
+// Longest first, so a longer sequence never hides behind a shorter one's name; ALGS keeps the method order for the glossary.
+const BY_LENGTH = [...ALGS].sort((a, b) => b[0].length - a[0].length);
 /** A named sequence played `reps` times at the end of a group's moves, after `setup` moves that prepare it. */
 export type Alg = { name: string; moves: string[]; reps: number; setup: number };
 
 /** The named sequence `moves` end with, if any. */
 export function algOf(moves: string[]): Alg | undefined {
   const line = ` ${moves.join(" ")}`;
-  for (const [alg, name] of ALGS) {
+  for (const [alg, name] of BY_LENGTH) {
     let reps = 0;
     while (line.endsWith(` ${times(alg, reps + 1).join(" ")}`)) reps++;
     if (reps) return { name, moves: alg, reps, setup: moves.length - reps * alg.length };
   }
 }
 
-const same = (a: Vec, b: Vec) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
-const turns = (m: string, n: number) => Array(n % 4).fill(m) as string[];
+export const same = (a: Vec, b: Vec) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+export const turns = (m: string, n: number) => Array(n % 4).fill(m) as string[];
 export const play = (state: string, moves: string[]) => moves.reduce(applyMove, state);
 /** The cube as the method holds it, solved: yellow on top, green in front. */
 export const YELLOW_UP = applyMove(SOLVED, "z2");
 
 // Cubies as their facelet indices, corners and edges only.
-const CUBIES = PIECES.map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));
+export const CUBIES = PIECES.map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));
 
-const colorAt = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
-export const findPiece = (s: string, piece: string) => CUBIES.find((c) => key(s, c.idx) === piece)!.pos;
+export const colorAt = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
+/** The cubie holding `piece` (its colors), with its facelets. */
+export const cubieOf = (s: string, piece: string) => CUBIES.find((c) => key(s, c.idx) === piece)!;
+export const findPiece = (s: string, piece: string) => cubieOf(s, piece).pos;
 /** The cube before each move of a plan, then after the last; a group with `from` (a course demo) starts from it. */
 export function planStates(start: string, groups: Group[]): string[] {
   const out = [start];
@@ -278,14 +414,14 @@ const has = (moves: string[], turn: string) => moves.some((m) => m[0] === turn);
 /** The setup in words: turn the cube (y) and/or the top (U), in that order; empty when there is none. */
 const holdSteps = (moves: string[], turnCube: string, turnTop: string) =>
   [has(moves, "y") && turnCube, has(moves, "U") && turnTop].filter(Boolean).join(tr({ fr: ", puis ", nl: ", en ", en: ", then " }));
-const solvedAt = (s: string, pos: Vec) =>
+export const solvedAt = (s: string, pos: Vec) =>
   CUBIES.find((c) => same(c.pos, pos))!.idx.every((i) => s[i] === center(s, STICKERS[i].normal));
 /** The cubie at `pos` holds the colors of the centers around it, in any orientation. */
 const placedAt = (s: string, pos: Vec) => {
   const c = CUBIES.find((c) => same(c.pos, pos))!;
   return key(s, c.idx) === c.idx.map((i) => center(s, STICKERS[i].normal)).sort().join("");
 };
-const pieces = (s: string, test: (colors: string, pos: Vec) => boolean) =>
+export const pieces = (s: string, test: (colors: string, pos: Vec) => boolean) =>
   CUBIES.filter((c) => test(key(s, c.idx), c.pos));
 /** A piece's colors, white or yellow first, as cubers name it. */
 export const pieceColors = (piece: string) => [...piece].sort((a, b) => "UDFBRL".indexOf(a) - "UDFBRL".indexOf(b)) as Face[];
@@ -293,7 +429,7 @@ export const pieceColors = (piece: string) => [...piece].sort((a, b) => "UDFBRL"
 export const names = (piece: string) => pieceColors(piece).map((c) => FACE_NAMES[c]).join("-");
 
 /** Cheapest y^r U^k (r < ys, k < us) for which `ok` holds on the result. */
-function setup(s: string, ok: (s: string) => boolean, ys = 4, us = 4): string[] | undefined {
+export function setup(s: string, ok: (s: string) => boolean, ys = 4, us = 4): string[] | undefined {
   const options = [];
   for (let r = 0; r < ys; r++) for (let k = 0; k < us; k++) options.push([...turns("y", r), ...turns("U", k)]);
   const cost = (m: string[]) => simplify(m).length;
@@ -320,23 +456,30 @@ function search(s: string, ok: (s: string) => boolean): string[] {
   throw new Error("daisy search failed");
 }
 
+/** A group: `text` says where things stand, each step what to do with its moves; none when there is nothing
+ * to play. The last step's moves are the sequence, kept whole so the guide can name it; the steps before it
+ * (cube and top turns) are simplified. */
+export function makeGroup(stage: number, text: string, steps: [text: string, moves: string[]][], piece?: string, pair?: string): Group | undefined {
+  const last = steps.at(-1)![1];
+  const named = algOf(last); // undefined when empty: an empty last step is dropped below, never named
+  const parts = steps
+    .map(([text, moves], i) => [text, i === steps.length - 1 && named ? moves : simplify(moves)] as const)
+    .filter(([, moves]) => moves.length);
+  const moves = parts.flatMap(([, m]) => m);
+  if (!moves.length) return;
+  const alg = named && { ...named, setup: moves.length - last.length };
+  return { stage, text, moves, steps: parts.map(([text, m]) => ({ text, count: m.length })), piece, pair, alg };
+}
+
 /** Beginner-method plan for a cube held white up, green in front. */
 export function beginnerSolve(start: string): Group[] {
   const groups: Group[] = [];
   let s = start;
-  /** A group: `text` says where things stand, each step what to do with its moves. The last step's moves are
-   * the sequence, kept whole so the guide can name it; the steps before it (cube and top turns) are simplified. */
-  const emit = (stage: number, text: string, steps: [text: string, moves: string[]][], piece?: string) => {
-    const last = steps.at(-1)![1];
-    const named = algOf(last); // undefined when empty: an empty last step is dropped below, never named
-    const parts = steps
-      .map(([text, moves], i) => [text, i === steps.length - 1 && named ? moves : simplify(moves)] as const)
-      .filter(([, moves]) => moves.length);
-    const moves = parts.flatMap(([, m]) => m);
-    if (!moves.length) return;
-    const alg = named && { ...named, setup: moves.length - last.length };
-    groups.push({ stage, text, moves, steps: parts.map(([text, m]) => ({ text, count: m.length })), piece, alg });
-    s = play(s, moves);
+  const emit = (...args: Parameters<typeof makeGroup>) => {
+    const g = makeGroup(...args);
+    if (!g) return;
+    groups.push(g);
+    s = play(s, g.moves);
   };
   const guard = (n: number) => {
     if (n > 30) throw new Error("beginner solver is looping");

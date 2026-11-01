@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { beginnerSolve, planStates, STAGES } from "../src/beginner.ts";
+import { cfopSolve } from "../src/cfop.ts";
 import { COURSE } from "../src/course.ts";
 import { applyMove, colorsOf, PIECES, SOLVED, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
 
@@ -77,9 +78,9 @@ test("stages come in order, so each stage's moves are one run the progress bar c
   assert.ok(ordered(beginnerSolve(start)));
 });
 
-test("each group's steps share out its moves, in the course and in a beginner plan", () => {
+test("each group's steps share out its moves, in the course and in a beginner or CFOP plan", () => {
   const start = "L2 B U' R F2 D' L U2 B' R'".split(" ").reduce(applyMove, SOLVED);
-  for (const g of [...COURSE, ...beginnerSolve(start)]) {
+  for (const g of [...COURSE, ...beginnerSolve(start), ...cfopSolve(start)]) {
     assert.ok(g.steps?.length && g.steps.every((s) => s.count > 0 && s.text), g.text);
     assert.equal(g.steps.reduce((n, s) => n + s.count, 0), g.moves.length, g.text);
   }

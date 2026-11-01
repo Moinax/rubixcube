@@ -105,8 +105,11 @@ function permutation(move: string): number[] {
   return p;
 }
 
+/** For each facelet, the facelet whose sticker `move` brings there. */
+export const permutationOf = (move: string) => PERMUTATIONS.get(move) ?? permutation(move);
+
 export function applyMove(state: string, move: string): string {
-  const p = PERMUTATIONS.get(move) ?? permutation(move);
+  const p = permutationOf(move);
   let out = "";
   for (let i = 0; i < 54; i++) out += state[p[i]];
   return out;

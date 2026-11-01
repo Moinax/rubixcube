@@ -81,6 +81,7 @@ type Props = {
   piece?: string;
   place?: string;
   spot?: boolean;
+  replay?: number;
   autoRotate?: boolean;
 };
 
@@ -90,9 +91,9 @@ type Props = {
  * `fly` (the cube the piece's sequence leads to) sends a copy of the piece flying to the place, landing
  * the way the sequence leaves it, then calls `onEnd`. `spot` dims the rest of the cube, makes the outlines
  * pulse and turns the camera toward the piece and its place when they hide; without it, the camera comes
- * back in front, where the moves are played from.
+ * back in front, where the moves are played from. A new `replay` count plays the same moves again.
  */
-export default function CubeView({ state, moves, fly, onEnd, piece, place, spot, autoRotate = false }: Props) {
+export default function CubeView({ state, moves, fly, onEnd, piece, place, spot, replay, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; aim?: number; reach?: number; spot?: boolean }>(null);
   const ended = useRef(onEnd);
@@ -124,8 +125,6 @@ export default function CubeView({ state, moves, fly, onEnd, piece, place, spot,
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      PIECE_LINE.resolution.set(w, h);
-      PLACE_LINE.resolution.set(w, h);
     });
     resize.observe(el);
     const turn = new THREE.Spherical();
@@ -152,6 +151,9 @@ export default function CubeView({ state, moves, fly, onEnd, piece, place, spot,
       GLASS.opacity = GLASS_OPACITY * breath;
       controls.update();
       ctx?.onFrame?.(t);
+      // The outlines are shared: each view sizes them to its own canvas before drawing them.
+      renderer.getSize(PIECE_LINE.resolution);
+      PLACE_LINE.resolution.copy(PIECE_LINE.resolution);
       renderer.render(world, camera);
     });
     return () => {
@@ -268,7 +270,7 @@ export default function CubeView({ state, moves, fly, onEnd, piece, place, spot,
       ctx.root.remove(flier);
       ended.current?.();
     };
-  }, [state, moves?.join(" "), fly, piece, place]);
+  }, [state, moves?.join(" "), fly, piece, place, replay]);
 
   // Only a change of view turns the camera, so it stays wherever the user dragged it in between.
   const view = spot && piece ? bestView([findPiece(state, piece), ...(place ? [homeOf(state, place)] : [])]) : [1, 1];

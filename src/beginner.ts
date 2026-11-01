@@ -1,5 +1,5 @@
 import { capitalize, tr } from "./i18n.ts";
-import { applyMove, center, colorsOf as key, FACE_NAMES, INFLECTED, NORMALS, PIECES, simplify, STICKERS, stickerAt, type Face, type Vec } from "./cube.ts";
+import { applyMove, center, colorsOf as key, FACE_NAMES, INFLECTED, NORMALS, PIECES, simplify, SOLVED, STICKERS, stickerAt, type Face, type Vec } from "./cube.ts";
 
 // Layer-by-layer beginner method, played like a human would: hold the cube
 // yellow up, turn it with y to face the slot you work on, and apply the
@@ -172,15 +172,67 @@ export const TWIST = "R' D' R D".split(" ");
 /** `moves` played `n` times in a row. */
 export const times = (moves: string[], n: number) => Array<string[]>(n).fill(moves).flat();
 
-/** The named sequences of the method, longest first: a longer one never hides behind a shorter one's name. */
-const ALGS: [moves: string[], name: string][] = [
-  [RIGHT, tr({ fr: "insertion à droite", nl: "invoegen naar rechts", en: "right insert" })],
-  [LEFT, tr({ fr: "insertion à gauche", nl: "invoegen naar links", en: "left insert" })],
-  [SUNE, "Sune"],
-  [CYCLE, "Niklas"],
-  [FLIP, "F sexy move F'"],
-  [SEXY, "sexy move"],
-  [TWIST, tr({ fr: "torsion du coin", nl: "hoek draaien", en: "corner twist" })],
+/** The named sequences of the method and what each does, longest first: a longer one never hides behind a shorter one's name. */
+export const ALGS: [moves: string[], name: string, use: string][] = [
+  [
+    RIGHT,
+    tr({ fr: "insertion à droite", nl: "invoegen naar rechts", en: "right insert" }),
+    tr({
+      fr: "Glisse une arête du haut dans la couronne du milieu, vers la droite.",
+      nl: "Schuift een randstuk van boven in de middelste laag, naar rechts.",
+      en: "Slides a top edge into the middle layer, to the right.",
+    }),
+  ],
+  [
+    LEFT,
+    tr({ fr: "insertion à gauche", nl: "invoegen naar links", en: "left insert" }),
+    tr({ fr: "Le miroir : glisse l'arête vers la gauche.", nl: "Het spiegelbeeld: schuift het randstuk naar links.", en: "The mirror: slides the edge to the left." }),
+  ],
+  [
+    SUNE,
+    "Sune",
+    tr({
+      fr: "Fait tourner trois arêtes du haut, pour les aligner avec leurs centres.",
+      nl: "Wisselt drie randstukken bovenaan rond, om ze op één lijn te brengen met hun middenstukken.",
+      en: "Cycles three top edges, to line them up with their centers.",
+    }),
+  ],
+  [
+    CYCLE,
+    "Niklas",
+    tr({
+      fr: "Fait tourner trois coins du haut, sans bouger celui en haut à droite devant toi.",
+      nl: "Wisselt drie hoekstukken bovenaan rond, zonder het hoekstuk rechtsboven vooraan te verplaatsen.",
+      en: "Cycles three top corners, without moving the top right front one.",
+    }),
+  ],
+  [
+    FLIP,
+    "F sexy move F'",
+    tr({
+      fr: "Retourne des arêtes du haut : le point devient un L, le L une ligne, la ligne la croix jaune.",
+      nl: "Draait randstukken bovenaan om: de stip wordt een L, de L een lijn, de lijn het gele kruis.",
+      en: "Flips top edges: the dot becomes an L, the L a line, the line the yellow cross.",
+    }),
+  ],
+  [
+    SEXY,
+    "sexy move",
+    tr({
+      fr: "La base de la méthode : sort le coin en bas à droite et le remet tourné d'un cran. 6 fois de suite ramènent le cube à l'identique.",
+      nl: "De basis van de methode: haalt het hoekstuk rechtsonder eruit en zet het een slag gedraaid terug. 6 keer na elkaar brengt de kubus terug zoals hij was.",
+      en: "The base of the method: takes the bottom right corner out and puts it back twisted one notch. 6 in a row bring the cube back as it was.",
+    }),
+  ],
+  [
+    TWIST,
+    tr({ fr: "torsion du coin", nl: "hoek draaien", en: "corner twist" }),
+    tr({
+      fr: "Tourne le coin en haut à droite devant toi ; le bas se mélange, puis se répare quand tous les coins sont faits.",
+      nl: "Draait het hoekstuk rechtsboven vooraan; de onderkant raakt door elkaar en herstelt zich als alle hoekstukken klaar zijn.",
+      en: "Twists the top right front corner; the bottom gets scrambled, then fixes itself once every corner is done.",
+    }),
+  ],
 ];
 /** A named sequence played `reps` times at the end of a group's moves, after `setup` moves that prepare it. */
 export type Alg = { name: string; moves: string[]; reps: number; setup: number };
@@ -198,6 +250,8 @@ export function algOf(moves: string[]): Alg | undefined {
 const same = (a: Vec, b: Vec) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 const turns = (m: string, n: number) => Array(n % 4).fill(m) as string[];
 export const play = (state: string, moves: string[]) => moves.reduce(applyMove, state);
+/** The cube as the method holds it, solved: yellow on top, green in front. */
+export const YELLOW_UP = applyMove(SOLVED, "z2");
 
 // Cubies as their facelet indices, corners and edges only.
 const CUBIES = PIECES.map((idx) => ({ pos: STICKERS[idx[0]].pos, idx }));

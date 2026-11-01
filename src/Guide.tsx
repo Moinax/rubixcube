@@ -1,68 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import CubeView from "./CubeView";
+import Lexicon, { type Tab } from "./Lexicon";
 import { Back, Chevron, HOME, modeTitle } from "./Home";
 import { Chip, Colored } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group } from "./beginner";
 import { applyMove, describeMove, FACE_COLORS, invert, upright, type Face } from "./cube";
-import { lang, nOf, tr } from "./i18n";
-
-const FACES_EN: [string, string][] = [["R", "Right"], ["L", "Left"], ["U", "Up"], ["D", "Down"], ["F", "Front"], ["B", "Back"]];
-
-/** How to read the moves: the standard (Singmaster) notation every cube tutorial uses. */
-function Notation() {
-  const letter = (m: string) => <span className="wide text-chalk">{m}</span>;
-  return (
-    <details className="text-left text-sm text-mist phone:order-1">
-      <summary className="cursor-pointer text-chalk/80">
-        {tr({ fr: "Que veulent dire les lettres ?", nl: "Wat betekenen de letters?", en: "What do the letters mean?" })}
-      </summary>
-      <div className="mt-2 flex flex-col gap-2">
-        <p>
-          {tr({
-            fr: "C'est la notation standard des cubeurs. Chaque lettre est l'initiale anglaise d'une face ; seule, elle veut dire un quart de tour dans le sens des aiguilles d'une montre, comme si tu regardais cette face en face.",
-            nl: "Dit is de standaardnotatie van kubers. Elke letter is de Engelse beginletter van een kant; alleen betekent ze een kwartslag met de klok mee, alsof je recht naar die kant kijkt.",
-            en: "This is the standard notation cubers use. Each letter is the initial of a face; on its own, it means a quarter turn clockwise, as if you were looking straight at that face.",
-          })}
-        </p>
-        <ul className="grid gap-1 sm:grid-cols-2">
-          {FACES_EN.map(([m, en]) => (
-            <li key={m}>
-              {/* The English name only helps where it is not already the face's name. */}
-              {letter(m)} {lang !== "en" && <span className="opacity-70">({en})</span>}
-              {tr({ fr: " : ", nl: ": ", en: ": " })}
-              {describeMove(m).join(", ")}
-            </li>
-          ))}
-        </ul>
-        <p>
-          {tr({
-            fr: (
-              <>
-                {letter("'")} (prime) : le même quart de tour dans l'autre sens, {letter("R'")} défait {letter("R")}.{" "}
-                {letter("2")} : un demi-tour, {letter("U2")} = {letter("U U")}. {letter("x y z")} : tout le cube tourne
-                dans ta main, comme {letter("R")}, {letter("U")} et {letter("F")}.
-              </>
-            ),
-            nl: (
-              <>
-                {letter("'")} (prime): dezelfde kwartslag in de andere richting, {letter("R'")} maakt {letter("R")} ongedaan.{" "}
-                {letter("2")}: een halve slag, {letter("U2")} = {letter("U U")}. {letter("x y z")}: de hele kubus draait
-                in je hand, zoals {letter("R")}, {letter("U")} en {letter("F")}.
-              </>
-            ),
-            en: (
-              <>
-                {letter("'")} (prime): the same quarter turn the other way, {letter("R'")} undoes {letter("R")}.{" "}
-                {letter("2")}: a half turn, {letter("U2")} = {letter("U U")}. {letter("x y z")}: the whole cube turns
-                in your hand, like {letter("R")}, {letter("U")} and {letter("F")}.
-              </>
-            ),
-          })}
-        </p>
-      </div>
-    </details>
-  );
-}
+import { nOf, tr } from "./i18n";
 
 /** "Face du haut : un quart de tour…" with the face in bold. */
 function MoveText({ move }: { move: string }) {
@@ -166,6 +109,7 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   const [auto, setAuto] = useState(false);
   const [delay, setDelay] = useState(() => Number(localStorage.getItem(DELAY_KEY)) || 5);
   const [showGoal, setShowGoal] = useState(() => localStorage.getItem(GOAL_KEY) !== "0");
+  const [lexicon, setLexicon] = useState<{ tab: Tab; focus?: string } | null>(null);
   const cubeBox = useRef<HTMLDivElement>(null);
   /** Goes to move `to`, on its goal stop when it has one. */
   const land = (to: number, at: Stop = goalAt(to) ? "goal" : null) => {
@@ -234,6 +178,8 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (lexicon) return; // the glossary is open over the guide
+      if (e.key === "?" && !(e.target as Element).closest("input, textarea")) return setLexicon({ tab: "moves" });
       if (e.key === "Escape") closePicker();
       // A focused control already handles Space itself.
       if (e.key === " " && (e.target as Element).closest("button, summary, input")) return;
@@ -264,10 +210,10 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   // An instruction with no goal stop to read it on gets twice the time before its first move.
   const wait = delay * 1000 * (learn && !stop && step === groupStart && !goalAt(step) ? 2 : 1);
   useEffect(() => {
-    if (!auto || flying || fading) return;
+    if (!auto || flying || fading || lexicon) return; // waits while the glossary is open
     const timer = setTimeout(forward, wait);
     return () => clearTimeout(timer);
-  }, [auto, step, stop, wait, flying, fading]);
+  }, [auto, step, stop, wait, flying, fading, lexicon]);
 
   // Progress: one segment per stage (per phase in the fast mode), as long as its moves.
   const current = group?.stage ?? STAGES.length - 1;
@@ -304,7 +250,19 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   return (
     <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
       <div className="flex items-center justify-between gap-3 text-sm text-mist">
-        <Back label={HOME} onClick={onHome} />
+        <span className="flex items-center gap-4">
+          <Back label={HOME} onClick={onHome} />
+          <button
+            onClick={() => setLexicon({ tab: "moves" })}
+            title={tr({ fr: "Lexique (?)", nl: "Woordenlijst (?)", en: "Glossary (?)" })}
+            className="flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-0.5 text-chalk hover:border-mist/60"
+          >
+            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
+              <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z" />
+            </svg>
+            {tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}
+          </button>
+        </span>
         <p className="text-right">
           {course
             ? tr({ fr: "Cube d'exemple", nl: "Voorbeeldkubus", en: "Sample cube" })
@@ -513,7 +471,6 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
               </section>
             )
           )}
-          <Notation />
         </div>
       </div>
 
@@ -533,9 +490,16 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 py-3 md:grid md:h-18 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-6 md:px-8 md:py-0">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="wide min-w-12 flex-none text-4xl leading-none">
+            {/* The move's letter opens the glossary on it. */}
+            <button
+              onClick={() => move && setLexicon({ tab: "moves", focus: move })}
+              onMouseDown={keepFocus}
+              disabled={!move}
+              title={move && tr({ fr: "Ce coup dans le lexique", nl: "Deze zet in de woordenlijst", en: "This move in the glossary" })}
+              className="wide min-w-12 flex-none text-left text-4xl leading-none enabled:hover:text-white enabled:hover:underline enabled:hover:decoration-2 enabled:hover:underline-offset-4"
+            >
               {stop === "goal" ? <Icon name="goal" className="size-9 text-piece" /> : (move ?? "✓")}
-            </span>
+            </button>
             <div className="min-w-0 text-sm leading-snug">
               <p className="text-xs text-mist">
                 {stop === "goal"
@@ -639,10 +603,11 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
           </div>
 
           <p className="hidden text-right text-xs text-mist pointer-fine:md:block">
-            {tr({ fr: "← → coup par coup · espace : auto", nl: "← → zet per zet · spatie: auto", en: "← → move by move · space: auto" })}
+            {tr({ fr: "← → coup par coup · espace : auto · ? : lexique", nl: "← → zet per zet · spatie: auto · ?: woordenlijst", en: "← → move by move · space: auto · ?: glossary" })}
           </p>
         </div>
       </div>
+      {lexicon && <Lexicon tab={lexicon.tab} focus={lexicon.focus} onClose={() => setLexicon(null)} />}
     </main>
   );
 }

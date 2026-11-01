@@ -1,5 +1,5 @@
-import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, type Group } from "./beginner.ts";
-import { applyMove, invert as undo, SOLVED } from "./cube.ts";
+import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group } from "./beginner.ts";
+import { invert as undo, SOLVED } from "./cube.ts";
 import { tr, type Lang } from "./i18n.ts";
 
 // The beginner method as a course, for a cube the app has not seen: each case
@@ -7,8 +7,6 @@ import { tr, type Lang } from "./i18n.ts";
 // it, and how to recognise it on your own cube. Every demo start is built
 // backwards: a finished position with the moves undone, so playing them is
 // exactly the case. Demos hold yellow up, green in front, like the method.
-
-const YELLOW_UP = applyMove(SOLVED, "z2");
 
 /** A title, where things stand, then what to do: one text per part of the moves. */
 type Texts = Record<Lang, [title: string, text: string, ...steps: string[]]>;

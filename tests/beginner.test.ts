@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Cube from "cubejs";
-import { beginnerSolve, findPiece, homeOf, STAGES } from "../src/beginner.ts";
+import { algOf, beginnerSolve, findPiece, homeOf, LEFT, RIGHT, SEXY, STAGES, times } from "../src/beginner.ts";
 import { applyMove, simplify, SOLVED, upright } from "../src/cube.ts";
 
 // Solved up to a whole-cube rotation: every face is one color.
@@ -41,4 +41,17 @@ test("the outlined home is where stages 2 to 4 leave their piece", () => {
       if (STAGES[g.stage].toHome && g.piece && !/coincé|mal placée/.test(g.text)) assert.deepEqual(findPiece(s, g.piece), homeOf(s, g.piece), g.text);
     }
   }
+});
+
+test("each sequence is named, after its setup", () => {
+  assert.deepEqual(algOf(["y", "U", ...times(SEXY, 3)]), { name: "sexy move", moves: SEXY, reps: 3, setup: 2 });
+  assert.equal(algOf(["U", "R2"]), undefined);
+  for (let i = 0; i < 20; i++)
+    for (const g of beginnerSolve(Cube.random().asString()).filter((g) => g.stage >= 3)) {
+      const alg = g.alg;
+      // Only a turn of the top to line it up goes without a sequence.
+      assert.ok(alg || g.moves.every((m) => m[0] === "U"), g.text);
+      // The setup keeps its own turns: U then the right insert is not merged into U2.
+      if (g.stage === 4) assert.ok([RIGHT, LEFT].includes(alg!.moves), g.text);
+    }
 });

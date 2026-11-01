@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import CubeView from "./CubeView";
 import { Back, Chevron, HOME, modeTitle } from "./Home";
 import { Chip, Colored } from "./Scanner";
-import { findPiece, homeOf, planStates, STAGES, type Group } from "./beginner";
+import { planStates, STAGES, type Group } from "./beginner";
 import { applyMove, describeMove, invert, upright, type Face } from "./cube";
 import { lang, nOf, tr } from "./i18n";
 
@@ -95,6 +95,7 @@ type Anim = { from: string; move: string; group: Group };
 
 const DELAYS = [2, 3, 5, 8];
 const DELAY_KEY = "rubixcube:delay";
+const PATH_KEY = "rubixcube:path";
 
 const ICONS = {
   back: (
@@ -128,15 +129,23 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
 
   // The cube rests on `state`; a step forward or back plays its move, while the texts already show where it lands.
   const [anim, setAnim] = useState<Anim | null>(null);
+  // The path of the current instruction, played over the greyed cube.
+  const [preview, setPreview] = useState(false);
   const [auto, setAuto] = useState(false);
   const [delay, setDelay] = useState(() => Number(localStorage.getItem(DELAY_KEY)) || 5);
+  const [showPath, setShowPath] = useState(() => localStorage.getItem(PATH_KEY) !== "0");
+  /** Whether an instruction with a piece to follow starts at move `i`: its path can be shown. */
+  const pathAt = (i: number) => learn && i < total && flat[i].group !== flat[i - 1]?.group && !!groups[flat[i].group].piece;
   const jump = (to: number) => {
     setAnim(null);
+    setPreview(false);
     onStep(to);
   };
   const forward = () => {
     if (done) return;
     setAnim({ from: state, move: flat[step].move, group: group! });
+    // Autoplay shows the path of each new instruction, once the move that leads there has played.
+    setPreview(auto && showPath && pathAt(step + 1));
     onStep(step + 1);
     if (step + 1 === total) setAuto(false);
   };
@@ -145,22 +154,36 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
     const { move: m, group: g } = flat[step - 1];
     // From the end of that move: a course demo may start right after it, on another cube.
     setAnim({ from: applyMove(states[step - 1], m), move: invert([m])[0], group: groups[g] });
+    setPreview(false);
     onStep(step - 1);
   };
   const toggleAuto = () => {
     setAuto(!auto);
-    if (!auto) forward(); // starts right away, then waits between moves
+    if (auto) return;
+    // Starts right away: with the path of the instruction ahead, else with its next move.
+    if (showPath && pathAt(step)) setPreview(true);
+    else forward();
+  };
+  const cubeBox = useRef<HTMLDivElement>(null);
+  const watchPath = () => {
+    setAnim(null);
+    setPreview(true);
+    cubeBox.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); // on a phone, the card sits below the cube
   };
   const chooseDelay = (d: number) => {
     setDelay(d);
     localStorage.setItem(DELAY_KEY, String(d));
   };
+  const choosePath = (on: boolean) => {
+    setShowPath(on);
+    localStorage.setItem(PATH_KEY, on ? "1" : "0");
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closePicker();
-      // A focused button already handles Space itself.
-      if (e.key === " " && (e.target as Element).closest("button, summary")) return;
+      // A focused control already handles Space itself.
+      if (e.key === " " && (e.target as Element).closest("button, summary, input")) return;
       if (e.key === " ") {
         e.preventDefault();
         if (!done) toggleAuto();
@@ -177,14 +200,23 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   const chips = flat.map((f, i) => ({ ...f, i })).filter((f) => !learn || f.group === flat[step]?.group);
   const [n, of] = learn ? [step - groupStart + 1, chips.length] : [step + 1, total];
   const position = nOf(n, of);
+  const intro = learn && !done && step === groupStart;
+  // The named sequence of the instruction, and where the next move stands in it.
+  const alg = group?.alg;
+  const k = step - groupStart;
+  const part = !alg
+    ? undefined
+    : k < alg.setup
+      ? tr({ fr: "préparation", nl: "voorbereiding", en: "setup" })
+      : `${alg.name}${alg.reps > 1 ? ` ${Math.floor((k - alg.setup) / alg.moves.length) + 1}/${alg.reps}` : ""}`;
 
-  // An instruction gets twice the time to be read before its first move.
-  const wait = delay * 1000 * (learn && step === groupStart && group?.text ? 2 : 1);
+  // An instruction gets twice the time to be read before its first move, unless its path played.
+  const wait = delay * 1000 * (intro && !(showPath && pathAt(step)) ? 2 : 1);
   useEffect(() => {
-    if (!auto) return;
+    if (!auto || preview) return;
     const timer = setTimeout(forward, wait);
     return () => clearTimeout(timer);
-  }, [auto, step, wait]);
+  }, [auto, step, wait, preview]);
 
   // Progress: one segment per stage, as long as its moves.
   const current = group?.stage ?? STAGES.length - 1;
@@ -201,13 +233,11 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
     return () => removeEventListener("pointerdown", outside);
   }, []);
 
-  /** Where the piece of `g` goes in cube `s`, for the stages that put pieces in their final place. */
-  const placeOf = (g: Group | undefined, s: string) => (learn && g?.piece && STAGES[g.stage].toHome ? homeOf(s, g.piece) : undefined);
+  /** Whether the piece of `g` goes to its final place, which the cube outlines. */
+  const hasPlace = (g?: Group) => learn && !!g?.piece && !!STAGES[g.stage].toHome;
   const piece = group?.piece;
-  const target = placeOf(group, state);
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
   // While a move plays, the outlines follow the piece it works on, from where it starts.
-  const shown = anim?.from ?? state;
   const worked = anim?.group ?? group;
   const settings = useId();
 
@@ -300,13 +330,15 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
       </div>
 
       <div className="grid flex-1 items-center gap-6 md:grid-cols-2 md:gap-10">
-        <div className="aspect-square max-h-[40dvh] w-full justify-self-center md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start">
+        <div ref={cubeBox} className="aspect-square max-h-[40dvh] w-full justify-self-center md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start">
           <CubeView
-            state={shown}
-            move={anim?.move}
-            onEnd={() => setAnim(null)}
-            highlight={worked?.piece ? findPiece(shown, worked.piece) : undefined}
-            target={placeOf(worked, shown)}
+            state={anim?.from ?? state}
+            moves={anim ? [anim.move] : preview ? chips.slice(k).map((c) => c.move) : undefined}
+            preview={!anim && preview}
+            onEnd={() => (anim ? setAnim(null) : setPreview(false))}
+            piece={worked?.piece}
+            place={hasPlace(worked)}
+            frame={!anim && !preview && intro && !!piece}
           />
         </div>
 
@@ -333,26 +365,54 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
           ) : (
             (group?.text || stage) && (
               <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
-                {group?.title && <p className="mb-1 font-semibold">{group.title}</p>}
+                {learn && (
+                  <p className="mb-1.5 flex items-baseline gap-2">
+                    <span className="rounded-md bg-piece px-1.5 py-px text-[11px] font-bold tracking-wide text-plastic uppercase">
+                      {tr({ fr: "Objectif", nl: "Doel", en: "Goal" })}
+                    </span>
+                    {group?.title && <span className="font-semibold">{group.title}</span>}
+                  </p>
+                )}
                 {group?.text && (
                   <p>
                     <Colored text={group.text} />
                   </p>
                 )}
+                {alg && (
+                  <p className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-xl bg-raised px-3 py-2 text-sm">
+                    <span className="text-mist">{tr({ fr: "Séquence", nl: "Reeks", en: "Sequence" })}</span>
+                    <span className="font-semibold whitespace-nowrap [font-stretch:125%]">{alg.moves.join(" ")}</span>
+                    <span>
+                      {alg.name}
+                      {alg.reps > 1 && <span className="text-mist"> ×{alg.reps}</span>}
+                    </span>
+                  </p>
+                )}
                 {piece && (
-                  <p className="mt-2 flex gap-4 text-xs text-mist">
+                  <p className="mt-2 flex items-center gap-4 text-xs text-mist">
                     <span className="flex items-center gap-1.5">
                       <i className="size-2.5 rounded-[3px] bg-piece" />
                       {piece.length === 3
                         ? tr({ fr: "le coin", nl: "het hoekstuk", en: "the corner" })
                         : tr({ fr: "l'arête", nl: "het randstuk", en: "the edge" })}
                     </span>
-                    {target && (
+                    {hasPlace(group) && (
                       <span className="flex items-center gap-1.5">
                         <i className="size-2.5 rounded-[3px] bg-place" />
                         {tr({ fr: "sa place", nl: "zijn plek", en: "its place" })}
                       </span>
                     )}
+                    <button
+                      onClick={watchPath}
+                      onMouseDown={keepFocus}
+                      disabled={preview}
+                      className="ml-auto flex items-center gap-1 font-semibold text-chalk underline-offset-2 enabled:hover:underline disabled:opacity-50"
+                    >
+                      <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor" aria-hidden>
+                        {ICONS.play}
+                      </svg>
+                      {tr({ fr: "Voir le trajet", nl: "Bekijk het traject", en: "Watch the path" })}
+                    </button>
                   </p>
                 )}
                 {stage && (
@@ -409,6 +469,7 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
             <div className="min-w-0 text-sm leading-snug">
               <p className="text-xs text-mist">
                 {done ? DONE : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
+                {part && ` · ${part}`}
               </p>
               {move && (
                 <div className="md:line-clamp-2">
@@ -439,7 +500,7 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                 aria-label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })}
                 className={`relative grid h-10 w-12 place-items-center rounded-full text-zinc-200 disabled:opacity-30 ${auto ? "bg-white/12" : "enabled:hover:bg-white/15"}`}
               >
-                {auto && (
+                {auto && !preview && (
                   <svg viewBox="0 0 48 40" className="absolute inset-0" aria-hidden>
                     <rect key={`${step}|${wait}`} x="1.5" y="1.5" width="45" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
                   </svg>
@@ -485,6 +546,12 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
                   </button>
                 ))}
               </div>
+              {learn && (
+                <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+                  {tr({ fr: "Montrer le trajet avant chaque séquence", nl: "Het traject tonen voor elke reeks", en: "Show the path before each sequence" })}
+                  <input type="checkbox" checked={showPath} onChange={(e) => choosePath(e.target.checked)} className="size-4 flex-none accent-place" />
+                </label>
+              )}
             </div>
           </div>
 

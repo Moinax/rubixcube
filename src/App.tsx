@@ -27,14 +27,20 @@ const GUIDE_KEY = "rubixcube:guide";
 
 /** Rebuilds a saved learn or course plan from the code, so text updates reach a guide in progress;
  * the saved plan stays if that fails. The fast solution has no texts and costs a solver warm-up. */
-function refresh(guide: GuideScreen): GuideScreen {
-  if (!guide.learn) return guide;
+function refresh(saved: GuideScreen): GuideScreen {
+  if (!saved.learn) return saved;
+  let guide = saved;
   try {
-    guide = { ...guide, groups: guide.course ? COURSE : beginnerSolve(guide.start) };
+    guide = { ...saved, groups: saved.course ? COURSE : beginnerSolve(saved.start) };
   } catch (e) {
     console.error(e);
   }
-  return { ...guide, step: Math.min(guide.step, guide.groups.reduce((n, g) => n + g.moves.length, 0)) };
+  // The rebuilt plan may split its moves differently: resume on the same cube, the closest match to the saved step.
+  const reached = planStates(saved.start, saved.groups)[saved.step];
+  const states = planStates(guide.start, guide.groups);
+  const matches = states.flatMap((s, i) => (s === reached ? [i] : []));
+  if (matches.length) return { ...guide, step: matches.reduce((a, b) => (Math.abs(b - saved.step) < Math.abs(a - saved.step) ? b : a)) };
+  return { ...guide, step: Math.min(saved.step, states.length - 1) };
 }
 
 function load<T>(key: string): T | undefined {

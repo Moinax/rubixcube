@@ -1,4 +1,4 @@
-import { CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, TWIST, type Group } from "./beginner.ts";
+import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, type Group } from "./beginner.ts";
 import { applyMove, invert as undo, SOLVED } from "./cube.ts";
 import { tr, type Lang } from "./i18n.ts";
 
@@ -8,7 +8,6 @@ import { tr, type Lang } from "./i18n.ts";
 // backwards: a finished position with the moves undone, so playing them is
 // exactly the case. Demos hold yellow up, green in front, like the method.
 
-const times = (moves: string[], n: number) => Array<string[]>(n).fill(moves).flat();
 const YELLOW_UP = applyMove(SOLVED, "z2");
 
 type Texts = Record<Lang, [title: string, text: string]>;
@@ -16,7 +15,7 @@ type Texts = Record<Lang, [title: string, text: string]>;
 /** A case: `goal` is where its moves lead, its start is `goal` with the moves undone. */
 function demo(stage: number, texts: Texts, moves: string[], goal = YELLOW_UP, piece?: string): Group {
   const [title, text] = tr(texts);
-  return { stage, title, text, moves, from: play(goal, undo(moves)), piece };
+  return { stage, title, text, moves, from: play(goal, undo(moves)), piece, alg: algOf(moves) };
 }
 
 // Pieces by color letters (white U, yellow D, green F, blue B, red R, orange L).

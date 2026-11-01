@@ -8,8 +8,8 @@ import { applyMove, colorsOf as key, FACE_NAMES, INFLECTED, NORMALS, PIECES, sim
 
 /** `toHome`: the stage puts each piece in its final place, which the guide outlines. */
 export type Stage = { title: string; goal: string; how: string; toHome?: boolean };
-/** Moves to play with their instruction; course demos also carry a title and their own start cube. */
-export type Group = { stage: number; text: string; moves: string[]; piece?: string; title?: string; from?: string };
+/** Moves to play with their instruction, and the named sequence they end with; course demos also carry a title and their own start cube. */
+export type Group = { stage: number; text: string; moves: string[]; piece?: string; alg?: Alg; title?: string; from?: string };
 
 export const STAGES: Stage[] = tr<Stage[]>({
   fr: [
@@ -166,6 +166,32 @@ export const SUNE = "R U R' U R U2 R' U".split(" ");
 export const CYCLE = "U R U' L' U R' U' L".split(" ");
 export const TWIST = "R' D' R D".split(" ");
 
+/** `moves` played `n` times in a row. */
+export const times = (moves: string[], n: number) => Array<string[]>(n).fill(moves).flat();
+
+/** The named sequences of the method, longest first: a longer one never hides behind a shorter one's name. */
+const ALGS: [moves: string[], name: string][] = [
+  [RIGHT, tr({ fr: "insertion à droite", nl: "invoegen naar rechts", en: "right insert" })],
+  [LEFT, tr({ fr: "insertion à gauche", nl: "invoegen naar links", en: "left insert" })],
+  [SUNE, "Sune"],
+  [CYCLE, "Niklas"],
+  [FLIP, "F sexy move F'"],
+  [SEXY, "sexy move"],
+  [TWIST, tr({ fr: "torsion du coin", nl: "hoek draaien", en: "corner twist" })],
+];
+/** A named sequence played `reps` times at the end of a group's moves, after `setup` moves that prepare it. */
+export type Alg = { name: string; moves: string[]; reps: number; setup: number };
+
+/** The named sequence `moves` end with, if any. */
+export function algOf(moves: string[]): Alg | undefined {
+  const line = ` ${moves.join(" ")}`;
+  for (const [alg, name] of ALGS) {
+    let reps = 0;
+    while (line.endsWith(` ${times(alg, reps + 1).join(" ")}`)) reps++;
+    if (reps) return { name, moves: alg, reps, setup: moves.length - reps * alg.length };
+  }
+}
+
 const same = (a: Vec, b: Vec) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 const turns = (m: string, n: number) => Array(n % 4).fill(m) as string[];
 export const play = (state: string, moves: string[]) => moves.reduce(applyMove, state);
@@ -236,10 +262,12 @@ function search(s: string, ok: (s: string) => boolean): string[] {
 export function beginnerSolve(start: string): Group[] {
   const groups: Group[] = [];
   let s = start;
-  const emit = (stage: number, text: string, moves: string[], piece?: string) => {
-    moves = simplify(moves);
+  // The setup (cube and top turns) is simplified, the sequence after it stays whole, so the guide can name it.
+  const emit = (stage: number, text: string, setup: string[], piece?: string, alg: string[] = []) => {
+    const moves = [...simplify(setup), ...alg];
     if (!moves.length) return;
-    groups.push({ stage, text, moves, piece });
+    const named = algOf(alg);
+    groups.push({ stage, text, moves, piece, alg: named && { ...named, setup: moves.length - alg.length } });
     s = play(s, moves);
   };
   const guard = (n: number) => {
@@ -326,7 +354,7 @@ export function beginnerSolve(start: string): Group[] {
         nl: `Het hoekstuk ${name} zit onderaan vast op de verkeerde plek: ${y ? "draai de kubus zodat het rechtsonder vooraan zit, en doe dan" : "het zit al rechtsonder vooraan, doe"} één keer R U R' U' om het naar boven te halen.`,
         en: `The ${name} corner is stuck at the bottom in the wrong place: ${y ? "turn the cube to have it at the bottom right in front of you, then do" : "it is already at the bottom right in front of you, do"} R U R' U' once to bring it up.`,
       });
-      emit(3, text, [...moves, ...SEXY], corner);
+      emit(3, text, moves, corner, SEXY);
       continue;
     }
     // Slot below the corner's two side colors, at front-right, corner right above it.
@@ -358,8 +386,9 @@ export function beginnerSolve(start: string): Group[] {
         nl: `Hoekstuk ${name}: zijn plek, groen omlijnd, zit onderaan tussen het ${INFLECTED[f]} en het ${INFLECTED[r]} middenstuk. ${hold ? capitalize(hold) : "Het hoekstuk staat al recht boven zijn plek"}. Doe R U R' U' ${reps === 1 ? "één" : reps} keer, tot het wit onderaan zit.`,
         en: `${capitalize(name)} corner: its place, outlined in green, is at the bottom between the ${front} and ${right} centers. ${hold ? capitalize(hold) : "The corner is already right above its place"}. Do R U R' U' ${reps === 1 ? "once" : `${reps} times`}, until the white is at the bottom.`,
       }),
-      [...moves, ...Array(reps).fill(SEXY).flat()],
+      moves,
       corner,
+      times(SEXY, reps),
     );
   }
 
@@ -382,7 +411,7 @@ export function beginnerSolve(start: string): Group[] {
         nl: `Het randstuk ${name} zit in het midden maar op de verkeerde plek: ${y ? "draai de kubus zodat het rechts vooraan zit, en doe dan" : "het zit al rechts vooraan, doe"} het algoritme naar rechts om het naar boven te halen.`,
         en: `The ${name} edge is in the middle but misplaced: ${y ? "turn the cube to have it at the front right, then do" : "it is already at the front right, do"} the right-hand algorithm to bring it out on top.`,
       });
-      emit(4, text, [...moves, ...RIGHT], edge);
+      emit(4, text, moves, edge, RIGHT);
       continue;
     }
     const edge = key(s, up.idx);
@@ -412,8 +441,9 @@ export function beginnerSolve(start: string): Group[] {
         nl: `Randstuk ${name}: ${align || `het staat al boven het ${INFLECTED[f]} middenstuk`}. Schuif het naar ${right ? "rechts" : "links"}, naar zijn plek die groen omlijnd is.`,
         en: `${capitalize(name)} edge: ${align || `it is already above the ${front} center`}. Slide it to the ${right ? "right" : "left"}, into its place outlined in green.`,
       }),
-      [...moves, ...(right ? RIGHT : LEFT)],
+      moves,
       edge,
+      right ? RIGHT : LEFT,
     );
   }
 
@@ -455,7 +485,7 @@ export function beginnerSolve(start: string): Group[] {
                 en: "Yellow L: hold it at the back left, then F R U R' U' F'.",
               }),
             ];
-    emit(5, text, [...moves, ...FLIP]);
+    emit(5, text, moves, undefined, FLIP);
   }
 
   // 6. Yellow edges.
@@ -490,7 +520,9 @@ export function beginnerSolve(start: string): Group[] {
             nl: "De goede randstukken staan tegenover elkaar: doe één keer R U R' U R U2 R' U om er twee naast elkaar te krijgen.",
             en: "The edges that are right are opposite each other: do R U R' U R U2 R' U once to get two side by side.",
           }),
-      [...(pair ?? []), ...SUNE],
+      pair ?? [],
+      undefined,
+      SUNE,
     );
   }
 
@@ -514,8 +546,9 @@ export function beginnerSolve(start: string): Group[] {
             nl: "Geen enkel hoekstuk staat op zijn plek: doe één keer U R U' L' U R' U' L, vanaf eender welke kant.",
             en: "No corner is in its place: do U R U' L' U R' U' L once, from anywhere.",
           }),
-      [...rotation, ...CYCLE],
+      rotation,
       hold ? key(play(s, rotation), CUBIES.find((c) => same(c.pos, URF))!.idx) : undefined,
+      CYCLE,
     );
   }
 
@@ -535,8 +568,9 @@ export function beginnerSolve(start: string): Group[] {
         nl: `${k ? "Draai de bovenkant om het volgende hoekstuk rechtsboven vooraan te brengen, dan" : "Hoekstuk rechtsboven vooraan:"} ${reps} keer R' D' R D, tot het geel boven zit.`,
         en: `${k ? "Turn the top to bring the next corner to the top right front, then" : "Corner at the top right front:"} R' D' R D ${reps} times, until the yellow is on top.`,
       }),
-      [...turns("U", k), ...Array(reps).fill(TWIST).flat()],
+      turns("U", k),
       corner,
+      times(TWIST, reps),
     );
   }
   emit(

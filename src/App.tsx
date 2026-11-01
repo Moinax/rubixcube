@@ -7,7 +7,7 @@ import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
 import { CFOP_STAGES, cfopSolve } from "./cfop";
 import { COURSE } from "./course";
-import { phaseTwo, randomCube, SOLVED, solve, suspects, validate } from "./cube";
+import { phaseTwo, randomCube, SOLVED, solve, suspects, upright, validate } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** Modes that solve the user's own cube, so need its colors first. */
@@ -59,17 +59,21 @@ const method = (cfop?: boolean) => (cfop ? { solve: cfopSolve, stages: CFOP_STAG
 
 /** Rebuilds a saved plan from the code, so text updates reach a guide in progress: learn and course plans
  * anew, the fast solution split again from its saved moves (solving anew costs a solver warm-up). The
- * saved plan stays if that fails. */
+ * saved plan stays if that fails, or if the new plan never reaches the cube where the guide was left. */
 function refresh(saved: GuideScreen): GuideScreen {
   try {
     if (!saved.learn) return { ...saved, groups: fastPlan(saved.start, saved.groups.flatMap((g) => g.moves)) };
     const guide = { ...saved, groups: saved.course ? COURSE : method(saved.cfop).solve(saved.start) };
-    // The rebuilt plan may split its moves differently: resume on the same cube, the closest match to the saved step.
+    // The rebuilt plan may split its moves differently, or turn the cube elsewhere: resume on the same cube,
+    // however it is held, the closest match to the saved step.
     const reached = planStates(saved.start, saved.groups)[saved.step];
+    const held = reached && upright(reached);
+    const same = (s: string) => s === reached || (!!held && upright(s) === held);
     const states = planStates(guide.start, guide.groups);
-    const matches = states.flatMap((s, i) => (s === reached ? [i] : []));
+    const matches = states.flatMap((s, i) => (same(s) ? [i] : []));
     if (matches.length) return { ...guide, step: matches.reduce((a, b) => (Math.abs(b - saved.step) < Math.abs(a - saved.step) ? b : a)) };
-    return { ...guide, step: Math.min(saved.step, states.length - 1) };
+    // The new plan never passes through that cube: the saved plan goes on, older texts and all, rather than another cube.
+    return saved;
   } catch (e) {
     console.error(e);
     return saved;

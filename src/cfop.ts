@@ -2,6 +2,7 @@ import {
   colorAt,
   CUBIES,
   facing,
+  TURN_TO_FACE,
   cubieOf,
   FLIP,
   findPiece,
@@ -304,10 +305,12 @@ export function cfopSolve(start: string): Group[] {
     return [stickerAt(pos, DOWN)!, stickerAt(pos, [pos[0], 0, pos[2]])!];
   };
   const whites = pieces(s, (c) => c.length === 2 && c.includes(W)).map((c) => key(s, c.idx));
+  const tables = new Map<string, Map<number, number>>();
+  const distancesFrom = (h: [number, number]) => tables.get(`${h}`) ?? tables.set(`${h}`, distances(h)).get(`${h}`)!;
   let home = whites.filter((e) => solvedAt(s, findPiece(s, e)));
   while (home.length < 4) {
-    // The cube may have turned since the last edge: the homes move with it.
-    const dist = new Map(whites.map((e) => [e, distances(homeOfEdge(e))]));
+    // The cube may have turned since the last edge: the homes move with it, among the 4 bottom edge places.
+    const dist = new Map(whites.map((e) => [e, distancesFrom(homeOfEdge(e))]));
     const tracked = (edge: string): Tracked => ({ at: [stickerOf(s, edge, W), stickerOf(s, edge, edge.replace(W, ""))], dist: dist.get(edge)! });
     const [edge, path] = whites
       .filter((e) => !home.includes(e))
@@ -325,14 +328,7 @@ export function cfopSolve(start: string): Group[] {
         en: `It is ${{ top: "on top", middle: "in the middle layer", bottom: "at the bottom, in the wrong place or flipped" }[where]}. Its place is at the bottom, under the ${FACE_NAMES[other]} center, white underneath.`,
       }),
       [
-        [
-          tr({
-            fr: "Tourne le cube pour avoir devant toi ou à droite les faces à tourner : tu verras ce qu'elles font.",
-            nl: "Draai de kubus zodat de kanten die je draait vooraan of rechts zitten: zo zie je wat ze doen.",
-            en: "Turn the cube so the faces to turn are in front of you or on the right: you'll see what they do.",
-          }),
-          hold,
-        ],
+        [TURN_TO_FACE, hold],
         [
           tr({
             fr: `Amène-la directement à sa place, sans déloger les arêtes déjà posées : ici ${moves.length === 1 ? "un seul coup" : `${moves.length} coups`}. Avec l'habitude, tu verras le chemin d'un coup d'œil.`,

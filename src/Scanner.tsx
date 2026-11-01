@@ -68,7 +68,7 @@ const COLOR_WORDS = new RegExp(`(?<!\\p{L})${COLOR}(?:-${COLOR})*(?!\\p{L})`, "g
 const faceOf = (word: string) => COLOR_FACES[word.toLowerCase().replace(/s$/, "")] ?? COLOR_FACES[word.toLowerCase()];
 
 /** Small squares of the faces' colors, sitting on the text's baseline. */
-const Swatches = ({ faces }: { faces: Face[] }) => (
+export const Swatches = ({ faces }: { faces: Face[] }) => (
   <span className="mr-[0.3em] inline-flex gap-px align-[-0.08em]">
     {faces.map((f, i) => (
       <i key={i} className="inline-block size-[0.8em] rounded-[3px]" style={{ background: FACE_COLORS[f] }} />

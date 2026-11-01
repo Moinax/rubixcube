@@ -393,11 +393,18 @@ const BLIND: Record<string, number> = { B: 4, L: 2, R: 1 };
 /** The cube turn (none, y, y2 or y') that brings the faces `moves` turns in front of you or to the right,
  * with the same moves named from there: what was B2 at the back becomes y2 then F2. */
 export function facing(moves: string[]): [turn: string[], moves: string[]] {
+  const options = [0, 1, 2, 3].map((r) => turned(moves, r));
   // Turning the cube costs a move too: never worth it for a face already on the right.
-  const cost = (r: number) => +(r > 0) + turned(moves, r).reduce((n, m) => n + (BLIND[m[0]] ?? 0), 0);
-  const r = [1, 2, 3].reduce((best, r) => (cost(r) < cost(best) ? r : best), 0);
-  return [turns("y", r), turned(moves, r)];
+  const costs = options.map((o, r) => +(r > 0) + o.reduce((n, m) => n + (BLIND[m[0]] ?? 0), 0));
+  const r = costs.indexOf(Math.min(...costs));
+  return [turns("y", r), options[r]];
 }
+/** The step that turns the cube for `facing`. */
+export const TURN_TO_FACE = tr({
+  fr: "Tourne le cube pour avoir devant toi ou à droite les faces à tourner : tu verras ce qu'elles font.",
+  nl: "Draai de kubus zodat de kanten die je draait vooraan of rechts zitten: zo zie je wat ze doen.",
+  en: "Turn the cube so the faces to turn are in front of you or on the right: you'll see what they do.",
+});
 /** The cube as the method holds it, solved: yellow on top, green in front. */
 export const YELLOW_UP = applyMove(SOLVED, "z2");
 
@@ -546,14 +553,7 @@ export function beginnerSolve(start: string): Group[] {
         en: `It is ${{ down: "at the bottom, white facing down", bottom: "at the bottom, white on the side", middle: "in the middle layer", top: "on top, but white on the side" }[where]}. It has to reach the top, white facing up, as a petal around the yellow center.`,
       }),
       [
-        [
-          tr({
-            fr: "Tourne le cube pour avoir devant toi ou à droite les faces à tourner : tu verras ce qu'elles font.",
-            nl: "Draai de kubus zodat de kanten die je draait vooraan of rechts zitten: zo zie je wat ze doen.",
-            en: "Turn the cube so the faces to turn are in front of you or on the right: you'll see what they do.",
-          }),
-          hold,
-        ],
+        [TURN_TO_FACE, hold],
         [
           tr({
             fr: "Tourne le haut pour libérer la place où elle va arriver : aucun pétale ne sera délogé.",
@@ -602,7 +602,7 @@ export function beginnerSolve(start: string): Group[] {
       return pos[1] === 1 && colorAt(t, pos, SIDE_FACES.find(([f]) => f === face)![1]) === other;
     })!;
     const color = FACE_NAMES[other];
-    // Its face comes in front of you first, where the half turn is easy to watch.
+    // Its face comes in front of you first, where the half turn is easy to watch, unless it is already on the right.
     const [hold, drop] = facing([face + "2"]);
     emit(
       2,

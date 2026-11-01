@@ -2,9 +2,9 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import CubeView from "./CubeView";
 import Lexicon, { type Tab } from "./Lexicon";
 import { Back, Chevron, HOME, modeTitle } from "./Home";
-import { Chip, Colored } from "./Scanner";
+import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
-import { applyMove, describeMove, FACE_COLORS, invert, upright, type Face } from "./cube";
+import { applyMove, describeMove, invert, upright, type Face } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** "Face du haut : un quart de tour…" with the face in bold. */
@@ -27,12 +27,8 @@ function pieceName(piece: string) {
 
 /** A piece's colors as swatches, with its name, outlined in the piece's pink. */
 const PieceChip = ({ piece }: { piece: string }) => (
-  <span className="flex items-center gap-1.5 rounded-lg bg-raised py-0.5 pr-2 pl-1 ring-1 ring-piece">
-    <span className="flex gap-px">
-      {pieceColors(piece).map((f) => (
-        <i key={f} className="h-3.5 w-2 rounded-[2px]" style={{ background: FACE_COLORS[f] }} />
-      ))}
-    </span>
+  <span className="rounded-lg bg-raised py-0.5 pr-2 pl-1.5 ring-1 ring-piece">
+    <Swatches faces={pieceColors(piece)} />
     {pieceName(piece)}
   </span>
 );
@@ -60,8 +56,6 @@ type GuideProps = {
 
 /** A move playing from `from`, forward or undone (inverted), and the group it belongs to. */
 type Anim = { from: string; move: string; group: Group };
-/** A stop between moves: the result of a course demo, before the next demo's cube fades in. */
-type Stop = "result" | null;
 
 const DELAYS = [2, 3, 5, 8];
 const DELAY_KEY = "rubixcube:delay";
@@ -106,18 +100,21 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const newCubeAt = (s: number) => states[s] !== ends[flat[s - 1].group];
   /** Whether a stage ends before move `s`, a phase in the fast mode. */
   const stageEndAt = (s: number) => !learn || groups[flat[s].group].stage !== groups[flat[s - 1].group].stage;
+  /** Whether move `s` starts a group, after another. */
+  const boundaryAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group;
   /** Whether a result stop ends the group before move `s`: only when the next one starts on another cube (a new
    * demo). Otherwise the last move leads straight to the next sequence, its piece and place already outlined. */
-  const resultAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group && newCubeAt(s);
+  const resultAt = (s: number) => boundaryAt(s) && newCubeAt(s);
   /** Whether move `s` starts a new stage (a phase, in the fast mode). */
-  const stageStartAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group && stageEndAt(s);
+  const stageStartAt = (s: number) => boundaryAt(s) && stageEndAt(s);
 
-  const [stop, setStop] = useState<Stop>(null);
+  // On the result of a course demo, before the next demo's cube fades in.
+  const [atResult, setAtResult] = useState(false);
   const done = step === total;
-  const gi = stop === "result" ? flat[step - 1].group : flat[step]?.group;
+  const gi = atResult ? flat[step - 1].group : flat[step]?.group;
   const group = gi === undefined ? undefined : groups[gi];
-  const move = stop ? undefined : flat[step]?.move;
-  const state = stop === "result" ? ends[gi!] : states[step];
+  const move = atResult ? undefined : flat[step]?.move;
+  const state = atResult ? ends[gi!] : states[step];
 
   // The cube rests on `state`; a step forward or back plays its move, while the texts already show where it lands.
   const [anim, setAnim] = useState<Anim | null>(null);
@@ -127,8 +124,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const [delay, setDelay] = useState(() => Number(localStorage.getItem(DELAY_KEY)) || 5);
   const [lexicon, setLexicon] = useState<{ tab: Tab; focus?: string } | null>(null);
   /** Goes to move `to`, or to the result stop just before it. */
-  const land = (to: number, at: Stop = null) => {
-    setStop(at);
+  const land = (to: number, result = false) => {
+    setAtResult(result);
     onStep(to);
   };
   /** Swaps the cube for one no move leads to: a fade, never a jump. A jump, or leaving the guide, cancels it. */
@@ -149,22 +146,22 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   };
   const forward = () => {
     if (done || fading) return;
-    if (stop === "result") return newCubeAt(step) ? swap(() => land(step)) : land(step);
+    if (atResult) return swap(() => land(step));
     setAnim({ from: state, move: flat[step].move, group: group! });
-    land(step + 1, resultAt(step + 1) ? "result" : undefined);
+    land(step + 1, resultAt(step + 1));
     // The autoplay stops at the end of the guide, and of each stage: the next one starts on a press.
     if (step + 1 === total || stageStartAt(step + 1)) setAuto(false);
   };
   const back = () => {
     if (fading || !step) return;
-    if (!stop && resultAt(step)) {
+    if (!atResult && resultAt(step)) {
       setAnim(null);
-      return newCubeAt(step) ? swap(() => setStop("result")) : setStop("result");
+      return swap(() => setAtResult(true));
     }
     const { move: m, group: g } = flat[step - 1];
     // From the end of that move: a course demo may start right after it, on another cube.
     setAnim({ from: applyMove(states[step - 1], m), move: invert([m])[0], group: groups[g] });
-    land(step - 1, null);
+    land(step - 1);
   };
   const toggleAuto = () => {
     setAuto(!auto);
@@ -207,12 +204,12 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
       : `${alg.name}${alg.reps > 1 ? ` ${Math.floor((k - alg.setup) / alg.moves.length) + 1}/${alg.reps}` : ""}`;
 
   // A new instruction gets twice the time to be read before its first move.
-  const wait = delay * 1000 * (learn && !stop && step === groupStart ? 2 : 1);
+  const wait = delay * 1000 * (learn && !atResult && step === groupStart ? 2 : 1);
   useEffect(() => {
     if (!auto || fading || lexicon) return; // waits while the glossary is open
     const timer = setTimeout(forward, wait);
     return () => clearTimeout(timer);
-  }, [auto, step, stop, wait, fading, lexicon]);
+  }, [auto, step, atResult, wait, fading, lexicon]);
 
   // Progress: one segment per stage (per phase in the fast mode), as long as its moves.
   const current = group?.stage ?? stages.length - 1;
@@ -238,7 +235,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const worked = anim?.group ?? group;
   const settings = useId();
   // What a result stop closes: the last demo of a stage, or one demo among its cases.
-  const ending = stop !== "result" ? undefined : stageEndAt(step) ? "stage" : "demo";
+  const ending = !atResult ? undefined : stageEndAt(step) ? "stage" : "demo";
   const ENDINGS = {
     stage: learn
       ? { label: tr({ fr: "Étape terminée", nl: "Stap klaar", en: "Step done" }), next: tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next step" }) }
@@ -248,7 +245,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   // What ▶ does from here: go on past a result, or play the move; its size never changes.
   const next: { icon: keyof typeof ICONS; label?: string; title: string } = done
     ? { icon: "done", title: DONE }
-    : stop === "result"
+    : atResult
           ? { icon: "next", label: tr({ fr: "Suite", nl: "Verder", en: "Next" }), title: ENDINGS[ending!].next }
           : { icon: "play", label: move, title: `${tr({ fr: "Jouer", nl: "Speel", en: "Play" })} ${move}` };
 
@@ -417,7 +414,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                   {(group.steps ?? [{ text: "", count: group.moves.length }]).map((part, j, parts) => {
                     const first = groupStart + parts.slice(0, j).reduce((sum, p) => sum + p.count, 0);
                     const own = flat.slice(first, first + part.count).map((f) => f.move);
-                    const [passed, here] = [stop === "result" || step >= first + part.count, !stop && step >= first && step < first + part.count];
+                    const [passed, here] = [atResult || step >= first + part.count, !atResult && step >= first && step < first + part.count];
                     // A sequence played several times shows each time apart, and which one is playing.
                     const rep = algOf(own);
                     const size = rep && !rep.setup && rep.reps > 1 ? rep.moves.length : own.length;
@@ -546,7 +543,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               >
                 {auto && (
                   <svg viewBox="0 0 48 40" className="absolute inset-0" aria-hidden>
-                    <rect key={`${step}|${stop}|${wait}`} x="1.5" y="1.5" width="45" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
+                    <rect key={`${step}|${atResult}|${wait}`} x="1.5" y="1.5" width="45" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
                   </svg>
                 )}
                 <Icon name={auto ? "pause" : "auto"} />

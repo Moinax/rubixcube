@@ -368,6 +368,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             pair={worked?.pair}
             pairPlace={worked && slots.get(worked)!.pair}
             grip={worked?.grip}
+            next={move}
           />
         </div>
 

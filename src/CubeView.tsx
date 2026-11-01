@@ -35,8 +35,12 @@ const FINGER = new THREE.CircleGeometry(0.2, 32);
 export const THUMB_COLOR = "#e879f9";
 export const INDEX_COLOR = "#34d399";
 const [THUMB, INDEX] = [THUMB_COLOR, INDEX_COLOR].map((color) => new THREE.MeshBasicMaterial({ color }));
+// A finger that has to lift off for the next move, so it doesn't block the face; and the ring of the one that plays.
+const LIFTED = new Map([THUMB, INDEX].map((m) => [m, new THREE.MeshBasicMaterial({ color: m.color, transparent: true, opacity: 0.25 })]));
+const RING = new THREE.RingGeometry(0.25, 0.31, 40);
+const RING_MATERIAL = new THREE.MeshBasicMaterial({ color: "#f3f2ee" });
 type Finger = "left thumb" | "right thumb" | "left index" | "right index";
-const GRIP: [finger: Finger, pos: Vec, normal: Vec, material: THREE.Material][] = [
+const GRIP: [finger: Finger, pos: Vec, normal: Vec, material: THREE.MeshBasicMaterial][] = [
   ["left thumb", [-1, -1, 1], [0, 0, 1], THUMB],
   ["right thumb", [1, -1, 1], [0, 0, 1], THUMB],
   ["left index", [-1, 1, -1], [0, 1, 0], INDEX],
@@ -69,6 +73,7 @@ type Props = {
   pairPlace?: string;
   replay?: number;
   grip?: boolean;
+  next?: string;
   autoRotate?: boolean;
 };
 
@@ -76,9 +81,11 @@ type Props = {
  * Renders `state`; when `moves` are set, plays them one after the other from `state`, then calls `onEnd`.
  * `piece` (its colors) is outlined, and `place` (the colors of the centers around it) is a green glass box;
  * so are `pair`, a second piece that goes with it (an F2L edge), and `pairPlace`. A new `replay` count
- * plays the same moves again. `grip` marks where the fingers rest in the home grip.
+ * plays the same moves again. `grip` marks where the fingers rest in the home grip: before `next` (the move to
+ * play), its fingers stand out and the ones in its way fade; while a move plays, its fingers ride with the face
+ * and the ones in its way lift off.
  */
-export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, autoRotate = false }: Props) {
+export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void }>(null);
   const ended = useRef(onEnd);
@@ -166,14 +173,19 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
             if (mine) mesh.add(new LineSegments2(OUTLINE, PIECE_LINE));
             (move && inLayer(move, pos) ? layer : ctx.root).add(mesh);
           }
-      // The fingers making the move ride with the face they turn; the others stay where they rest.
+      // The fingers making the move ride with the face they turn; the ones in its way lift off; the others rest.
       riding = [];
+      const coming = move ?? next;
       if (grip)
         for (const [finger, pos, normal, look] of GRIP) {
-          const dot = new THREE.Mesh(FINGER, look);
+          const [plays, inTheWay] = [!!coming && riders(coming).includes(finger), !!coming && inLayer(coming, pos)];
+          const lifts = inTheWay && !plays;
+          if (lifts && move) continue;
+          const dot = new THREE.Mesh(FINGER, lifts ? LIFTED.get(look)! : look);
+          if (plays) dot.add(new THREE.Mesh(RING, RING_MATERIAL)).scale.setScalar(1.3);
           dot.position.set(...pos).addScaledVector(new THREE.Vector3(...normal), 0.52);
           dot.lookAt(dot.position.clone().add(new THREE.Vector3(...normal)));
-          const rides = move && riders(move).includes(finger) && inLayer(move, pos);
+          const rides = move && plays && inTheWay;
           (rides ? layer : ctx.root).add(dot);
           if (rides) riding.push({ dot, home: dot.position.clone(), facing: dot.quaternion.clone() });
         }
@@ -230,7 +242,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     };
 
     show(state, 0);
-  }, [state, moves?.join(" "), piece, place, pair, pairPlace, replay, grip]);
+  }, [state, moves?.join(" "), piece, place, pair, pairPlace, replay, grip, next]);
 
   return <div ref={host} className="relative h-full w-full touch-none" />;
 }

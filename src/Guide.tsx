@@ -112,8 +112,12 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   }, [groups, ends]);
   /** Whether move `s` starts a group with a piece to follow: a goal stop comes first. */
   const goalAt = (s: number) => learn && s < total && flat[s].group !== flat[s - 1]?.group && !!groups[flat[s].group].piece;
-  /** Whether the group ending before move `s` hands over to another cube (a new demo): a result stop ends it. */
-  const resultAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group && states[s] !== ends[flat[s - 1].group];
+  /** Whether the group ending before move `s` hands over to another cube (a new demo): a fade swaps them. */
+  const newCubeAt = (s: number) => states[s] !== ends[flat[s - 1].group];
+  /** Whether a stage ends before move `s`, a phase in the fast mode. */
+  const stageEndAt = (s: number) => !learn || groups[flat[s].group].stage !== groups[flat[s - 1].group].stage;
+  /** Whether a result stop ends the group before move `s`: a stage is done, or a demo hands over to another cube. */
+  const resultAt = (s: number) => s > 0 && s < total && flat[s].group !== flat[s - 1].group && (newCubeAt(s) || stageEndAt(s));
 
   const [stop, setStop] = useState<Stop>(() => (goalAt(step) ? "goal" : null));
   const done = step === total;
@@ -157,7 +161,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const forward = (playing = auto) => {
     if (done || fading) return;
     setFlying(false);
-    if (stop === "result") return swap(() => land(step));
+    if (stop === "result") return newCubeAt(step) ? swap(() => land(step)) : land(step);
     if (stop === "goal") {
       setStop(null);
       // The autoplay may skip the flight; a press always shows it.
@@ -167,13 +171,17 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     }
     setAnim({ from: state, move: flat[step].move, group: group! });
     land(step + 1, resultAt(step + 1) ? "result" : undefined);
-    if (step + 1 === total) setAuto(false);
+    // The autoplay stops at the end of the guide, and of each stage: the next one starts on a press.
+    if (step + 1 === total || (resultAt(step + 1) && stageEndAt(step + 1))) setAuto(false);
   };
   const canBack = step > 0 || (!stop && goalAt(step));
   const back = () => {
     if (fading) return;
     setFlying(false);
-    if (stop === "goal" && resultAt(step)) return swap(() => setStop("result"));
+    if (stop !== "result" && resultAt(step) && (stop === "goal" || !goalAt(step))) {
+      setAnim(null);
+      return newCubeAt(step) ? swap(() => setStop("result")) : setStop("result");
+    }
     if (!stop && goalAt(step)) {
       setAnim(null);
       return setStop("goal");
@@ -259,13 +267,23 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   // While a move plays, the outlines follow the piece it works on, from where it starts.
   const worked = anim?.group ?? group;
   const settings = useId();
+  // A result stop that closes a stage, rather than one demo among the stage's cases.
+  const stageDone = stop === "result" && stageEndAt(step);
   // What ▶ does from here: show the goal, go on to the next demo, play the move; its size never changes.
   const next: { icon: keyof typeof ICONS; label?: string; title: string } = done
     ? { icon: "done", title: DONE }
     : stop === "goal"
       ? { icon: "goal", label: tr({ fr: "But", nl: "Doel", en: "Goal" }), title: tr({ fr: "Voir le but", nl: "Bekijk het doel", en: "Show the goal" }) }
       : stop === "result"
-        ? { icon: "next", label: tr({ fr: "Suite", nl: "Verder", en: "Next" }), title: tr({ fr: "Exemple suivant", nl: "Volgend voorbeeld", en: "Next example" }) }
+        ? {
+            icon: "next",
+            label: tr({ fr: "Suite", nl: "Verder", en: "Next" }),
+            title: !stageDone
+              ? tr({ fr: "Exemple suivant", nl: "Volgend voorbeeld", en: "Next example" })
+              : learn
+                ? tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next step" })
+                : tr({ fr: "Phase suivante", nl: "Volgende fase", en: "Next phase" }),
+          }
         : { icon: "play", label: move, title: `${tr({ fr: "Jouer", nl: "Speel", en: "Play" })} ${move}` };
 
   return (
@@ -527,7 +545,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 {stop === "goal"
                   ? tr({ fr: "Objectif", nl: "Doel", en: "Goal" })
                   : stop === "result"
-                    ? tr({ fr: "Résultat", nl: "Resultaat", en: "Result" })
+                    ? stageDone
+                      ? learn
+                        ? tr({ fr: "Étape terminée", nl: "Stap klaar", en: "Step done" })
+                        : tr({ fr: "Phase terminée", nl: "Fase klaar", en: "Phase done" })
+                      : tr({ fr: "Résultat", nl: "Resultaat", en: "Result" })
                     : done
                       ? DONE
                       : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
@@ -541,7 +563,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                   <span className="text-mist">→ {placeOf(group?.pair)}</span>
                 </p>
               )}
-              {stop === "result" && <p className="font-semibold">{group?.title}</p>}
+              {stop === "result" && <p className="font-semibold">{stageDone && learn ? stages[group!.stage].title : group?.title}</p>}
               {move && (
                 <div className="md:line-clamp-2">
                   <MoveText move={move} />

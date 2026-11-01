@@ -2,8 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import CubeView from "./CubeView";
 import { Back, Chevron, HOME, modeTitle } from "./Home";
 import { Chip, Colored } from "./Scanner";
-import { findPiece, names, planStates, play, slotOf, STAGES, type Group } from "./beginner";
-import { applyMove, describeMove, invert, upright, type Face } from "./cube";
+import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group } from "./beginner";
+import { applyMove, describeMove, FACE_COLORS, invert, upright, type Face } from "./cube";
 import { lang, nOf, tr } from "./i18n";
 
 const FACES_EN: [string, string][] = [["R", "Right"], ["L", "Left"], ["U", "Up"], ["D", "Down"], ["F", "Front"], ["B", "Back"]];
@@ -132,6 +132,7 @@ const Icon = ({ name, className = "size-5" }: { name: keyof typeof ICONS; classN
   </svg>
 );
 const DONE = tr({ fr: "Terminé", nl: "Klaar", en: "Done" });
+const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 // A click leaves the focus where it was, so Space keeps toggling the auto mode.
 const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
@@ -248,9 +249,8 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
   });
 
   // Learn and course modes walk one instruction at a time; the fast mode is one long sequence.
-  const groupStart = flat.findIndex((f) => f.group === flat[step]?.group);
-  const chips = flat.map((f, i) => ({ ...f, i })).filter((f) => !learn || f.group === flat[step]?.group);
-  const [n, of] = learn ? [step - groupStart + 1, chips.length] : [step + 1, total];
+  const groupStart = flat.findIndex((f) => f.group === gi);
+  const [n, of] = learn ? [step - groupStart + 1, group?.moves.length ?? 0] : [step + 1, total];
   const position = nOf(n, of);
   // The named sequence of the instruction, and where the next move stands in it.
   const alg = group?.alg;
@@ -421,77 +421,98 @@ export default function Guide({ start, groups, learn, course, step, onStep, onHo
               </p>
             </div>
           ) : (
-            (group?.text || stage) && (
+            group && (
               <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
-                {(learn || group?.title) && (
-                  <p className="mb-1.5 flex items-baseline gap-2">
-                    {learn && (
-                      <span className="rounded-md bg-piece px-1.5 py-px text-[11px] font-bold tracking-wide text-plastic uppercase">
-                        {tr({ fr: "Objectif", nl: "Doel", en: "Goal" })}
-                      </span>
-                    )}
-                    {group?.title && <span className="font-semibold">{group.title}</span>}
-                  </p>
-                )}
-                {group?.text && (
-                  <p>
-                    <Colored text={group.text} />
-                  </p>
-                )}
-                {alg && (
-                  <p className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-xl bg-raised px-3 py-2 text-sm">
-                    <span className="text-mist">{tr({ fr: "Séquence", nl: "Reeks", en: "Sequence" })}</span>
-                    <span className="font-semibold whitespace-nowrap [font-stretch:125%]">{alg.moves.join(" ")}</span>
-                    <span>
-                      {alg.name}
-                      {alg.reps > 1 && <span className="text-mist"> ×{alg.reps}</span>}
-                    </span>
-                  </p>
-                )}
+                <p className={LABEL}>
+                  {tr({ fr: "Le but", nl: "Het doel", en: "The goal" })}
+                  {learn && group.stage > 0 && group.title && <span className="font-normal tracking-normal normal-case"> · {group.title}</span>}
+                </p>
+                <p className="wide mt-1 text-lg leading-snug">{learn && group.stage > 0 ? STAGES[group.stage].goal : (group.title ?? stage?.goal)}</p>
                 {piece && (
-                  <p className="mt-2 flex items-center gap-4 text-xs text-mist">
-                    <span className="flex items-center gap-1.5">
-                      <i className="size-2.5 rounded-[3px] bg-piece" />
-                      {piece.length === 3
-                        ? tr({ fr: "le coin", nl: "het hoekstuk", en: "the corner" })
-                        : tr({ fr: "l'arête", nl: "het randstuk", en: "the edge" })}
+                  <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                    <span className="flex items-center gap-1.5 rounded-lg bg-raised py-0.5 pr-2 pl-1 ring-1 ring-piece">
+                      <span className="flex gap-px">
+                        {pieceColors(piece).map((f) => (
+                          <i key={f} className="h-3.5 w-2 rounded-[2px]" style={{ background: FACE_COLORS[f] }} />
+                        ))}
+                      </span>
+                      {pieceName(piece)}
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      <i className="size-2.5 rounded-[3px] bg-place" />
+                    <span className="text-mist">→</span>
+                    <span className="flex items-center gap-1.5 rounded-lg bg-raised py-0.5 pr-2 pl-1 ring-1 ring-place">
+                      <i className="h-3.5 w-3.5 rounded-[2px] bg-place" />
                       {tr({ fr: "sa place", nl: "zijn plek", en: "its place" })}
                     </span>
                   </p>
                 )}
-                {stage && (
-                  <details className="mt-3 border-t border-edge pt-3 text-sm text-mist">
-                    <summary className="cursor-pointer text-chalk/80">
-                      {tr({ fr: "Comment ça marche ?", nl: "Hoe werkt het?", en: "How does it work?" })}
-                    </summary>
-                    <p className="mt-1">
-                      <span className="text-chalk">{stage.goal}</span> <Colored text={stage.how} />
-                    </p>
-                  </details>
+                {group.text && (
+                  <p className="mt-2 text-mist">
+                    <Colored text={group.text} />
+                  </p>
+                )}
+
+                <p className={`${LABEL} mt-4 border-t border-edge pt-3`}>{tr({ fr: "Comment", nl: "Hoe", en: "How" })}</p>
+                <ol className="mt-2 grid gap-3">
+                  {(group.steps ?? [{ text: "", count: group.moves.length }]).map((part, j, parts) => {
+                    const first = groupStart + parts.slice(0, j).reduce((sum, p) => sum + p.count, 0);
+                    const own = flat.slice(first, first + part.count).map((f) => f.move);
+                    const [passed, here] = [stop === "result" || step >= first + part.count, !stop && step >= first && step < first + part.count];
+                    // A sequence played several times shows each time apart, and which one is playing.
+                    const rep = algOf(own);
+                    const size = rep && !rep.setup && rep.reps > 1 ? rep.moves.length : own.length;
+                    const runs = Array.from({ length: own.length / size }, (_, r) => r * size);
+                    return (
+                      <li key={j} className={`grid grid-cols-[1.25rem_1fr] gap-2.5 ${passed ? "opacity-55" : ""}`}>
+                        <span className={`mt-0.5 grid size-5 place-items-center rounded-full text-[11px] font-bold ${here ? "bg-chalk text-plastic" : "bg-raised text-mist"} ${part.text ? "" : "invisible"}`}>
+                          {j + 1}
+                        </span>
+                        <div className="min-w-0">
+                          {part.text && (
+                            <p>
+                              <Colored text={part.text} />
+                              {here && runs.length > 1 && (
+                                <span className="ml-1.5 rounded-md bg-piece px-1.5 py-px align-[1px] text-[11px] font-bold text-plastic">
+                                  {Math.floor((step - first) / size) + 1}/{runs.length}
+                                </span>
+                              )}
+                            </p>
+                          )}
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {runs.map((r) => (
+                              <span key={r} className={`flex gap-1 ${runs.length > 1 ? "rounded-[10px] p-0.5 ring-1 ring-edge" : ""}`}>
+                                {own.slice(r, r + size).map((m, c) => {
+                                  const i = first + r + c;
+                                  return (
+                                    <button
+                                      key={i}
+                                      onClick={() => jump(i)}
+                                      onMouseDown={keepFocus}
+                                      title={describeMove(m).join(", ")}
+                                      className={`min-w-8 rounded-lg px-1 py-0.5 text-sm font-semibold [font-stretch:125%] ${
+                                        here && i === step ? "bg-chalk text-plastic" : passed || i < step ? "bg-raised text-mist/60" : "bg-raised text-chalk"
+                                      }`}
+                                    >
+                                      {m}
+                                    </button>
+                                  );
+                                })}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+                {stage && !(course && !group.stage) && (
+                  <p className="mt-4 text-sm text-mist">
+                    <span className="text-chalk/80">{tr({ fr: "Pourquoi ça marche : ", nl: "Waarom het werkt: ", en: "Why it works: " })}</span>
+                    <Colored text={stage.why} />
+                  </p>
                 )}
               </section>
             )
           )}
-
-          <ol className="flex flex-wrap gap-1.5">
-            {chips.map(({ move: m, i }) => (
-              <li key={i}>
-                <button
-                  onClick={() => jump(i)}
-                  onMouseDown={keepFocus}
-                  title={describeMove(m).join(", ")}
-                  className={`min-w-10 rounded-lg px-2 py-1 text-sm font-semibold [font-stretch:125%] ${
-                    i === step ? "bg-chalk text-plastic" : i < step ? "bg-shell text-mist/60" : "bg-shell text-chalk"
-                  }`}
-                >
-                  {m}
-                </button>
-              </li>
-            ))}
-          </ol>
           <Notation />
         </div>
       </div>

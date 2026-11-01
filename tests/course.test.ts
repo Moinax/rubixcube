@@ -76,3 +76,11 @@ test("stages come in order, so each stage's moves are one run the progress bar c
   const start = "D' R2 F U' L B2 R' D F2 U".split(" ").reduce(applyMove, SOLVED);
   assert.ok(ordered(beginnerSolve(start)));
 });
+
+test("each group's steps share out its moves, in the course and in a beginner plan", () => {
+  const start = "L2 B U' R F2 D' L U2 B' R'".split(" ").reduce(applyMove, SOLVED);
+  for (const g of [...COURSE, ...beginnerSolve(start)]) {
+    assert.ok(g.steps?.length && g.steps.every((s) => s.count > 0 && s.text), g.text);
+    assert.equal(g.steps.reduce((n, s) => n + s.count, 0), g.moves.length, g.text);
+  }
+});

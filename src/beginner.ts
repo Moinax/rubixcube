@@ -6,151 +6,154 @@ import { applyMove, center, colorsOf as key, FACE_NAMES, INFLECTED, NORMALS, PIE
 // handful of algorithms the method teaches. Each step is simulated, never searched,
 // except the daisy, which is intuitive anyway.
 
-/** `toHome`: the stage puts each piece in its final place. */
-export type Stage = { title: string; goal: string; how: string; toHome?: boolean };
-/** Moves to play with their instruction, and the named sequence they end with; course demos also carry a title and their own start cube. */
-export type Group = { stage: number; text: string; moves: string[]; piece?: string; alg?: Alg; title?: string; from?: string };
+/** `goal`: what the stage builds; `why`: in one line, why its moves work. `toHome`: the stage puts each piece in its final place. */
+export type Stage = { title: string; goal: string; why: string; toHome?: boolean };
+/** One part of a group's moves, with what to do: the setup, then the sequence. */
+export type Step = { text: string; count: number };
+/** Moves to play: `text` says where the piece stands and where it goes, `steps` how to get it there, and the
+ * named sequence they end with; course demos also carry a title and their own start cube. */
+export type Group = { stage: number; text: string; moves: string[]; steps?: Step[]; piece?: string; alg?: Alg; title?: string; from?: string };
 
 export const STAGES: Stage[] = tr<Stage[]>({
   fr: [
     {
       title: "Prise en main",
       goal: "Tenir le cube jaune en haut, blanc en bas.",
-      how: "Les centres ne bougent jamais les uns par rapport aux autres : ce sont eux qui donnent la couleur de chaque face. On construit le blanc en bas et on finit par le jaune en haut.",
+      why: "Les centres ne bougent jamais : ce sont eux qui donnent la couleur de chaque face.",
     },
     {
       title: "La marguerite",
       goal: "Les 4 arêtes blanches autour du centre jaune, blanc vers le haut.",
-      how: "Le dessus ne contient encore rien d'important, on peut donc y ranger les arêtes blanches librement. Si la place visée est déjà prise, tourne d'abord le haut pour ne pas déloger un pétale.",
+      why: "Le dessus ne contient encore rien d'important : on peut y ranger les arêtes blanches sans rien casser.",
     },
     {
       title: "La croix blanche",
-      goal: "Les 4 arêtes blanches en bas, alignées avec leurs centres.",
-      how: "Tourne le haut jusqu'à ce que la deuxième couleur d'un pétale soit au-dessus du centre de la même couleur, puis fais un demi-tour de cette face : le pétale descend à sa place, blanc en bas.",
+      goal: "Les 4 arêtes blanches en bas, chacune sous le centre de sa couleur.",
+      why: "Un demi-tour ne touche qu'une face : le pétale descend, les autres restent en haut.",
     },
     {
       title: "Les coins blancs",
-      goal: "Finir la première couronne.",
-      how: "Mets la place du coin en bas à droite devant toi et le coin juste au-dessus. R U R' U' (le « sexy move ») sort le coin et le remet tourné d'un cran : répète-le jusqu'à ce que le blanc soit en bas. 6 répétitions ramènent le cube à l'identique, donc rien d'autre ne casse en bas.",
+      goal: "Les 4 coins blancs en bas, pour finir la première couronne.",
+      why: "6 sexy moves ramènent le cube à l'identique : en route, rien d'autre ne casse en bas.",
     },
     {
       title: "La deuxième couronne",
-      goal: "Placer les 4 arêtes du milieu.",
-      how: "Prends une arête du haut sans jaune, aligne sa couleur de devant avec le centre, puis glisse-la à droite (U R U' R' U' F' U F) ou à gauche (U' L' U L U F U' F'), selon la couleur du dessus. L'algorithme écarte la place, y glisse l'arête puis remet le coin blanc en place. Les deux versions sont le miroir l'une de l'autre.",
+      goal: "Les 4 arêtes de la couronne du milieu à leur place.",
+      why: "L'insertion écarte la place, y glisse l'arête, puis remet le coin blanc comme avant ; à gauche, c'est le miroir.",
     },
     {
       title: "La croix jaune",
-      goal: "Faire une croix jaune sur le dessus.",
-      how: "F R U R' U' F' retourne des arêtes du haut sans toucher aux deux premières couronnes : le F … F' encadre le sexy move. On passe du point au « L », puis à la ligne, puis à la croix. Le L se tient derrière et à gauche, la ligne à l'horizontale.",
+      goal: "Une croix jaune sur le dessus.",
+      why: "Le F … F' autour du sexy move retourne des arêtes du haut sans toucher aux deux premières couronnes.",
     },
     {
       title: "Les arêtes jaunes",
-      goal: "Aligner les arêtes jaunes avec leurs centres.",
-      how: "Tourne le haut pour aligner le plus d'arêtes possible. R U R' U R U2 R' U fait tourner trois arêtes du haut : tiens les deux arêtes déjà bonnes derrière et à droite. Si elles sont face à face, fais-le une fois pour en avoir deux côte à côte.",
+      goal: "Chaque arête jaune au-dessus du centre de sa couleur.",
+      why: "Le Sune fait tourner trois arêtes du haut et laisse le reste du cube intact.",
     },
     {
       title: "Placer les coins jaunes",
       goal: "Chaque coin du haut à sa place, même mal tourné.",
-      how: "Un coin est à sa place quand ses 3 couleurs sont celles des 3 faces qui l'entourent. U R U' L' U R' U' L fait tourner trois coins et laisse immobile celui en haut à droite devant toi : tiens-y un coin déjà bien placé.",
+      why: "Le Niklas fait tourner trois coins et laisse immobile celui en haut à droite devant toi.",
     },
     {
       title: "Orienter les coins jaunes",
-      goal: "Tourner les coins pour finir le cube.",
-      how: "R' D' R D tourne le coin en haut à droite devant toi : répète-le jusqu'à ce que le jaune soit en haut, puis amène le coin suivant à cet endroit en tournant seulement la face du haut. Le bas se mélange en route, c'est normal : les répétitions s'additionnent à un multiple de 6, et 6 R' D' R D ne changent rien, donc le bas se répare tout seul à la fin. Ne tourne jamais tout le cube pendant cette étape.",
+      goal: "Tourner les coins jaunes pour finir le cube.",
+      why: "Le bas se mélange en route puis se répare tout seul : les répétitions font un multiple de 6, et 6 R' D' R D ne changent rien.",
     },
   ],
   nl: [
     {
       title: "Aan de slag",
       goal: "Houd de kubus met geel boven en wit onder.",
-      how: "De middenstukken bewegen nooit ten opzichte van elkaar: zij bepalen de kleur van elke kant. We bouwen het wit onderaan op en eindigen met het geel bovenaan.",
+      why: "De middenstukken bewegen nooit: zij bepalen de kleur van elke kant.",
     },
     {
       title: "Het madeliefje",
       goal: "De 4 witte randstukken rond het gele middenstuk, met wit naar boven.",
-      how: "Bovenaan zit nog niets belangrijks, dus je kunt de witte randstukken daar vrij kwijt. Is de plek die je wilt al bezet, draai dan eerst de bovenkant zodat je geen blaadje wegduwt.",
+      why: "Bovenaan zit nog niets belangrijks: je kunt de witte randstukken daar kwijt zonder iets stuk te maken.",
     },
     {
       title: "Het witte kruis",
-      goal: "De 4 witte randstukken onderaan, op één lijn met hun middenstukken.",
-      how: "Draai de bovenkant tot de tweede kleur van een blaadje boven het middenstuk van dezelfde kleur staat, en draai die kant dan een halve slag: het blaadje zakt naar zijn plek, met wit onderaan.",
+      goal: "De 4 witte randstukken onderaan, elk onder het middenstuk van zijn kleur.",
+      why: "Een halve slag raakt maar één kant: het blaadje zakt, de andere blijven boven.",
     },
     {
       title: "De witte hoeken",
-      goal: "De eerste laag afmaken.",
-      how: "Zet de plek van het hoekstuk rechtsonder vooraan, met het hoekstuk er recht boven. R U R' U' (de „sexy move”) haalt het hoekstuk eruit en zet het een slag gedraaid terug: herhaal tot het wit onderaan zit. Na 6 herhalingen is de kubus weer zoals hij was, dus onderaan gaat niets anders stuk.",
+      goal: "De 4 witte hoekstukken onderaan, om de eerste laag af te maken.",
+      why: "6 sexy moves brengen de kubus terug zoals hij was: onderweg gaat onderaan niets anders stuk.",
     },
     {
       title: "De tweede laag",
-      goal: "De 4 middelste randstukken plaatsen.",
-      how: "Neem een randstuk bovenaan zonder geel, zet zijn voorkleur op één lijn met het middenstuk en schuif het naar rechts (U R U' R' U' F' U F) of naar links (U' L' U L U F U' F'), afhankelijk van de kleur bovenop. Het algoritme schuift de plek opzij, schuift het randstuk erin en zet het witte hoekstuk terug. De twee versies zijn elkaars spiegelbeeld.",
+      goal: "De 4 randstukken van de middelste laag op hun plek.",
+      why: "Het invoegen schuift de plek opzij, schuift het randstuk erin en zet het witte hoekstuk terug; naar links is het spiegelbeeld.",
     },
     {
       title: "Het gele kruis",
-      goal: "Een geel kruis maken op de bovenkant.",
-      how: "F R U R' U' F' draait randstukken bovenaan om zonder aan de eerste twee lagen te komen: de F … F' omsluit de sexy move. Je gaat van de stip naar de „L”, dan naar de lijn, dan naar het kruis. Houd de L achteraan links, de lijn horizontaal.",
+      goal: "Een geel kruis op de bovenkant.",
+      why: "De F … F' rond de sexy move draait randstukken bovenaan om zonder aan de eerste twee lagen te komen.",
     },
     {
       title: "De gele randstukken",
-      goal: "De gele randstukken op één lijn brengen met hun middenstukken.",
-      how: "Draai de bovenkant zodat zoveel mogelijk randstukken goed staan. R U R' U R U2 R' U wisselt drie randstukken bovenaan rond: houd de twee randstukken die al goed staan achteraan en rechts. Staan ze tegenover elkaar, doe het dan één keer om er twee naast elkaar te krijgen.",
+      goal: "Elk geel randstuk boven het middenstuk van zijn kleur.",
+      why: "De Sune wisselt drie randstukken bovenaan rond en laat de rest van de kubus heel.",
     },
     {
       title: "De gele hoeken plaatsen",
       goal: "Elk hoekstuk bovenaan op zijn plek, ook als het verkeerd gedraaid is.",
-      how: "Een hoekstuk staat op zijn plek als zijn 3 kleuren die van de 3 kanten eromheen zijn. U R U' L' U R' U' L wisselt drie hoekstukken rond en laat het hoekstuk rechtsboven vooraan stilstaan: houd daar een hoekstuk dat al goed staat.",
+      why: "De Niklas wisselt drie hoekstukken rond en laat het hoekstuk rechtsboven vooraan stilstaan.",
     },
     {
       title: "De gele hoeken draaien",
-      goal: "De hoekstukken draaien om de kubus af te maken.",
-      how: "R' D' R D draait het hoekstuk rechtsboven vooraan: herhaal tot het geel boven zit, en breng dan het volgende hoekstuk naar die plek door alleen de bovenkant te draaien. De onderkant raakt onderweg door elkaar, dat is normaal: de herhalingen tellen op tot een veelvoud van 6, en 6 keer R' D' R D verandert niets, dus de onderkant herstelt zich op het einde vanzelf. Draai tijdens deze stap nooit de hele kubus.",
+      goal: "De gele hoekstukken draaien om de kubus af te maken.",
+      why: "De onderkant raakt onderweg door elkaar en herstelt zich vanzelf: de herhalingen tellen op tot een veelvoud van 6, en 6 keer R' D' R D verandert niets.",
     },
   ],
   en: [
     {
       title: "Getting started",
       goal: "Hold the cube yellow on top, white at the bottom.",
-      how: "The centers never move relative to each other: they give each face its color. We build the white at the bottom and finish with the yellow on top.",
+      why: "The centers never move: they give each face its color.",
     },
     {
       title: "The daisy",
       goal: "The 4 white edges around the yellow center, white facing up.",
-      how: "The top holds nothing important yet, so the white edges can go there freely. If the spot you aim for is taken, turn the top first so you don't knock out a petal.",
+      why: "The top holds nothing important yet: the white edges can wait there without breaking anything.",
     },
     {
       title: "The white cross",
-      goal: "The 4 white edges at the bottom, lined up with their centers.",
-      how: "Turn the top until a petal's second color sits above the center of the same color, then give that face a half turn: the petal drops into its place, white at the bottom.",
+      goal: "The 4 white edges at the bottom, each under the center of its color.",
+      why: "A half turn moves only one face: the petal drops, the others stay on top.",
     },
     {
       title: "The white corners",
-      goal: "Finish the first layer.",
-      how: "Put the corner's place at the bottom right in front of you, and the corner right above it. R U R' U' (the “sexy move”) takes the corner out and puts it back twisted one notch: repeat it until the white is at the bottom. 6 repetitions bring the cube back as it was, so nothing else breaks at the bottom.",
+      goal: "The 4 white corners at the bottom, to finish the first layer.",
+      why: "6 sexy moves bring the cube back as it was: along the way, nothing else breaks at the bottom.",
     },
     {
       title: "The second layer",
-      goal: "Place the 4 middle edges.",
-      how: "Take a top edge without yellow, line its front color up with the center, then slide it to the right (U R U' R' U' F' U F) or to the left (U' L' U L U F U' F'), depending on its top color. The algorithm moves the slot aside, slides the edge in, then puts the white corner back. The two versions mirror each other.",
+      goal: "The 4 middle-layer edges in their places.",
+      why: "The insert moves the slot aside, slides the edge in, then puts the white corner back; to the left, it's the mirror.",
     },
     {
       title: "The yellow cross",
-      goal: "Make a yellow cross on top.",
-      how: "F R U R' U' F' flips top edges without touching the first two layers: the F … F' wraps the sexy move. You go from the dot to the “L”, then to the line, then to the cross. Hold the L at the back left, the line horizontal.",
+      goal: "A yellow cross on top.",
+      why: "The F … F' around the sexy move flips top edges without touching the first two layers.",
     },
     {
       title: "The yellow edges",
-      goal: "Line the yellow edges up with their centers.",
-      how: "Turn the top to line up as many edges as you can. R U R' U R U2 R' U cycles three top edges: hold the two edges that are already right at the back and on the right. If they are opposite each other, do it once to get two side by side.",
+      goal: "Each yellow edge above the center of its color.",
+      why: "The Sune cycles three top edges and leaves the rest of the cube intact.",
     },
     {
       title: "Place the yellow corners",
       goal: "Every top corner in its place, even if twisted.",
-      how: "A corner is in its place when its 3 colors are those of the 3 faces around it. U R U' L' U R' U' L cycles three corners and leaves the top right front one still: hold a corner that is already placed there.",
+      why: "The Niklas cycles three corners and leaves the top right front one still.",
     },
     {
       title: "Orient the yellow corners",
-      goal: "Twist the corners to finish the cube.",
-      how: "R' D' R D twists the top right front corner: repeat it until the yellow is on top, then bring the next corner to that spot by turning only the top face. The bottom gets scrambled along the way, that's normal: the repetitions add up to a multiple of 6, and 6 R' D' R D change nothing, so the bottom fixes itself at the end. Never turn the whole cube during this step.",
+      goal: "Twist the yellow corners to finish the cube.",
+      why: "The bottom gets scrambled along the way, then fixes itself: the repetitions add up to a multiple of 6, and 6 R' D' R D change nothing.",
     },
   ],
   // The white cross, the white corners and the second layer put each piece in its final place.
@@ -230,9 +233,10 @@ const placedAt = (s: string, pos: Vec) => {
 };
 const pieces = (s: string, test: (colors: string, pos: Vec) => boolean) =>
   CUBIES.filter((c) => test(key(s, c.idx), c.pos));
-/** « blanc-vert-orange »: white or yellow first, as cubers name a piece. */
-export const names = (piece: string) =>
-  [...piece].sort((a, b) => "UDFBRL".indexOf(a) - "UDFBRL".indexOf(b)).map((c) => FACE_NAMES[c as Face]).join("-");
+/** A piece's colors, white or yellow first, as cubers name it. */
+export const pieceColors = (piece: string) => [...piece].sort((a, b) => "UDFBRL".indexOf(a) - "UDFBRL".indexOf(b)) as Face[];
+/** « blanc-vert-orange ». */
+export const names = (piece: string) => pieceColors(piece).map((c) => FACE_NAMES[c]).join("-");
 
 /** Cheapest y^r U^k (r < ys, k < us) for which `ok` holds on the result. */
 function setup(s: string, ok: (s: string) => boolean, ys = 4, us = 4): string[] | undefined {
@@ -266,12 +270,18 @@ function search(s: string, ok: (s: string) => boolean): string[] {
 export function beginnerSolve(start: string): Group[] {
   const groups: Group[] = [];
   let s = start;
-  // The setup (cube and top turns) is simplified, the sequence after it stays whole, so the guide can name it.
-  const emit = (stage: number, text: string, setup: string[], piece?: string, alg: string[] = []) => {
-    const moves = [...simplify(setup), ...alg];
+  /** A group: `text` says where things stand, each step what to do with its moves. The last step's moves are
+   * the sequence, kept whole so the guide can name it; the steps before it (cube and top turns) are simplified. */
+  const emit = (stage: number, text: string, steps: [text: string, moves: string[]][], piece?: string) => {
+    const last = steps.at(-1)![1];
+    const named = algOf(last); // undefined when empty: an empty last step is dropped below, never named
+    const parts = steps
+      .map(([text, moves], i) => [text, i === steps.length - 1 && named ? moves : simplify(moves)] as const)
+      .filter(([, moves]) => moves.length);
+    const moves = parts.flatMap(([, m]) => m);
     if (!moves.length) return;
-    const named = algOf(alg);
-    groups.push({ stage, text, moves, piece, alg: named && { ...named, setup: moves.length - alg.length } });
+    const alg = named && { ...named, setup: moves.length - last.length };
+    groups.push({ stage, text, moves, steps: parts.map(([text, m]) => ({ text, count: m.length })), piece, alg });
     s = play(s, moves);
   };
   const guard = (n: number) => {
@@ -281,11 +291,20 @@ export function beginnerSolve(start: string): Group[] {
   emit(
     0,
     tr({
-      fr: "Retourne le cube : le jaune passe en haut, garde le vert face à toi.",
-      nl: "Draai de kubus om: geel gaat naar boven, houd groen naar je toe.",
-      en: "Turn the cube over: yellow goes on top, keep green facing you.",
+      fr: "On tient le cube jaune en haut pendant toute la méthode : le blanc se construit en bas.",
+      nl: "Je houdt de kubus de hele methode met geel boven: het wit bouw je onderaan op.",
+      en: "You hold the cube with yellow on top for the whole method: the white gets built at the bottom.",
     }),
-    ["z2"],
+    [
+      [
+        tr({
+          fr: "Fais pivoter le cube d'un demi-tour, comme un volant : le jaune passe en haut, le vert reste face à toi.",
+          nl: "Draai de kubus een halve slag, zoals een stuur: geel gaat naar boven, groen blijft naar je toe gericht.",
+          en: "Spin the cube half a turn, like a steering wheel: yellow goes on top, green stays facing you.",
+        }),
+        ["z2"],
+      ],
+    ],
   );
   const W = center(s, DOWN);
   const Y = center(s, UP);
@@ -304,37 +323,91 @@ export function beginnerSolve(start: string): Group[] {
     const edge = whiteEdges.find((e) => !done.includes(e));
     if (!edge) break;
     const moves = search(s, (t) => isPetal(t, edge) && done.every((e) => isPetal(t, e)));
-    const name = names(edge);
+    const pos = findPiece(s, edge);
+    const where = pos[1] === 0 ? "middle" : pos[1] === 1 ? "top" : colorAt(s, pos, DOWN) === W ? "down" : "bottom";
+    // A turn of the top first frees the spot it lands in.
+    const free = moves.findIndex((m) => m[0] !== "U");
     emit(
       1,
       tr({
-        fr: `Amène l'arête ${name} sur le dessus, blanc vers le haut, sans déloger les autres.`,
-        nl: `Breng het randstuk ${name} naar de bovenkant, met wit naar boven, zonder de andere weg te duwen.`,
-        en: `Bring the ${name} edge to the top, white facing up, without knocking the others out.`,
+        fr: `Elle est ${{ down: "en bas, blanc dessous", bottom: "en bas, blanc sur le côté", middle: "dans la couronne du milieu", top: "en haut, mais blanc sur le côté" }[where]}. Elle doit rejoindre le dessus, blanc vers le haut, comme un pétale autour du centre jaune.`,
+        nl: `Het zit ${{ down: "onderaan, met wit naar beneden", bottom: "onderaan, met wit opzij", middle: "in de middelste laag", top: "boven, maar met wit opzij" }[where]}. Het moet naar de bovenkant, met wit naar boven, als een blaadje rond het gele middenstuk.`,
+        en: `It is ${{ down: "at the bottom, white facing down", bottom: "at the bottom, white on the side", middle: "in the middle layer", top: "on top, but white on the side" }[where]}. It has to reach the top, white facing up, as a petal around the yellow center.`,
       }),
-      moves,
+      [
+        [
+          tr({
+            fr: "Tourne le haut pour libérer la place où elle va arriver : aucun pétale ne sera délogé.",
+            nl: "Draai de bovenkant om de plek vrij te maken waar het aankomt: zo duw je geen blaadje weg.",
+            en: "Turn the top to free the spot it will land in, so no petal gets knocked out.",
+          }),
+          moves.slice(0, free),
+        ],
+        [
+          {
+            down: tr({
+              fr: "Fais un demi-tour de sa face : elle monte, blanc vers le haut.",
+              nl: "Draai zijn kant een halve slag: het gaat naar boven, met wit naar boven.",
+              en: "Give its face a half turn: it goes up, white facing up.",
+            }),
+            bottom: tr({
+              fr: "Un quart de tour de sa face la met au milieu, puis la face d'à côté la monte, blanc vers le haut.",
+              nl: "Een kwartslag van zijn kant brengt het naar het midden, daarna brengt de kant ernaast het naar boven, met wit naar boven.",
+              en: "A quarter turn of its face puts it in the middle, then the face next to it brings it up, white facing up.",
+            }),
+            middle: tr({
+              fr: "Tourne d'un quart la face de son autre couleur, dans le sens qui amène le blanc en haut.",
+              nl: "Draai de kant van zijn andere kleur een kwartslag, in de richting die het wit naar boven brengt.",
+              en: "Give the face of its other color a quarter turn, the way that brings the white up.",
+            }),
+            top: tr({
+              fr: "Descends-la au milieu, puis remonte-la par le côté, blanc vers le haut ; un tour du haut entre les deux met les pétales à l'abri.",
+              nl: "Breng het naar het midden en dan langs de zijkant weer naar boven, met wit naar boven; een draai van de bovenkant ertussen houdt de blaadjes veilig.",
+              en: "Bring it down to the middle, then back up from the side, white facing up; a turn of the top in between keeps the petals safe.",
+            }),
+          }[where],
+          moves.slice(free),
+        ],
+      ],
       edge,
     );
   }
 
   // 2. White cross.
   for (const edge of crossDone ? [] : whiteEdges) {
-    const other = edge.replace(W, "");
+    const other = edge.replace(W, "") as Face;
     const [face] = SIDE_FACES.find(([, n]) => center(s, n) === other)!;
     const k = [0, 1, 2, 3].find((k) => {
       const t = play(s, turns("U", k));
       const pos = findPiece(t, edge);
       return pos[1] === 1 && colorAt(t, pos, SIDE_FACES.find(([f]) => f === face)![1]) === other;
     })!;
-    const name = names(edge);
+    const color = FACE_NAMES[other];
     emit(
       2,
       tr({
-        fr: `Tourne le haut pour mettre l'arête ${name} au-dessus du centre ${FACE_NAMES[other as Face]}, puis demi-tour de cette face.`,
-        nl: `Draai de bovenkant om het randstuk ${name} boven het ${INFLECTED[other as Face]} middenstuk te zetten, en draai die kant dan een halve slag.`,
-        en: `Turn the top to put the ${name} edge above the ${FACE_NAMES[other as Face]} center, then give that face a half turn.`,
+        fr: `Ce pétale doit descendre à sa place : en bas, sous le centre ${color}, blanc dessous.`,
+        nl: `Dit blaadje moet naar zijn plek zakken: onderaan, onder het ${INFLECTED[other]} middenstuk, met wit onderaan.`,
+        en: `This petal has to drop into its place: at the bottom, under the ${color} center, white underneath.`,
       }),
-      [...turns("U", k), face + "2"],
+      [
+        [
+          tr({
+            fr: `Tourne le haut jusqu'à ce que le ${color} du pétale soit juste au-dessus du centre ${color}.`,
+            nl: `Draai de bovenkant tot het ${color} van het blaadje recht boven het ${INFLECTED[other]} middenstuk staat.`,
+            en: `Turn the top until the petal's ${color} sits right above the ${color} center.`,
+          }),
+          turns("U", k),
+        ],
+        [
+          tr({
+            fr: "Fais un demi-tour de cette face : le pétale descend, blanc en bas.",
+            nl: "Draai die kant een halve slag: het blaadje zakt, met wit onderaan.",
+            en: "Give that face a half turn: the petal drops, white at the bottom.",
+          }),
+          [face + "2"],
+        ],
+      ],
       edge,
     );
   }
@@ -350,15 +423,33 @@ export function beginnerSolve(start: string): Group[] {
     const up = todo.find((c) => c.pos[1] === 1);
     const corner = key(s, (up ?? todo[0]).idx);
     if (!up) {
-      const moves = setup(s, (t) => same(findPiece(t, corner), FRD), 4, 1)!;
-      const y = has(moves, "y");
-      const name = names(corner);
-      const text = tr({
-        fr: `Le coin ${name} est coincé en bas au mauvais endroit : ${y ? "tourne le cube pour l'avoir en bas à droite devant toi, puis fais" : "il est déjà en bas à droite devant toi, fais"} une fois R U R' U' pour le remonter.`,
-        nl: `Het hoekstuk ${name} zit onderaan vast op de verkeerde plek: ${y ? "draai de kubus zodat het rechtsonder vooraan zit, en doe dan" : "het zit al rechtsonder vooraan, doe"} één keer R U R' U' om het naar boven te halen.`,
-        en: `The ${name} corner is stuck at the bottom in the wrong place: ${y ? "turn the cube to have it at the bottom right in front of you, then do" : "it is already at the bottom right in front of you, do"} R U R' U' once to bring it up.`,
-      });
-      emit(3, text, moves, corner, SEXY);
+      emit(
+        3,
+        tr({
+          fr: `Il est coincé en bas, au mauvais endroit ou mal tourné : on le remonte d'abord en haut.`,
+          nl: `Het zit onderaan vast, op de verkeerde plek of verkeerd gedraaid: eerst halen we het naar boven.`,
+          en: `It is stuck at the bottom, in the wrong place or twisted: first we bring it back up.`,
+        }),
+        [
+          [
+            tr({
+              fr: "Tourne le cube pour l'avoir en bas à droite devant toi.",
+              nl: "Draai de kubus zodat het rechtsonder vooraan zit.",
+              en: "Turn the cube to have it at the bottom right in front of you.",
+            }),
+            setup(s, (t) => same(findPiece(t, corner), FRD), 4, 1)!,
+          ],
+          [
+            tr({
+              fr: "Fais une fois le sexy move : le coin remonte en haut, et tu reprends comme pour un coin en haut.",
+              nl: "Doe één keer de sexy move: het hoekstuk komt naar boven, en je gaat verder zoals bij een hoekstuk bovenaan.",
+              en: "Do the sexy move once: the corner comes up, and you carry on as for a corner on top.",
+            }),
+            SEXY,
+          ],
+        ],
+        corner,
+      );
       continue;
     }
     // Slot below the corner's two side colors, at front-right, corner right above it.
@@ -369,7 +460,6 @@ export function beginnerSolve(start: string): Group[] {
     while (!solvedAt(t, FRD)) (t = play(t, SEXY)), reps++;
     const [f, r] = [center(t, FRONT), center(t, RIGHT_SIDE)] as Face[];
     const [front, right] = [FACE_NAMES[f], FACE_NAMES[r]];
-    const name = names(corner);
     const hold = holdSteps(
       moves,
       tr({
@@ -386,13 +476,22 @@ export function beginnerSolve(start: string): Group[] {
     emit(
       3,
       tr({
-        fr: `Coin ${name} : sa place, encadrée en vert, est en bas entre les centres ${front} et ${right}. ${hold ? capitalize(hold) : "Le coin est déjà juste au-dessus de sa place"}. Fais R U R' U' ${reps === 1 ? "une" : reps} fois, jusqu'à ce que le blanc soit en bas.`,
-        nl: `Hoekstuk ${name}: zijn plek, groen omlijnd, zit onderaan tussen het ${INFLECTED[f]} en het ${INFLECTED[r]} middenstuk. ${hold ? capitalize(hold) : "Het hoekstuk staat al recht boven zijn plek"}. Doe R U R' U' ${reps === 1 ? "één" : reps} keer, tot het wit onderaan zit.`,
-        en: `${capitalize(name)} corner: its place, outlined in green, is at the bottom between the ${front} and ${right} centers. ${hold ? capitalize(hold) : "The corner is already right above its place"}. Do R U R' U' ${reps === 1 ? "once" : `${reps} times`}, until the white is at the bottom.`,
+        fr: `Il est en haut. Sa place est en bas, entre les centres ${front} et ${right}.`,
+        nl: `Het zit boven. Zijn plek is onderaan, tussen het ${INFLECTED[f]} en het ${INFLECTED[r]} middenstuk.`,
+        en: `It is on top. Its place is at the bottom, between the ${front} and ${right} centers.`,
       }),
-      moves,
+      [
+        [hold && `${capitalize(hold)}.`, moves],
+        [
+          tr({
+            fr: `Répète le sexy move jusqu'à ce que le coin soit à sa place, blanc en bas : ici ${reps === 1 ? "une fois" : `${reps} fois`}.`,
+            nl: `Herhaal de sexy move tot het hoekstuk op zijn plek zit, met wit onderaan: hier ${reps === 1 ? "één keer" : `${reps} keer`}.`,
+            en: `Repeat the sexy move until the corner sits in its place, white at the bottom: here ${reps === 1 ? "once" : `${reps} times`}.`,
+          }),
+          times(SEXY, reps),
+        ],
+      ],
       corner,
-      times(SEXY, reps),
     );
   }
 
@@ -407,15 +506,33 @@ export function beginnerSolve(start: string): Group[] {
     const up = todo.find((c) => c.pos[1] === 1);
     if (!up) {
       const edge = key(s, todo[0].idx);
-      const moves = setup(s, (t) => same(findPiece(t, edge), FR), 4, 1)!;
-      const y = has(moves, "y");
-      const name = names(edge);
-      const text = tr({
-        fr: `L'arête ${name} est au milieu mais mal placée : ${y ? "tourne le cube pour l'avoir à droite devant toi, puis fais" : "elle est déjà à droite devant toi, fais"} l'algorithme de droite pour la sortir en haut.`,
-        nl: `Het randstuk ${name} zit in het midden maar op de verkeerde plek: ${y ? "draai de kubus zodat het rechts vooraan zit, en doe dan" : "het zit al rechts vooraan, doe"} het algoritme naar rechts om het naar boven te halen.`,
-        en: `The ${name} edge is in the middle but misplaced: ${y ? "turn the cube to have it at the front right, then do" : "it is already at the front right, do"} the right-hand algorithm to bring it out on top.`,
-      });
-      emit(4, text, moves, edge, RIGHT);
+      emit(
+        4,
+        tr({
+          fr: `Elle est coincée dans la couronne du milieu, à l'envers ou à la place d'une autre : on la sort d'abord en haut.`,
+          nl: `Het zit vast in de middelste laag, omgekeerd of op de plek van een ander: eerst halen we het naar boven.`,
+          en: `It is stuck in the middle layer, flipped or in another edge's place: first we bring it out on top.`,
+        }),
+        [
+          [
+            tr({
+              fr: "Tourne le cube pour l'avoir à droite devant toi.",
+              nl: "Draai de kubus zodat het rechts vooraan zit.",
+              en: "Turn the cube to have it at the front right.",
+            }),
+            setup(s, (t) => same(findPiece(t, edge), FR), 4, 1)!,
+          ],
+          [
+            tr({
+              fr: "Fais une fois l'insertion à droite : l'arête remonte en haut, et tu reprends comme pour une arête en haut.",
+              nl: "Doe één keer het invoegen naar rechts: het randstuk komt naar boven, en je gaat verder zoals bij een randstuk bovenaan.",
+              en: "Do the right insert once: the edge comes up, and you carry on as for an edge on top.",
+            }),
+            RIGHT,
+          ],
+        ],
+        edge,
+      );
       continue;
     }
     const edge = key(s, up.idx);
@@ -423,8 +540,8 @@ export function beginnerSolve(start: string): Group[] {
     const t = play(s, moves);
     const right = colorAt(t, UF, UP) === center(t, RIGHT_SIDE);
     const f = center(t, FRONT) as Face;
-    const front = FACE_NAMES[f];
-    const name = names(edge);
+    const o = colorAt(t, UF, UP) as Face;
+    const [front, other] = [FACE_NAMES[f], FACE_NAMES[o]];
     const align = holdSteps(
       moves,
       tr({
@@ -433,21 +550,30 @@ export function beginnerSolve(start: string): Group[] {
         en: `turn the cube to have the ${front} center in front of you`,
       }),
       tr({
-        fr: `tourne le haut pour amener l'arête au-dessus du centre ${front}`,
-        nl: `draai de bovenkant om het randstuk boven het ${INFLECTED[f]} middenstuk te brengen`,
-        en: `turn the top to bring the edge above the ${front} center`,
+        fr: `tourne le haut pour amener l'arête au-dessus, son ${front} contre le centre ${front}`,
+        nl: `draai de bovenkant om het randstuk erboven te brengen, zijn ${front} tegen het ${INFLECTED[f]} middenstuk`,
+        en: `turn the top to bring the edge above it, its ${front} against the ${front} center`,
       }),
     );
     emit(
       4,
       tr({
-        fr: `Arête ${name} : ${align || `elle est déjà au-dessus du centre ${front}`}. Glisse-la vers la ${right ? "droite" : "gauche"}, à sa place encadrée en vert.`,
-        nl: `Randstuk ${name}: ${align || `het staat al boven het ${INFLECTED[f]} middenstuk`}. Schuif het naar ${right ? "rechts" : "links"}, naar zijn plek die groen omlijnd is.`,
-        en: `${capitalize(name)} edge: ${align || `it is already above the ${front} center`}. Slide it to the ${right ? "right" : "left"}, into its place outlined in green.`,
+        fr: `Elle est en haut. Sa place est dans la couronne du milieu, entre les centres ${front} et ${other}.`,
+        nl: `Het zit boven. Zijn plek is in de middelste laag, tussen het ${INFLECTED[f]} en het ${INFLECTED[o]} middenstuk.`,
+        en: `It is on top. Its place is in the middle layer, between the ${front} and ${other} centers.`,
       }),
-      moves,
+      [
+        [align && `${capitalize(align)}.`, moves],
+        [
+          tr({
+            fr: `Son ${other} est sur le dessus, et le centre ${other} est à ${right ? "droite" : "gauche"} : fais l'insertion à ${right ? "droite" : "gauche"}.`,
+            nl: `Zijn ${other} zit bovenop, en het ${INFLECTED[o]} middenstuk zit ${right ? "rechts" : "links"}: doe het invoegen naar ${right ? "rechts" : "links"}.`,
+            en: `Its ${other} is on top, and the ${other} center is on the ${right ? "right" : "left"}: do the ${right ? "right" : "left"} insert.`,
+          }),
+          right ? RIGHT : LEFT,
+        ],
+      ],
       edge,
-      right ? RIGHT : LEFT,
     );
   }
 
@@ -456,40 +582,68 @@ export function beginnerSolve(start: string): Group[] {
   const UL: Vec = [-1, 1, 0];
   const UR: Vec = [1, 1, 0];
   const UB: Vec = [0, 1, -1];
+  const flip = (then: string) =>
+    tr({
+      fr: `Fais F, le sexy move, puis F' : ${then}.`,
+      nl: `Doe F, de sexy move, en dan F': ${then}.`,
+      en: `Do F, the sexy move, then F': ${then}.`,
+    });
   for (let n = 0; ; n++) {
     guard(n);
     const count = [UL, UR, UB, UF].filter((p) => yellowUp(s, p)).length;
     if (count === 4) break;
     const line = setup(s, (t) => yellowUp(t, UL) && yellowUp(t, UR), 1);
     const shape = setup(s, (t) => yellowUp(t, UL) && yellowUp(t, UB), 1);
-    const [moves, text] =
-      count === 0
-        ? [
-            [],
+    if (!count)
+      emit(
+        5,
+        tr({
+          fr: "Aucune arête jaune sur le dessus, seulement le centre : c'est le point.",
+          nl: "Geen enkel geel randstuk bovenop, alleen het middenstuk: dat is de stip.",
+          en: "No yellow edge on top, only the center: that's the dot.",
+        }),
+        [[flip(tr({ fr: "le point devient un L", nl: "de stip wordt een L", en: "the dot becomes an L" })), FLIP]],
+      );
+    else if (line)
+      emit(
+        5,
+        tr({
+          fr: "Deux arêtes jaunes face à face forment une ligne.",
+          nl: "Twee gele randstukken tegenover elkaar vormen een lijn.",
+          en: "Two opposite yellow edges form a line.",
+        }),
+        [
+          [
             tr({
-              fr: "Point jaune : fais F R U R' U' F' pour obtenir un L.",
-              nl: "Gele stip: doe F R U R' U' F' om een L te krijgen.",
-              en: "Yellow dot: do F R U R' U' F' to get an L.",
+              fr: "Tourne le haut pour mettre la ligne à l'horizontale, de gauche à droite.",
+              nl: "Draai de bovenkant zodat de lijn horizontaal ligt, van links naar rechts.",
+              en: "Turn the top so the line lies horizontal, left to right.",
             }),
-          ]
-        : line
-          ? [
-              line,
-              tr({
-                fr: "Ligne jaune : mets-la à l'horizontale, puis F R U R' U' F'.",
-                nl: "Gele lijn: houd hem horizontaal, dan F R U R' U' F'.",
-                en: "Yellow line: hold it horizontal, then F R U R' U' F'.",
-              }),
-            ]
-          : [
-              shape!,
-              tr({
-                fr: "L jaune : tiens-le derrière et à gauche, puis F R U R' U' F'.",
-                nl: "Gele L: houd hem achteraan links, dan F R U R' U' F'.",
-                en: "Yellow L: hold it at the back left, then F R U R' U' F'.",
-              }),
-            ];
-    emit(5, text, moves, undefined, FLIP);
+            line,
+          ],
+          [flip(tr({ fr: "la ligne devient la croix", nl: "de lijn wordt het kruis", en: "the line becomes the cross" })), FLIP],
+        ],
+      );
+    else
+      emit(
+        5,
+        tr({
+          fr: "Deux arêtes jaunes voisines forment un L.",
+          nl: "Twee naburige gele randstukken vormen een L.",
+          en: "Two neighboring yellow edges form an L.",
+        }),
+        [
+          [
+            tr({
+              fr: "Tourne le haut pour tenir le L derrière et à gauche.",
+              nl: "Draai de bovenkant zodat de L achteraan links ligt.",
+              en: "Turn the top to hold the L at the back left.",
+            }),
+            shape!,
+          ],
+          [flip(tr({ fr: "le L devient une ligne", nl: "de L wordt een lijn", en: "the L becomes a line" })), FLIP],
+        ],
+      );
   }
 
   // 6. Yellow edges.
@@ -502,32 +656,70 @@ export function beginnerSolve(start: string): Group[] {
       emit(
         6,
         tr({
-          fr: "Tourne le haut : toutes les arêtes jaunes s'alignent avec leurs centres.",
-          nl: "Draai de bovenkant: alle gele randstukken komen op één lijn met hun middenstukken.",
-          en: "Turn the top: all the yellow edges line up with their centers.",
+          fr: "Les arêtes jaunes sont déjà dans le bon ordre.",
+          nl: "De gele randstukken staan al in de goede volgorde.",
+          en: "The yellow edges are already in the right order.",
         }),
-        align,
+        [
+          [
+            tr({
+              fr: "Tourne le haut : chaque arête jaune se met au-dessus du centre de sa couleur.",
+              nl: "Draai de bovenkant: elk geel randstuk komt boven het middenstuk van zijn kleur.",
+              en: "Turn the top: each yellow edge lands above the center of its color.",
+            }),
+            align,
+          ],
+        ],
       );
       break;
     }
     const pair = setup(s, (t) => edgeAligned(t, BACK) && edgeAligned(t, RIGHT_SIDE));
-    emit(
-      6,
-      pair
-        ? tr({
-            fr: "Deux arêtes jaunes côte à côte sont bonnes : tiens-les derrière et à droite, puis R U R' U R U2 R' U.",
-            nl: "Twee gele randstukken naast elkaar staan goed: houd ze achteraan en rechts, dan R U R' U R U2 R' U.",
-            en: "Two yellow edges side by side are right: hold them at the back and on the right, then R U R' U R U2 R' U.",
-          })
-        : tr({
-            fr: "Les arêtes bien placées sont face à face : fais R U R' U R U2 R' U une fois pour en avoir deux côte à côte.",
-            nl: "De goede randstukken staan tegenover elkaar: doe één keer R U R' U R U2 R' U om er twee naast elkaar te krijgen.",
-            en: "The edges that are right are opposite each other: do R U R' U R U2 R' U once to get two side by side.",
-          }),
-      pair ?? [],
-      undefined,
-      SUNE,
-    );
+    if (pair)
+      emit(
+        6,
+        tr({
+          fr: "Deux arêtes jaunes voisines peuvent se mettre au-dessus du centre de leur couleur.",
+          nl: "Twee naburige gele randstukken kunnen boven het middenstuk van hun kleur komen.",
+          en: "Two neighboring yellow edges can sit above the center of their color.",
+        }),
+        [
+          [
+            tr({
+              fr: "Tourne le cube et le haut pour les tenir derrière et à droite, chacune au-dessus de son centre.",
+              nl: "Draai de kubus en de bovenkant zodat ze achteraan en rechts staan, elk boven zijn middenstuk.",
+              en: "Turn the cube and the top to hold them at the back and on the right, each above its center.",
+            }),
+            pair,
+          ],
+          [
+            tr({
+              fr: "Fais le Sune : les deux autres arêtes se mettent en place.",
+              nl: "Doe de Sune: de twee andere randstukken vallen op hun plek.",
+              en: "Do the Sune: the other two edges fall into place.",
+            }),
+            SUNE,
+          ],
+        ],
+      );
+    else
+      emit(
+        6,
+        tr({
+          fr: "Les deux arêtes jaunes qui peuvent être bonnes sont face à face.",
+          nl: "De twee gele randstukken die goed kunnen staan, staan tegenover elkaar.",
+          en: "The two yellow edges that can be right are opposite each other.",
+        }),
+        [
+          [
+            tr({
+              fr: "Fais le Sune une fois, depuis n'importe quel côté : tu auras deux arêtes voisines bonnes.",
+              nl: "Doe één keer de Sune, vanaf eender welke kant: daarna staan er twee naburige goed.",
+              en: "Do the Sune once, from any side: you'll get two neighboring edges right.",
+            }),
+            SUNE,
+          ],
+        ],
+      );
   }
 
   // 7. Place yellow corners.
@@ -536,24 +728,54 @@ export function beginnerSolve(start: string): Group[] {
     guard(n);
     if (topCorners.every((p) => placedAt(s, p))) break;
     const hold = setup(s, (t) => placedAt(t, URF), 4, 1);
-    const rotation = hold ?? [];
-    emit(
-      7,
-      hold
-        ? tr({
-            fr: "Tiens le coin déjà bien placé en haut à droite devant toi, puis U R U' L' U R' U' L.",
-            nl: "Houd het hoekstuk dat al goed staat rechtsboven vooraan, dan U R U' L' U R' U' L.",
-            en: "Hold the corner that is already placed at the top right front, then U R U' L' U R' U' L.",
-          })
-        : tr({
-            fr: "Aucun coin n'est à sa place : fais U R U' L' U R' U' L une fois, depuis n'importe où.",
-            nl: "Geen enkel hoekstuk staat op zijn plek: doe één keer U R U' L' U R' U' L, vanaf eender welke kant.",
-            en: "No corner is in its place: do U R U' L' U R' U' L once, from anywhere.",
-          }),
-      rotation,
-      hold ? key(play(s, rotation), CUBIES.find((c) => same(c.pos, URF))!.idx) : undefined,
-      CYCLE,
-    );
+    if (hold) {
+      const corner = key(play(s, hold), CUBIES.find((c) => same(c.pos, URF))!.idx);
+      emit(
+        7,
+        tr({
+          fr: `Il est déjà bien placé : ses 3 couleurs sont celles des 3 faces autour de lui, même s'il est mal tourné.`,
+          nl: `Het staat al goed: zijn 3 kleuren zijn die van de 3 kanten eromheen, ook als het verkeerd gedraaid is.`,
+          en: `It is already placed: its 3 colors are those of the 3 faces around it, even if it is twisted.`,
+        }),
+        [
+          [
+            tr({
+              fr: "Tourne le cube pour l'avoir en haut à droite devant toi.",
+              nl: "Draai de kubus zodat het rechtsboven vooraan zit.",
+              en: "Turn the cube to have it at the top right in front of you.",
+            }),
+            hold,
+          ],
+          [
+            tr({
+              fr: "Fais le Niklas : les trois autres coins tournent, celui-ci ne bouge pas.",
+              nl: "Doe de Niklas: de drie andere hoekstukken draaien rond, dit blijft staan.",
+              en: "Do the Niklas: the other three corners cycle, this one stays put.",
+            }),
+            CYCLE,
+          ],
+        ],
+        corner,
+      );
+    } else
+      emit(
+        7,
+        tr({
+          fr: "Aucun coin du haut n'est à sa place.",
+          nl: "Geen enkel hoekstuk bovenaan staat op zijn plek.",
+          en: "No top corner is in its place.",
+        }),
+        [
+          [
+            tr({
+              fr: "Fais le Niklas une fois, depuis n'importe où : un coin se met en place.",
+              nl: "Doe één keer de Niklas, vanaf eender waar: één hoekstuk valt op zijn plek.",
+              en: "Do the Niklas once, from anywhere: one corner falls into place.",
+            }),
+            CYCLE,
+          ],
+        ],
+      );
   }
 
   // 8. Orient yellow corners, then align the top layer.
@@ -568,23 +790,45 @@ export function beginnerSolve(start: string): Group[] {
     emit(
       8,
       tr({
-        fr: `${k ? "Tourne le haut pour amener le coin suivant en haut à droite devant toi, puis" : "Coin en haut à droite devant toi :"} R' D' R D ${reps} fois, jusqu'à ce que le jaune soit en haut.`,
-        nl: `${k ? "Draai de bovenkant om het volgende hoekstuk rechtsboven vooraan te brengen, dan" : "Hoekstuk rechtsboven vooraan:"} ${reps} keer R' D' R D, tot het geel boven zit.`,
-        en: `${k ? "Turn the top to bring the next corner to the top right front, then" : "Corner at the top right front:"} R' D' R D ${reps} times, until the yellow is on top.`,
+        fr: `Il doit être tourné : son jaune n'est pas encore en haut.`,
+        nl: `Het moet gedraaid worden: zijn geel zit nog niet boven.`,
+        en: `It needs twisting: its yellow isn't on top yet.`,
       }),
-      turns("U", k),
+      [
+        [
+          tr({
+            fr: "Tourne seulement le haut pour l'amener en haut à droite devant toi. Ne tourne jamais tout le cube pendant cette étape.",
+            nl: "Draai alleen de bovenkant om het rechtsboven vooraan te brengen. Draai tijdens deze stap nooit de hele kubus.",
+            en: "Turn only the top to bring it to the top right in front of you. Never turn the whole cube during this step.",
+          }),
+          turns("U", k),
+        ],
+        [
+          tr({
+            fr: `Répète R' D' R D jusqu'à ce que son jaune soit en haut : ici ${reps} fois. Le bas se mélange, c'est normal.`,
+            nl: `Herhaal R' D' R D tot zijn geel boven zit: hier ${reps} keer. De onderkant raakt door elkaar, dat is normaal.`,
+            en: `Repeat R' D' R D until its yellow is on top: here ${reps} times. The bottom gets scrambled, that's normal.`,
+          }),
+          times(TWIST, reps),
+        ],
+      ],
       corner,
-      times(TWIST, reps),
     );
   }
   emit(
     8,
     tr({
-      fr: "Tourne le haut une dernière fois : le cube est résolu !",
-      nl: "Draai de bovenkant nog een laatste keer: de kubus is opgelost!",
-      en: "Turn the top one last time: the cube is solved!",
+      fr: "Tous les coins sont tournés : il ne reste que le haut à aligner.",
+      nl: "Alle hoekstukken zijn gedraaid: alleen de bovenkant moet nog goed.",
+      en: "Every corner is twisted right: only the top is left to line up.",
     }),
-    setup(s, (t) => aligned(t) === 4, 1)!,
+    [
+      [
+        tr({ fr: "Tourne le haut : le cube est résolu !", nl: "Draai de bovenkant: de kubus is opgelost!", en: "Turn the top: the cube is solved!" }),
+        setup(s, (t) => aligned(t) === 4, 1)!,
+      ],
+    ],
   );
   return groups;
 }
+

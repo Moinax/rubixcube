@@ -309,7 +309,7 @@ function Editor({ state, mode, scanned, onChange, onScan, onBack, onSolve }: Edi
       <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-5 p-4 md:p-8">
         {/* After a scan, going back means scanning again; after typing colors in, dropping them for the choice. */}
         <div>
-          <h1 className="wide text-3xl">{tr({ fr: "Vérifie les couleurs", nl: "Controleer de kleuren", en: "Check the colors" })}</h1>
+          <h1 className="wide text-2xl md:text-3xl">{tr({ fr: "Vérifie les couleurs", nl: "Controleer de kleuren", en: "Check the colors" })}</h1>
           <p className="mt-1 text-mist">
             {tr({
               fr: "Touche une couleur, puis les cases à corriger.",

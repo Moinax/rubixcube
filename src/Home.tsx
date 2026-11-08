@@ -231,7 +231,7 @@ export function InputChoice({ mode: id, onScan, onManual, onRandom, onBack }: In
           </button>
         </div>
         <div>
-          <h1 className="wide text-3xl">{tr({ fr: "Montre-moi ton cube", nl: "Laat me je kubus zien", en: "Show me your cube" })}</h1>
+          <h1 className="wide text-2xl md:text-3xl">{tr({ fr: "Montre-moi ton cube", nl: "Laat me je kubus zien", en: "Show me your cube" })}</h1>
           <p className="mt-1 text-mist">
             {tr({
               fr: `Il me faut ses couleurs pour ${id === "fast" ? "calculer la solution" : "te guider pas à pas"}.`,
@@ -390,13 +390,13 @@ export function BasicsChoice({ onPick, onBack }: BasicsProps) {
     <>
       <TopBar back={{ label: HOME, onClick: onBack }} />
       <main className="mx-auto flex w-full flex-1 max-w-2xl flex-col gap-5 p-5 md:justify-center md:p-10">
-        <h1 className="wide text-3xl">{tr({ fr: "Par quoi commencer\u00a0?", nl: "Waarmee begin je?", en: "Where to start?" })}</h1>
+        <h1 className="wide text-2xl md:text-3xl">{tr({ fr: "Par quoi commencer\u00a0?", nl: "Waarmee begin je?", en: "Where to start?" })}</h1>
         <div className="grid gap-3 md:grid-cols-2">
           {parts.map(([id, title, text]) => (
             <button
               key={id}
               onClick={() => onPick(id)}
-              className={`grid gap-1.5 rounded-2xl border bg-shell p-5 text-left hover:bg-raised ${id === "plan" ? "border-chalk/50 md:col-span-2" : "border-edge"}`}
+              className={`grid gap-1.5 rounded-2xl border border-edge bg-shell p-5 text-left hover:bg-raised ${id === "plan" ? "md:col-span-2" : ""}`}
             >
               <span className="mb-1 flex h-12 items-center">
                 <PartPicture id={id} />

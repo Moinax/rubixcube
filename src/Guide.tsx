@@ -459,7 +459,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             </p>
           )}
           {/* The cases: one menu, at every size, so they read as the parts of one stage. */}
-          {(cases.length > 1 || present) && (
+          {/* Shown even for a single case, so the cube and the player keep their height from one stage to the next. */}
+          {(cases.length > 0 || present) && (
             <details ref={casePicker} className="group relative md:max-w-md">
               <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell px-3 py-1.5 [&::-webkit-details-marker]:hidden">
                 <span className="min-w-0 flex-1">

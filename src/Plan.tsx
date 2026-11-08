@@ -55,31 +55,41 @@ function Milestone({ at, label }: { at: number; label: string }) {
   );
 }
 
-/** The beginner method as a map: stage 0 is the idea of it, then each stage on its own, for any cube. */
+/** The page that finds your stage from what your cube looks like, between the idea and the stages. */
+export const WHERE = -1;
+/** The pages in reading order: the idea (0), where you are, then stages 1 to 8. */
+const PAGES = [0, WHERE, ...PLAN.slice(1).map((_, i) => i + 1)];
+const WHERE_TITLE = tr({ fr: "Où j'en suis ?", nl: "Waar ben ik?", en: "Where am I?" });
+
+/** The beginner method as a map: the idea of it, where you stand, then each stage on its own, for any cube. */
 export default function Plan({ stage, onStage, onBack, onCases, onMyCube, children }: Props) {
   const plan = PLAN[stage];
-  const intro = stage === 0;
-  const cases = CASES[stage].length;
+  const [intro, where] = [stage === 0, stage === WHERE];
+  const cases = CASES[stage]?.length;
+  const page = PAGES.indexOf(stage);
+  const next = PAGES[page + 1];
   return (
     <>
       <TopBar back={{ label: tr({ fr: "Les bases", nl: "De basis", en: "The basics" }), onClick: onBack }} />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 p-4 pb-28 md:p-8 md:pb-28">
 
         <nav className="-mx-4 flex gap-1.5 overflow-x-auto px-4 md:mx-0 md:px-0" aria-label={tr({ fr: "Les étapes", nl: "De stappen", en: "The stages" })}>
-          {PLAN.map((_, i) => (
+          {PAGES.map((i) => (
             <button
               key={i}
               onClick={() => onStage(i)}
               aria-current={i === stage ? "step" : undefined}
-              title={i ? STAGES[i].title : undefined}
-              className={`h-9 flex-none rounded-full px-3 text-sm font-semibold ${i === stage ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"} ${i ? "min-w-9" : ""}`}
+              title={i > 0 ? STAGES[i].title : undefined}
+              className={`h-9 flex-none rounded-full px-3 text-sm font-semibold ${i === stage ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"} ${i > 0 ? "min-w-9" : ""}`}
             >
-              {i || tr({ fr: "Le principe", nl: "Het idee", en: "The idea" })}
+              {i > 0 ? i : i === WHERE ? WHERE_TITLE : tr({ fr: "Le principe", nl: "Het idee", en: "The idea" })}
             </button>
           ))}
         </nav>
 
         <div className="grid gap-6 md:grid-cols-2 md:items-start md:gap-10">
+          {/* Where you are is a list of drawings already: it takes the whole width. */}
+          {!where && (
           <div className="md:sticky md:top-6">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
               <Milestone
@@ -101,13 +111,14 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
               })}
             </p>
           </div>
+          )}
 
-          <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5">
+          <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 ${where ? "md:col-span-2 md:mx-auto md:w-full md:max-w-2xl" : ""}`}>
             <p className={LABEL}>
-              {intro ? tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }) : tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}
+              {intro || where ? tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }) : tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}
             </p>
             <h1 className="wide mt-1 text-2xl leading-tight">
-              {intro ? tr({ fr: "Comment on résout un cube", nl: "Hoe je een kubus oplost", en: "How a cube gets solved" }) : STAGES[stage].title}
+              {intro ? tr({ fr: "Comment on résout un cube", nl: "Hoe je een kubus oplost", en: "How a cube gets solved" }) : where ? WHERE_TITLE : STAGES[stage].title}
             </h1>
             {intro ? (
               <>
@@ -119,7 +130,9 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
                     </p>
                   </div>
                 ))}
-                <h2 className="mt-5 border-t border-edge pt-4 font-semibold">{tr({ fr: "Où j'en suis ?", nl: "Waar ben ik?", en: "Where am I?" })}</h2>
+              </>
+            ) : where ? (
+              <>
                 <p className="mt-1 text-mist">
                   {tr({
                     fr: "Tiens ton cube jaune en haut et trouve le dessin qui lui ressemble (le gris, c'est n'importe quelle couleur). Si plusieurs vont, prends le plus bas dans la liste.",
@@ -207,15 +220,21 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
         {/* Fixed, like the guide's player: the next stage is always under the same thumb. */}
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 md:px-8">
-            <button className="btn border border-edge bg-shell hover:bg-raised" disabled={intro} onClick={() => onStage(stage - 1)}>
+            <button className="btn border border-edge bg-shell hover:bg-raised" disabled={!page} onClick={() => onStage(PAGES[page - 1])}>
               <Chevron to="left" />
               {tr({ fr: "Précédent", nl: "Vorige", en: "Previous" })}
             </button>
-            {stage < LAST ? (
-              <button className="btn btn-main min-w-0" onClick={() => onStage(stage + 1)}>
+            {next !== undefined ? (
+              <button className="btn btn-main min-w-0" onClick={() => onStage(next)}>
                 <span className="truncate">
-                  {intro ? tr({ fr: "Étape 1", nl: "Stap 1", en: "Stage 1" }) : tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next stage" })}
-                  <span className="font-normal opacity-70 max-sm:hidden"> · {STAGES[stage + 1].title}</span>
+                  {next === WHERE ? (
+                    WHERE_TITLE
+                  ) : (
+                    <>
+                      {where ? tr({ fr: "Étape 1", nl: "Stap 1", en: "Stage 1" }) : tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next stage" })}
+                      <span className="font-normal opacity-70 max-sm:hidden"> · {STAGES[next].title}</span>
+                    </>
+                  )}
                 </span>
                 <Chevron />
               </button>

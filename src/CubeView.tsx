@@ -42,7 +42,7 @@ const fingerLook = (solid: THREE.MeshBasicMaterial) => ({ solid, faded: new THRE
 const [THUMB_LOOK, INDEX_LOOK] = [fingerLook(THUMB), fingerLook(INDEX)];
 const RING = new THREE.RingGeometry(0.25, 0.31, 40);
 const RING_MATERIAL = new THREE.MeshBasicMaterial({ color: "#f3f2ee" });
-const GRIP: [finger: Finger, pos: Vec, normal: Vec, look: typeof THUMB_LOOK][] = [
+export const GRIP: [finger: Finger, pos: Vec, normal: Vec, look: typeof THUMB_LOOK][] = [
   ["left thumb", [-1, -1, 1], [0, 0, 1], THUMB_LOOK],
   ["right thumb", [1, -1, 1], [0, 0, 1], THUMB_LOOK],
   ["left index", [-1, 1, -1], [0, 1, 0], INDEX_LOOK],

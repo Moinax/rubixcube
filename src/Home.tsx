@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
-import CubeView, { BLANK } from "./CubeView";
+import CubeView, { BLANK, GRIP, INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import { YELLOW_UP } from "./beginner";
 import { applyMove, FACE_COLORS, SOLVED, STICKERS, type Face } from "./cube";
-import { MILESTONES, SCRAMBLED } from "./plan";
+import { MILESTONES, SCRAMBLED, SEEN_FROM_BELOW } from "./plan";
 import { lang, LANGS, setLang, tr, type Lang } from "./i18n";
 
 export type Mode = "fast" | "learn" | "cfop" | "course";
@@ -298,8 +298,8 @@ type BasicsProps = { onPick: (part: Part) => void; onBack: () => void };
 
 /** The basics come in three parts, each on its own: the plan of the method, reading the moves, or holding the cube. */
 /** A small flat drawing of the cube `state` (its top, front and right faces, or its bottom, front and right ones
- * `below`), for a list where a 3D view each would be too many. */
-export function IsoCube({ state, below = false, className = "size-14" }: { state: string; below?: boolean; className?: string }) {
+ * `below`), for a list where a 3D view each would be too many; `grip` marks the fingers of the home grip on it. */
+export function IsoCube({ state, below = false, grip = false, className = "size-14" }: { state: string; below?: boolean; grip?: boolean; className?: string }) {
   const [sx, sy] = [Math.sqrt(3) / 2, 0.5];
   const at = ([x, y, z]: number[]) => `${((x - z) * sx).toFixed(3)},${((below ? -sy : sy) * (x + z) - y).toFixed(3)}`;
   const shown = [below ? [0, -1, 0] : [0, 1, 0], [0, 0, 1], [1, 0, 0]].map(String);
@@ -321,43 +321,40 @@ export function IsoCube({ state, below = false, className = "size-14" }: { state
           />
         );
       })}
+      {grip &&
+        GRIP.map(([finger, pos, normal]) => {
+          const [x, y] = at(pos.map((p, k) => p + normal[k] * 0.5)).split(",");
+          return <circle key={finger} cx={x} cy={y} r="0.36" fill={finger.endsWith("thumb") ? THUMB_COLOR : INDEX_COLOR} stroke="#16171b" strokeWidth="0.08" />;
+        })}
     </svg>
   );
 }
 
-/** What each part of the basics is about, drawn: the cube getting solved stage by stage, a cube turned by a
- * move and its letter, a cube in hand. */
+/** What each part of the basics is about, drawn: the cube's first stages, three moves, the cube with the fingers
+ * of the home grip on it. */
 function PartPicture({ id }: { id: Part }) {
   if (id === "plan")
     return (
       <span className="flex items-center gap-1">
-        {[SCRAMBLED, MILESTONES[4], YELLOW_UP].map((state, i) => (
-          <Fragment key={i}>
-            {i > 0 && <Chevron className="size-3 opacity-50" />}
-            <IsoCube state={state} className="size-10" />
+        {[0, 1, 2].map((at) => (
+          <Fragment key={at}>
+            {at > 0 && <Chevron className="size-3 opacity-50" />}
+            <IsoCube state={at ? MILESTONES[at] : SCRAMBLED} below={SEEN_FROM_BELOW.includes(at)} className="size-11" />
           </Fragment>
         ))}
       </span>
     );
   if (id === "moves")
     return (
-      <span className="flex items-center gap-2">
-        <IsoCube state={applyMove(YELLOW_UP, "R")} className="size-10" />
-        <span className="grid size-8 place-items-center rounded-lg bg-raised font-mono text-lg font-bold">R</span>
+      <span className="flex items-center gap-1.5">
+        {["R", "U'", "F"].map((move) => (
+          <span key={move} className="grid h-11 min-w-11 place-items-center rounded-lg bg-raised px-2 font-mono text-xl font-bold tracking-tighter">
+            {move}
+          </span>
+        ))}
       </span>
     );
-  return (
-    <span className="flex items-center gap-2">
-      <IsoCube state={YELLOW_UP} className="size-10" />
-      {/* Lucide "hand", ISC licence. */}
-      <svg viewBox="0 0 24 24" aria-hidden className="size-8 fill-none stroke-current stroke-[1.8] text-mist" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
-        <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
-        <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
-        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
-      </svg>
-    </span>
-  );
+  return <IsoCube state={YELLOW_UP} grip className="size-12" />;
 }
 
 export function BasicsChoice({ onPick, onBack }: BasicsProps) {
@@ -402,7 +399,7 @@ export function BasicsChoice({ onPick, onBack }: BasicsProps) {
               onClick={() => onPick(id)}
               className={`grid gap-1.5 rounded-2xl p-5 text-left ${id === "plan" ? "bg-chalk text-plastic hover:bg-white md:col-span-2" : "border border-edge bg-shell hover:bg-raised"}`}
             >
-              <span className="mb-1">
+              <span className="mb-1 flex h-12 items-center">
                 <PartPicture id={id} />
               </span>
               <span className="text-lg font-bold">{title}</span>

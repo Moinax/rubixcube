@@ -7,7 +7,7 @@ export type Mode = "fast" | "learn" | "cfop" | "course";
 const SHOWCASE = "R U F' L2 D B' R2 U'".split(" ").reduce(applyMove, SOLVED);
 
 /** A 3x3 face drawn from 9 face letters, "." for an empty cell; `marks` outlines cells as piece or place. */
-function MiniFace({ cells, marks = {}, small }: { cells: string; marks?: Record<number, "piece" | "place">; small?: boolean }) {
+export function MiniFace({ cells, marks = {}, small }: { cells: string; marks?: Record<number, "piece" | "place">; small?: boolean }) {
   return (
     <span className={`grid flex-none grid-cols-3 bg-black ${small ? "size-6 gap-px rounded-[5px] p-0.5" : "size-10 gap-0.5 rounded-lg p-[3px]"}`}>
       {[...cells].map((c, i) => (
@@ -241,11 +241,21 @@ export function InputChoice({ mode: id, onScan, onManual, onRandom, onBack }: In
   );
 }
 
-type BasicsProps = { onPick: (part: "moves" | "hands") => void; onBack: () => void };
+export type Part = "plan" | "moves" | "hands";
+type BasicsProps = { onPick: (part: Part) => void; onBack: () => void };
 
-/** The basics come in two parts, each on its own: reading the moves, or holding the cube. */
+/** The basics come in three parts, each on its own: the plan of the method, reading the moves, or holding the cube. */
 export function BasicsChoice({ onPick, onBack }: BasicsProps) {
-  const parts: ["moves" | "hands", string, string][] = [
+  const parts: [Part, string, string][] = [
+    [
+      "plan",
+      tr({ fr: "Comprendre la méthode", nl: "De methode begrijpen", en: "Understanding the method" }),
+      tr({
+        fr: "Les 8 étapes, de la marguerite au dernier coin : ce que tu cherches à chaque fois, quoi faire, et pourquoi. Pour savoir où tu en es sur n'importe quel cube.",
+        nl: "De 8 stappen, van het madeliefje tot het laatste hoekstuk: wat je telkens zoekt, wat je doet, en waarom. Om te weten waar je staat, op eender welke kubus.",
+        en: "The 8 stages, from the daisy to the last corner: what you look for each time, what to do, and why. To know where you stand on any cube.",
+      }),
+    ],
     [
       "moves",
       tr({ fr: "Lire les coups", nl: "De zetten lezen", en: "Reading the moves" }),
@@ -273,9 +283,13 @@ export function BasicsChoice({ onPick, onBack }: BasicsProps) {
       <h1 className="wide text-3xl">{tr({ fr: "Par quoi commencer\u00a0?", nl: "Waarmee begin je?", en: "Where to start?" })}</h1>
       <div className="grid gap-3 md:grid-cols-2">
         {parts.map(([id, title, text]) => (
-          <button key={id} onClick={() => onPick(id)} className="grid gap-1.5 rounded-2xl border border-edge bg-shell p-5 text-left hover:bg-raised">
+          <button
+            key={id}
+            onClick={() => onPick(id)}
+            className={`grid gap-1.5 rounded-2xl p-5 text-left ${id === "plan" ? "bg-chalk text-plastic hover:bg-white md:col-span-2" : "border border-edge bg-shell hover:bg-raised"}`}
+          >
             <span className="text-lg font-bold">{title}</span>
-            <span className="text-sm text-mist">{text}</span>
+            <span className={`text-sm ${id === "plan" ? "text-[#4b4f58]" : "text-mist"}`}>{text}</span>
           </button>
         ))}
       </div>

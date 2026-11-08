@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import CubeView from "./CubeView";
 import Guide from "./Guide";
 import { Back, BasicsChoice, Home, InputChoice, modeTitle, type Mode, type Resume } from "./Home";
+import Plan from "./Plan";
 import NetEditor from "./NetEditor";
 import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
@@ -17,6 +18,7 @@ type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boole
 type Screen =
   | { name: "home" }
   | { name: "basics" }
+  | { name: "plan"; stage: number }
   | { name: "input"; mode: CubeMode }
   | { name: "scan"; mode: CubeMode; scan?: Scan }
   | { name: "edit"; mode: CubeMode; state: string; scan?: Scan }
@@ -182,10 +184,29 @@ export default function App() {
       return (
         <BasicsChoice
           onPick={(part) => {
+            if (part === "plan") return setScreen({ name: "plan", stage: 0 });
             const { groups } = courseOf(part === "hands");
             setScreen({ name: "guide", start: groups[0].from!, groups, learn: true, step: 0, course: true, ...(part === "hands" && { hands: true }) });
           }}
           onBack={() => setScreen({ name: "home" })}
+        />
+      );
+    case "plan":
+      return (
+        <Plan
+          stage={screen.stage}
+          onStage={(stage) => {
+            setScreen({ name: "plan", stage });
+            scrollTo(0, 0);
+          }}
+          onBack={() => setScreen({ name: "basics" })}
+          onCases={(stage) => {
+            // The course at the first case of that stage.
+            const first = COURSE.findIndex((g) => g.stage === stage);
+            const step = COURSE.slice(0, first).reduce((n, g) => n + g.moves.length, 0);
+            setScreen({ name: "guide", start: COURSE[0].from!, groups: COURSE, learn: true, step, course: true });
+          }}
+          onMyCube={() => setScreen({ name: "input", mode: "learn" })}
         />
       );
     case "input":

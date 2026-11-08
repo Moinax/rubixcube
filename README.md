@@ -7,7 +7,11 @@ that solve your own cube then ask for it: scan it with the camera, type its
 colors in, or take a random scramble (handy for testing). Then follow the moves
 one by one on an animated 3D cube:
 
-- **Learn the basics** (no scan), in two parts (`src/course.ts`): reading the
+- **Learn the basics** (no scan), in three parts. Understanding the method
+  (`src/plan.ts`): the idea, then each of the 8 stages for any cube, before and
+  after on two 3D cubes with what doesn't count yet greyed out, what to look for,
+  what to do, why it breaks nothing, and a "where am I?" checklist. Then
+  (`src/course.ts`): reading the
   moves, the notation then the beginner method case by case, each case a demo
   cube built backwards from its algorithm, to recognise on your own cube; or
   holding the cube, the home grip marked on the 3D cube and the finger or wrist

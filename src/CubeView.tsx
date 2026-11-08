@@ -54,6 +54,8 @@ const material = (color: string) => {
 };
 
 const CAMERA: Vec = [4.6, 4, 6.2];
+// A sticker that doesn't matter yet: a blank ("."), dimmer than any color.
+const BLANK = "#3a3d46";
 
 const ease = (k: number) => k * k * (3 - 2 * k);
 
@@ -69,6 +71,7 @@ type Props = {
   grip?: boolean;
   next?: string;
   autoRotate?: boolean;
+  below?: boolean;
 };
 
 /**
@@ -77,9 +80,9 @@ type Props = {
  * so are `pair`, a second piece that goes with it (an F2L edge), and `pairPlace`. A new `replay` count
  * plays the same moves again. `grip` marks where the fingers rest in the home grip: before `next` (the move to
  * play), its fingers stand out and the ones in its way fade; while a move plays, its fingers ride with the face
- * and the ones in its way lift off.
+ * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face.
  */
-export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false }: Props) {
+export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void }>(null);
   const ended = useRef(onEnd);
@@ -138,6 +141,12 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     scene.current!.controls.autoRotate = autoRotate;
   }, [autoRotate]);
 
+  useEffect(() => {
+    const { controls } = scene.current!;
+    controls.object.position.set(CAMERA[0], below ? -CAMERA[1] : CAMERA[1], CAMERA[2]);
+    controls.update();
+  }, [below]);
+
   // The pieces to follow, each with the place it goes to.
   const tracked = ([[piece, place], [pair, pairPlace]] as [string | undefined, string | undefined][]).filter((t): t is [string, string | undefined] => !!t[0]);
   useEffect(() => {
@@ -160,7 +169,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
               GEOMETRY,
               SIDES.map((side) => {
                 const i = stickerAt(pos, side);
-                return i === undefined ? PLASTIC : material(FACE_COLORS[s[i] as Face]);
+                return i === undefined ? PLASTIC : material(FACE_COLORS[s[i] as Face] ?? BLANK);
               }),
             );
             mesh.position.set(x, y, z);

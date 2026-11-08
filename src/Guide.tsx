@@ -584,7 +584,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           <div className="flex flex-col gap-4">
             {done ? (
               <div>
-                <p className="wide text-4xl">
+                <p className="wide text-2xl md:text-3xl">
                   {focus
                     ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" })
                     : course

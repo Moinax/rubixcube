@@ -269,7 +269,8 @@ export default function App() {
           stages={screen.course ? courseOf(screen.hands).stages : method(screen.cfop).stages}
           step={screen.step}
           onStep={(step) => setScreen({ ...screen, step })}
-          onHome={() => setScreen({ name: "home" })}
+          // The courses sit under the basics; a guide on your own cube under the home's list of modes.
+          onHome={() => setScreen(screen.course ? { name: "basics" } : { name: "home" })}
           onScan={() => setScreen({ name: "scan", mode })}
           onEdit={(state) => setScreen({ name: "edit", mode, state })}
         />

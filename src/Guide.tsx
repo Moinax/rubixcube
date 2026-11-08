@@ -379,7 +379,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
 
   return (
     <>
-      <TopBar back={focus?.back ?? { label: HOME, onClick: onHome }}>
+      <TopBar back={focus?.back ?? { label: course ? tr({ fr: "Les bases", nl: "De basis", en: "The basics" }) : HOME, onClick: onHome }}>
         <LexiconButton onClick={() => setLexicon({ tab: "moves" })} />
       </TopBar>
       {/* In the plan's page, one column a comfortable line long, like the rest of the plan. */}

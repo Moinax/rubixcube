@@ -120,7 +120,11 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     camera.position.set(...CAMERA);
     const controls = new OrbitControls(camera, renderer.domElement);
     Object.assign(controls, { enableDamping: true, enablePan: false, minDistance: 6, maxDistance: 14 });
-    controls.addEventListener("start", () => setTurned(true));
+    // A hand on the cube stops a glance where it is: the hand turns it from there.
+    controls.addEventListener("start", () => {
+      setTurned(true);
+      if (scene.current) scene.current.onCamera = undefined;
+    });
     const root = new THREE.Group();
     world.add(root);
     scene.current = { root, controls };
@@ -172,23 +176,21 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     // runs slower around the middle, so the cube lingers on the face, then eases back into the hand.
     const glance = 1600;
     let start: number | undefined;
-    // A hand on the cube stops the tilt where it is: the hand turns it from there.
-    const done = () => {
-      ctx.onCamera = undefined;
-      ctx.controls.removeEventListener("start", done);
-    };
-    ctx.controls.addEventListener("start", done);
+    // Out from wherever the camera is (a glance cut short by the next one), back into the hand: never a jump. A glance
+    // under way runs to its end even when the guide moves on, so the cube is never left tilted.
+    let origin = held;
     ctx.onCamera = (t) => {
-      if (start === undefined && (ctx.onFrame || t < born.current + ARRIVAL)) return; // a move still turning goes first
-      start ??= t;
+      if (start === undefined) {
+        if (ctx.onFrame || t < born.current + ARRIVAL) return; // a move still turning goes first
+        [start, origin] = [t, camera.position.clone()];
+      }
       const k = Math.min(1, (t - start) / glance);
       const d = k - 0.5;
       const slowed = 0.5 + (Math.sign(d) * Math.abs(2 * d) ** 1.35) / 2;
-      camera.position.copy(held).lerp(look, (1 - Math.cos(2 * Math.PI * slowed)) / 2).setLength(held.length());
-      if (k === 1) done();
+      camera.position.copy(k < 0.5 ? origin : held).lerp(look, (1 - Math.cos(2 * Math.PI * slowed)) / 2).setLength(held.length());
+      if (k === 1) ctx.onCamera = undefined;
     };
     setTurned(false);
-    return done;
   }, [peek?.key]);
 
   // The pieces to follow, each with the place it goes to.

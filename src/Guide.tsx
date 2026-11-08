@@ -4,7 +4,7 @@ import Lexicon, { LexiconButton, type Tab } from "./Lexicon";
 import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
-import { applyMove, describeMove, invert, stickerAt, upright, type Face, type Vec } from "./cube";
+import { applyMove, describeMove, invert, isRotation, stickerAt, STICKERS, upright, type Face, type Vec } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** « L'arête blanc-vert », "the white-green edge", named as the instructions name it. */
@@ -245,10 +245,22 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const { ref: casePicker } = usePopover(step);
 
   const piece = group?.piece;
-  // At the end of a case, or of the whole guide, what the stage built is glanced at when it sits out of view: the
-  // beginner method's white cross and white corners, at the bottom. Its key never meets an instruction's.
-  const endPeek =
-    learn && stages === STAGES && (done || atResult) && [2, 3].includes(current) ? { from: [0, -1, 0] as Vec, key: -1 - step } : undefined;
+  // At the end of each part of an instruction (and of the instruction itself), what it just put out of view is
+  // glanced at: white squares that came onto the bottom face, where the method builds, like a petal dropped into the
+  // cross. The part's whole-cube turns are applied to where it started first, so turning the cube shows nothing new.
+  // Its key never meets an instruction's start.
+  const endPeek = (() => {
+    if (!learn || step === 0) return;
+    const end = atResult || done ? step : partEnds.includes(step) && step > groupStart ? step : -1;
+    if (end < 0) return;
+    const from = atResult || done ? flat.findIndex((f) => f.group === flat[step - 1].group) : end - parts[partEnds.indexOf(end)].count;
+    const turns = flat.slice(from, end).map((f) => f.move).filter(isRotation);
+    const before = play(states[from], turns);
+    const after = atResult ? ends[flat[step - 1].group] : states[end];
+    const keyOn = (s: string, n: Vec) => STICKERS.filter((t, i) => `${t.normal}` === `${n}` && s[i] === "U").length;
+    const away = ([[0, -1, 0]] as Vec[]).find((n) => keyOn(after, n) > keyOn(before, n));
+    return away && { from: away, key: -1 - step - (atResult ? 0.5 : 0) };
+  })();
   // At the start of an instruction, a piece the view doesn't show is glanced at first, the way a hand tilts the cube:
   // a piece hidden whole (down, left or back), or its white or yellow (which tells how it is turned) facing away.
   const hidden = (() => {

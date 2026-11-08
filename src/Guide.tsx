@@ -8,22 +8,6 @@ import type { Intro } from "./course";
 import { applyMove, describeMove, invert, upright, type Face } from "./cube";
 import { nOf, tr } from "./i18n";
 
-/** "Face du haut : un quart de tour…" with the face in bold. */
-function MoveText({ move, finger }: { move: string; finger?: string }) {
-  const [face, turn] = describeMove(move);
-  return (
-    <p>
-      <span className="font-semibold text-chalk">{face}</span> <span className="text-mist">{turn}</span>
-      {finger && (
-        <>
-          <span className="text-mist"> · </span>
-          <span className="font-semibold text-chalk">{finger}</span>
-        </>
-      )}
-    </p>
-  );
-}
-
 /** « L'arête blanc-vert », "the white-green edge", named as the instructions name it. */
 function pieceName(piece: string) {
   const n = names(piece);
@@ -213,18 +197,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     return () => removeEventListener("keydown", onKey);
   });
 
-  // Learn and course modes walk one instruction at a time; the fast mode is one long sequence.
   const groupStart = flat.findIndex((f) => f.group === gi);
-  const [n, of] = learn ? [step - groupStart + 1, group?.moves.length ?? 0] : [step + 1, total];
-  const position = nOf(n, of);
-  // The named sequence of the instruction, and where the next move stands in it.
-  const alg = group?.alg;
-  const k = step - groupStart;
-  const part = !alg
-    ? undefined
-    : k < alg.setup
-      ? tr({ fr: "préparation", nl: "voorbereiding", en: "setup" })
-      : `${alg.name}${alg.reps > 1 ? ` ${Math.floor((k - alg.setup) / alg.moves.length) + 1}/${alg.reps}` : ""}`;
 
   // The instruction's parts: only the one being played shows, the last one on a result stop.
   const parts = group?.steps ?? (group ? [{ text: "", count: group.moves.length }] : []);
@@ -291,7 +264,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           <span className="max-sm:hidden">{tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}</span>
         </button>
       </TopBar>
-      <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
+      <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-24 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
         {focus ? (
           <div className={cases.length > 1 ? "max-md:hidden" : ""}>
             <p className={LABEL}>{tr({ fr: "Les cas", nl: "De gevallen", en: "The cases" })}</p>
@@ -625,29 +598,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
         {/* The player, pinned to the bottom: its buttons never move or resize, so a pointer can rest on ▶. */}
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 py-3 md:grid md:h-18 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-6 md:px-8 md:py-0">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="min-w-0 text-sm leading-snug">
-                <p className="text-xs text-mist">
-                  {atIntro
-                    ? INTRO_LABEL
-                    : ending
-                      ? ENDINGS[ending].label
-                      : done
-                        ? DONE
-                        : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
-                  {move && part && ` · ${part}`}
-                </p>
-                {atIntro && <p className="font-semibold">{focus?.title}</p>}
-                {ending && (
-                  <p className="font-semibold">{ending === "demo" || !learn ? group?.title : stages[group!.stage].title}</p>
-                )}
-                {move && (
-                  <div className="md:line-clamp-2">
-                    <MoveText move={move} finger={group?.fingers?.[step - groupStart]} />
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* The bar is only the player: the card says what to do, ▶ what comes next, the glossary what a letter means.
+                An empty first column keeps the player centered on a wide screen. */}
+            <span className="max-md:hidden" />
 
             <div className="flex items-center justify-center gap-2">
               <div className="flex gap-1 rounded-full bg-white/8 p-1 ring-1 ring-white/15">

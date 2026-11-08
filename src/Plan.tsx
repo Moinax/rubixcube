@@ -289,8 +289,8 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
 
         <div className="grid gap-4 md:gap-6">
           {/* Where you are is a list of drawings already: it takes the whole width. */}
-          {/* The presentation shows the stage big; read, it steps back for the text. */}
-          {!where && <div className={`mx-auto w-full ${reading ? "max-w-48 md:max-w-xs" : "max-w-56 md:max-w-md"}`}>{beforeAfter}</div>}
+          {/* The same size presented or read: switching between them never moves the cubes. */}
+          {!where && <div className="mx-auto w-full max-w-56 md:max-w-md">{beforeAfter}</div>}
 
           <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 [&>:first-child]:mt-0 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
             {/* The menu above names the page: only the idea's page, called something else there, keeps a title. */}

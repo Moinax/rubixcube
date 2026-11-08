@@ -154,7 +154,15 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
     <nav className="flex flex-col items-center gap-2.5 text-sm font-semibold">
       {(
         [
-          [undefined, "‹", tr({ fr: "Présentation", nl: "Kennismaking", en: "Introduction" })],
+          [
+            undefined,
+            // An "i" in a circle, as the case menu marks the presentation.
+            <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5.5M12 7.5v.5" />
+            </svg>,
+            tr({ fr: "Présentation", nl: "Kennismaking", en: "Introduction" }),
+          ],
           ["read", "≡", tr({ fr: "Lire comment faire", nl: "Lezen hoe het moet", en: "Read how to do it" })],
           [
             "see",

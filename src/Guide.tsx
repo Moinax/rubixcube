@@ -226,6 +226,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
       ? tr({ fr: "préparation", nl: "voorbereiding", en: "setup" })
       : `${alg.name}${alg.reps > 1 ? ` ${Math.floor((k - alg.setup) / alg.moves.length) + 1}/${alg.reps}` : ""}`;
 
+  // The instruction's parts: only the one being played shows, the last one on a result stop.
+  const parts = group?.steps ?? (group ? [{ text: "", count: group.moves.length }] : []);
+  const partEnds = parts.map((_, j) => groupStart + parts.slice(0, j + 1).reduce((sum, p) => sum + p.count, 0));
+  const partNow = atResult ? parts.length - 1 : partEnds.findIndex((end) => step < end);
+
   // A new instruction gets twice the time to be read before its first move.
   const wait = delay * 1000 * (learn && !atResult && step === groupStart ? 2 : 1);
   useEffect(() => {
@@ -533,55 +538,56 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                     </p>
                   )}
 
-                  <p className={`${LABEL} mt-4 border-t border-edge pt-3`}>{tr({ fr: "Comment", nl: "Hoe", en: "How" })}</p>
-                  <ol className="mt-2 grid gap-3">
-                    {(group.steps ?? [{ text: "", count: group.moves.length }]).map((part, j, parts) => {
-                      const first = groupStart + parts.slice(0, j).reduce((sum, p) => sum + p.count, 0);
+                  <p className={`${LABEL} mt-4 border-t border-edge pt-3`}>
+                    {tr({ fr: "Comment", nl: "Hoe", en: "How" })}
+                    {parts.length > 1 && <span className="font-normal tracking-normal normal-case"> · {nOf(partNow + 1, parts.length)}</span>}
+                  </p>
+                  <ol className="mt-2 grid gap-2.5">
+                    {parts.map((part, j) => {
+                      if (j !== partNow) return null; // one part at a time: ◀ ▶ walk through them
+                      const first = partEnds[j] - part.count;
                       const own = flat.slice(first, first + part.count).map((f) => f.move);
                       const [passed, here] = [atResult || step >= first + part.count, !atResult && step >= first && step < first + part.count];
                       // A sequence played several times shows each time apart, and which one is playing.
                       const rep = algOf(own);
                       const size = rep && !rep.setup && rep.reps > 1 ? rep.moves.length : own.length;
                       const runs = Array.from({ length: own.length / size }, (_, r) => r * size);
+                      const moveChips = (className: string) => (
+                        <span className={`${className} flex-wrap gap-1.5`}>
+                          {runs.map((r) => (
+                            <span key={r} className={`flex flex-wrap gap-1 ${runs.length > 1 ? "rounded-[10px] p-0.5 ring-1 ring-edge" : ""}`}>
+                              {own.slice(r, r + size).map((m, c) => {
+                                const i = first + r + c;
+                                return (
+                                  <button
+                                    key={i}
+                                    onClick={() => jump(i)}
+                                    onMouseDown={keepFocus}
+                                    title={describeMove(m).join(", ")}
+                                    className={`min-w-8 rounded-lg px-1 py-0.5 text-sm font-semibold [font-stretch:125%] ${
+                                      here && i === step ? "bg-chalk text-plastic" : passed || i < step ? "bg-raised text-mist/60" : "bg-raised text-chalk"
+                                    }`}
+                                  >
+                                    {m}
+                                  </button>
+                                );
+                              })}
+                            </span>
+                          ))}
+                        </span>
+                      );
                       return (
-                        <li key={j} className={`grid grid-cols-[1.25rem_1fr] gap-2.5 ${passed ? "opacity-55" : ""}`}>
-                          <span className={`mt-0.5 grid size-5 place-items-center rounded-full text-[11px] font-bold ${here ? "bg-chalk text-plastic" : "bg-raised text-mist"} ${part.text ? "" : "invisible"}`}>
-                            {j + 1}
-                          </span>
-                          <div className="min-w-0">
-                            {part.text && (
-                              <p>
-                                <Colored text={part.text} />
-                                {here && runs.length > 1 && (
-                                  <span className="ml-1.5 rounded-md bg-piece px-1.5 py-px align-[1px] text-[11px] font-bold text-plastic">
-                                    {Math.floor((step - first) / size) + 1}/{runs.length}
-                                  </span>
-                                )}
-                              </p>
-                            )}
-                            <div className="mt-1.5 flex flex-wrap gap-1.5">
-                              {runs.map((r) => (
-                                <span key={r} className={`flex flex-wrap gap-1 ${runs.length > 1 ? "rounded-[10px] p-0.5 ring-1 ring-edge" : ""}`}>
-                                  {own.slice(r, r + size).map((m, c) => {
-                                    const i = first + r + c;
-                                    return (
-                                      <button
-                                        key={i}
-                                        onClick={() => jump(i)}
-                                        onMouseDown={keepFocus}
-                                        title={describeMove(m).join(", ")}
-                                        className={`min-w-8 rounded-lg px-1 py-0.5 text-sm font-semibold [font-stretch:125%] ${
-                                          here && i === step ? "bg-chalk text-plastic" : passed || i < step ? "bg-raised text-mist/60" : "bg-raised text-chalk"
-                                        }`}
-                                      >
-                                        {m}
-                                      </button>
-                                    );
-                                  })}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
+                        // A short step's moves lead its line, where its number was; a long one's (a sequence played
+                        // several times) would push the text away, so they come under it.
+                        <li key={j} className={passed ? "opacity-55" : ""}>
+                          {own.length <= 4 && moveChips("mr-2 inline-flex align-middle")}
+                          {part.text && <Colored text={part.text} />}
+                          {here && runs.length > 1 && (
+                            <span className="ml-1.5 rounded-md bg-piece px-1.5 py-px align-[1px] text-[11px] font-bold text-plastic">
+                              {Math.floor((step - first) / size) + 1}/{runs.length}
+                            </span>
+                          )}
+                          {own.length > 4 && moveChips(`flex ${part.text ? "mt-1.5" : ""}`)}
                         </li>
                       );
                     })}

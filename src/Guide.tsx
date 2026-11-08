@@ -235,7 +235,13 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const piece = group?.piece;
   /** What one case of a stage does toward it; lessons (stage 0) and the fast mode's phases have none. */
   const aim = learn && group && group.stage > 0 ? (stages[group.stage].aim ?? stages[group.stage].goal) : undefined;
-  const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
+  // A case may run over several groups (a whole stage, piece by piece): one entry, from its first group.
+  const cases = course
+    ? groups
+        .map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) }))
+        .filter(({ g }, i, all) => g.stage === current && g.title !== all[i - 1]?.g.title)
+    : [];
+  const isCase = (g: Group) => g.title === group?.title;
   // While a move plays, the outlines follow the piece it works on, from where it starts.
   const worked = anim?.group ?? group;
   const settings = useId();
@@ -353,7 +359,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-mist">
                     {focus && `${focus.title} · `}
-                    {tr({ fr: "cas", nl: "geval", en: "case" })} {nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}
+                    {tr({ fr: "cas", nl: "geval", en: "case" })} {nOf(cases.findIndex(({ g }) => isCase(g)) + 1, cases.length)}
                   </span>
                   <span className="block truncate font-semibold">{group?.title}</span>
                 </span>
@@ -364,9 +370,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                   <li key={first}>
                     <button
                       onClick={() => jump(first)}
-                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${g === group ? "bg-edge font-semibold" : ""}`}
+                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${isCase(g) ? "bg-edge font-semibold" : ""}`}
                     >
-                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${g === group ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{k + 1}</span>
+                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${isCase(g) ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{k + 1}</span>
                       {g.title}
                     </button>
                   </li>
@@ -381,7 +387,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                   <button
                     onClick={() => jump(first)}
                     onMouseDown={keepFocus}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${g === group ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${isCase(g) ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
                   >
                     {g.title}
                   </button>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { beginnerSolve, planStates, STAGES } from "../src/beginner.ts";
+import { beginnerSolve, planStates, STAGES, type Group } from "../src/beginner.ts";
 import { cfopSolve } from "../src/cfop.ts";
 import { COURSE, HAND_STAGES, HANDS, riders } from "../src/course.ts";
 import { applyMove, colorsOf, PIECES, SOLVED, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
@@ -19,7 +19,7 @@ const demo = (title: string) => COURSE.find((g) => g.title === title)!.from!;
 
 test("the course covers every stage in order, each demo held yellow up and green in front", () => {
   assert.deepEqual([...new Set(COURSE.map((g) => g.stage))], STAGES.map((_, i) => i));
-  for (const g of COURSE.filter((g) => g.stage > 0)) {
+  for (const g of COURSE.filter((g) => g.stage > 0 && g.from)) {
     assert.equal(center(g.from!, [0, 1, 0]), "D", g.title);
     assert.equal(center(g.from!, [0, 0, 1]), "F", g.title);
   }
@@ -62,7 +62,7 @@ test("planStates starts each course demo from its own cube and ends a beginner p
   const states = planStates(COURSE[0].from!, COURSE);
   let i = 0;
   for (const g of COURSE) {
-    assert.equal(states[i], g.from, g.title);
+    if (g.from) assert.equal(states[i], g.from, g.title); // a whole stage goes on, group after group, on one cube
     i += g.moves.length;
   }
   assert.equal(states.length, i + 1);
@@ -107,9 +107,14 @@ test("each move of the hands lessons names its finger, on the cube held yellow u
 test("a demo shows only what its stage works with, and the daisy's demos end on the whole daisy", () => {
   const petals = (s: string) => [[-1, 1, 0], [1, 1, 0], [0, 1, -1], [0, 1, 1]].filter((p) => at(s, p as Vec, [0, 1, 0]) === "U").length;
   const colored = (s: string) => [...s].filter((c) => c !== ".").length;
-  for (const g of COURSE.filter((g) => g.stage === 1)) {
-    assert.equal(colored(g.from!), 6 + 8, g.title); // the centers and the 4 white edges, nothing else
-    assert.equal(petals(g.moves.reduce(applyMove, g.from!)), 4, g.title);
+  // A demo: a group with its own cube, and the groups that go on from it (a whole stage, piece by piece).
+  const demos = COURSE.reduce<Group[][]>((all, g) => (g.from ? [...all, [g]] : (all.at(-1)!.push(g), all)), []);
+  const daisy = demos.filter(([g]) => g.stage === 1);
+  assert.equal(daisy[0][0].title, "Toute la marguerite"); // the whole stage first, then its cases
+  assert.equal(daisy[0].length, 4); // one group per white edge
+  for (const demo of daisy) {
+    assert.equal(colored(demo[0].from!), 6 + 8, demo[0].title); // the centers and the 4 white edges, nothing else
+    assert.equal(petals(demo.flatMap((g) => g.moves).reduce(applyMove, demo[0].from!)), 4, demo[0].title);
   }
   const drop = COURSE.find((g) => g.stage === 2)!;
   assert.equal(petals(drop.from!), 4); // the cross starts from the daisy

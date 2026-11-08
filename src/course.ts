@@ -1,4 +1,4 @@
-import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group, type Stage } from "./beginner.ts";
+import { algOf, beginnerSolve, CYCLE, FLIP, LEFT, planStates, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group, type Stage } from "./beginner.ts";
 import { colorsOf, invert as undo, PIECES, SOLVED } from "./cube.ts";
 import { tr, type Lang } from "./i18n.ts";
 
@@ -43,6 +43,16 @@ const focusOn = (stage: number, s: string) => {
 const demo = (stage: number, texts: Texts, moves: string[], goal = YELLOW_UP, piece?: string, split?: number[]) =>
   group(stage, texts, moves, focusOn(stage, play(goal, undo(moves))), piece, split);
 const lesson = (texts: Texts, moves: string[]) => group(0, texts, moves, SOLVED);
+
+/** A whole stage first, before its cases: on a scrambled cube, from the moment it is held yellow up, the moves the beginner guide plays
+ * for that stage, one group per piece, each saying where its piece stands. One case, `title`, in the case menu. */
+function whole(stage: number, title: Record<Lang, string>, scramble: string): Group[] {
+  const start = play(SOLVED, scramble.split(" ")); // the guide takes a cube as scanned, white up, and turns it over
+  const plan = beginnerSolve(start);
+  const first = plan.findIndex((g) => g.stage === stage);
+  const from = planStates(start, plan)[plan.slice(0, first).reduce((n, g) => n + g.moves.length, 0)];
+  return plan.filter((g) => g.stage === stage).map((g, i) => ({ ...g, title: tr(title), ...(!i && { from: focusOn(stage, from) }) }));
+}
 
 // Pieces by color letters (white U, yellow D, green F, blue B, red R, orange L).
 const WHITE_GREEN = "FU";
@@ -98,6 +108,8 @@ export const COURSE: Group[] = [
     ["z2"],
   ),
 
+  // The daisy's 4 white edges are each in another of its 4 cases.
+  ...whole(1, { fr: "Toute la marguerite", nl: "Het hele madeliefje", en: "The whole daisy" }, "F R2 F2 U' R' U R2 F' R' U' F' R"),
   demo(
     1,
     {

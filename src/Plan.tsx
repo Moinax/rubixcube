@@ -299,14 +299,9 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
           {/* The presentation shows the stage big; read, it steps back for the text. */}
           {!where && <div className={`mx-auto w-full ${reading ? "max-w-48 md:max-w-xs" : "max-w-56 md:max-w-md"}`}>{beforeAfter}</div>}
 
-          <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
-            {/* The phone menu above already says which page this is. */}
-            <p className={`${LABEL} max-md:hidden`}>
-              {intro || where ? tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }) : tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}
-            </p>
-            <h1 className="wide text-xl leading-tight md:mt-1">
-              {intro ? tr({ fr: "Comment on résout un cube", nl: "Hoe je een kubus oplost", en: "How a cube gets solved" }) : where ? WHERE_TITLE : STAGES[stage].title}
-            </h1>
+          <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 [&>:first-child]:mt-0 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
+            {/* The menu above names the page: only the idea's page, called something else there, keeps a title. */}
+            {intro && <h1 className="wide text-xl leading-tight">{tr({ fr: "Comment on résout un cube", nl: "Hoe je een kubus oplost", en: "How a cube gets solved" })}</h1>}
             {intro ? (
               <>
                 {PRINCIPLES.map(([heading, text]) => (

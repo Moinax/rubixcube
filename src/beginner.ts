@@ -37,7 +37,7 @@ export const STAGES: Stage[] = tr<Stage[]>({
     },
     {
       title: "La marguerite",
-      goal: "Une fleur sur le dessus : le centre jaune entouré de 4 cases blanches.",
+      goal: "Une fleur sur le dessus\u00a0: le centre jaune entouré de 4 cases blanches.",
       aim: "Faire de cette arête un pétale\u00a0: sa case blanche sur le dessus, à côté du centre jaune.",
       why: "Le dessus ne contient encore rien d'important : on peut y ranger les arêtes blanches sans rien casser.",
     },

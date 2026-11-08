@@ -146,7 +146,7 @@ export const PLAN: PlanStage[] = tr<PlanStage[]>({
         "Recommence jusqu'à avoir 4 pétales blancs autour du centre jaune.",
       ],
       why: "Pourquoi en haut, alors que la croix blanche ira en bas ? Parce qu'en haut il n'y a encore rien à protéger : tu peux tourner les faces comme tu veux pour y amener les pétales. C'est un parking : à l'étape suivante, tu les descends une par une à leur vraie place.",
-      done: "le dessus montre une fleur : le centre jaune entouré de 4 cases blanches.",
+      done: "le dessus montre une fleur\u00a0: le centre jaune entouré de 4 cases blanches.",
     },
     {
       look: "Chaque pétale, et le centre de son autre couleur : le centre vert pour le pétale blanc-vert.",

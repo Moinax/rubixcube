@@ -568,7 +568,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       same for every case of the stage, goes to the foot. A lesson or a phase keeps its title on top. */}
                   {aim ? (
                     !course && group.title && <p className={LABEL}>{group.title}</p>
-                  ) : (
+                  ) : course ? null /* a course's lesson is named by the case menu above */ : (
                     <>
                       <p className={LABEL}>{tr({ fr: "Le but", nl: "Het doel", en: "The goal" })}</p>
                       <p className="wide mt-1 text-lg leading-snug">{group.title ?? stage?.goal}</p>

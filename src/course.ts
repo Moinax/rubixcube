@@ -51,7 +51,10 @@ const WHITE_GREEN_ORANGE = "FLU";
 const GREEN_ORANGE = "FL";
 const GREEN_RED = "FR";
 const DAISY = play(YELLOW_UP, ["F2", "R2", "B2", "L2"]); // the 4 white edges on top, each above its center
-const THREE_PETALS = play(YELLOW_UP, ["R2", "B2", "L2"]); // the daisy with its white-green petal dropped into the cross
+// A daisy whose petals each need their own turn of the top to sit above their center; built forward, never undone
+// from a solved cube (undone, a later turn of the top would carry a dropped petal back up).
+const SHUFFLED_DAISY = play(DAISY, "U F U F' U' F".split(" "));
+const CROSS = "U' F2 y U F2 y U2 F2 y U F2".split(" ");
 const ONE_CORNER_PLACED = play(YELLOW_UP, ["y", ...undo(CYCLE), "y'"]);
 const EDGE_FLIPPED_IN_SLOT = play(YELLOW_UP, [...RIGHT, "U2", ...RIGHT]); // green-orange in its slot, upside down
 const OPPOSITE_DONE = play(YELLOW_UP, ["y", ...undo(SUNE), "y'", "U'"]);
@@ -145,17 +148,39 @@ export const COURSE: Group[] = [
     [1, 1, 1, 1],
   ),
 
+  // The whole cross, petal after petal: each time the cube turns so the next center faces you (no blind back turn).
   demo(
     2,
     {
-      fr: ["Descendre un pétale", "Un pétale attend sur le dessus : il doit descendre sous le centre de son autre couleur (ici le vert).", "Tourne le haut jusqu'à ce que le vert du pétale soit juste au-dessus du centre vert.", "Fais un demi-tour de cette face : le pétale descend, blanc en bas. Recommence pour les 4 pétales."],
-      nl: ["Een blaadje laten zakken", "Een blaadje wacht bovenaan: het moet zakken onder het middenstuk van zijn andere kleur (hier groen).", "Draai de bovenkant tot het groen van het blaadje recht boven het groene middenstuk staat.", "Draai die kant een halve slag: het blaadje zakt, met wit onderaan. Herhaal voor alle 4 de blaadjes."],
-      en: ["Bringing a petal down", "A petal waits on top: it has to drop under the center of its other color (here green).", "Turn the top until the petal's green sits right above the green center.", "Give that face a half turn: the petal drops, white at the bottom. Do it again for all 4 petals."],
+      fr: [
+        "Descendre les 4 pétales",
+        "Les 4 pétales attendent sur le dessus. Chacun doit descendre sous le centre de son autre couleur.",
+        "Le pétale blanc-vert : tourne le haut pour l'amener juste au-dessus du centre vert, puis fais un demi-tour de la face avant. Il descend, sa case blanche dessous.",
+        "Tourne tout le cube : le centre orange vient devant toi. Amène le pétale blanc-orange au-dessus de lui, puis demi-tour de la face avant.",
+        "Pareil avec le centre bleu et le pétale blanc-bleu.",
+        "Et le dernier, au-dessus du centre rouge : la croix blanche est faite.",
+      ],
+      nl: [
+        "De 4 blaadjes laten zakken",
+        "De 4 blaadjes wachten bovenaan. Elk moet zakken onder het middenstuk van zijn andere kleur.",
+        "Het wit-groene blaadje: draai de bovenkant tot het recht boven het groene middenstuk staat, en draai dan de voorkant een halve slag. Het zakt, met het witte vakje onderaan.",
+        "Draai de hele kubus: het oranje middenstuk komt voor je. Breng het wit-oranje blaadje erboven, en draai de voorkant een halve slag.",
+        "Hetzelfde met het blauwe middenstuk en het wit-blauwe blaadje.",
+        "En het laatste, boven het rode middenstuk: het witte kruis is klaar.",
+      ],
+      en: [
+        "Bringing the 4 petals down",
+        "The 4 petals wait on top. Each must drop under the center of its other color.",
+        "The white-green petal: turn the top to bring it right above the green center, then give the front face a half turn. It drops, its white square underneath.",
+        "Turn the whole cube: the orange center comes in front of you. Bring the white-orange petal above it, then a half turn of the front face.",
+        "The same with the blue center and the white-blue petal.",
+        "And the last one, above the red center: the white cross is done.",
+      ],
     },
-    ["U'", "F2"],
-    THREE_PETALS,
-    WHITE_GREEN,
-    [1, 1],
+    CROSS,
+    play(SHUFFLED_DAISY, CROSS),
+    undefined,
+    [2, 3, 3, 3],
   ),
 
   demo(

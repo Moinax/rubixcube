@@ -112,7 +112,10 @@ test("a demo shows only what its stage works with, and the daisy's demos end on 
     assert.equal(petals(g.moves.reduce(applyMove, g.from!)), 4, g.title);
   }
   const drop = COURSE.find((g) => g.stage === 2)!;
-  assert.equal(petals(drop.from!), 4); // the cross starts from the daisy
+  assert.equal(petals(drop.from!), 4); // the cross starts from the daisy…
+  const cross = drop.moves.reduce(applyMove, drop.from!);
+  const down: Vec = [0, -1, 0];
+  assert.ok(SIDES.every((n) => at(cross, [n[0], -1, n[2]] as Vec, down) === "U" && at(cross, [n[0], -1, n[2]] as Vec, n) === center(cross, n))); // …and ends on it
   for (const stage of [3, 4, 5, 6]) assert.ok(COURSE.filter((g) => g.stage === stage).every((g) => g.from!.includes(".")), `stage ${stage}`);
 });
 

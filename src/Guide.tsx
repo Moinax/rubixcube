@@ -424,7 +424,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           {focus ? null : stage ? (
             // The stage menu looks like the plan's: the number in a circle, where you are above the stage's title.
             <details ref={picker} className="group relative md:max-w-md">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell py-1.5 pr-3 pl-2 [&::-webkit-details-marker]:hidden">
+              <summary className="flex h-13 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2 [&::-webkit-details-marker]:hidden">
                 <span className="grid size-8 flex-none place-items-center rounded-full bg-chalk text-sm font-black text-plastic">{current || "i"}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-mist">
@@ -459,41 +459,57 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             </p>
           )}
           {/* The cases: one menu, at every size, so they read as the parts of one stage. */}
-          {/* Shown even for a single case, so the cube and the player keep their height from one stage to the next. */}
-          {(cases.length > 0 || present) && (
-            <details ref={casePicker} className="group relative md:max-w-md">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell px-3 py-1.5 [&::-webkit-details-marker]:hidden">
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs text-mist">
-                    {done ? DONE.toLowerCase() : `${tr({ fr: "cas", nl: "geval", en: "case" })} ${nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}`}
+          {/* Shown even for a single case, so the cube and the player keep their height from one stage to the next. It reads
+              like the stage's menu above it: the case's number in a smaller circle, "Cas 1 sur 4" over its title, at a fixed
+              height (a title too long for a line is cut, its menu line shows it whole); a menu
+              only when there is something else to pick. */}
+          {(cases.length > 0 || present) &&
+            (() => {
+              const k = cases.findIndex(({ g }) => g === group);
+              const chapter = (i: number) => `${i + 1}`;
+              const line = (
+                <>
+                  <span className="ml-1 grid size-6 flex-none place-items-center rounded-full bg-chalk text-[11px] font-black text-plastic">{done ? "✓" : chapter(k)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs text-mist">
+                      {done ? DONE : tr({ fr: `Cas ${k + 1} sur ${cases.length}`, nl: `Geval ${k + 1} van ${cases.length}`, en: `Case ${k + 1} of ${cases.length}` })}
+                    </span>
+                    <span className="line-clamp-1 leading-tight font-semibold">{done ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" }) : group?.title}</span>
                   </span>
-                  <span className="block leading-tight font-semibold">{done ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" }) : group?.title}</span>
-                </span>
-                <Chevron to="down" className="text-mist transition group-open:rotate-180" />
-              </summary>
-              <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
-                {present && (
-                  <li>
-                    <button onClick={present} className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge">
-                      <span className="grid size-7 flex-none place-items-center rounded-full bg-raised text-xs font-black text-chalk">i</span>
-                      {INTRO_LABEL}
-                    </button>
-                  </li>
-                )}
-                {cases.map(({ g, first }, k) => (
-                  <li key={first}>
-                    <button
-                      onClick={() => jump(first)}
-                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${g === group ? "bg-edge font-semibold" : ""}`}
-                    >
-                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${g === group ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{k + 1}</span>
-                      {g.title}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            </details>
-          )}
+                </>
+              );
+              const box = "flex h-13 items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2";
+              if (cases.length < 2 && !present) return <div className={`${box} md:max-w-md`}>{line}</div>;
+              return (
+                <details ref={casePicker} className="group relative md:max-w-md">
+                  <summary className={`${box} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+                    {line}
+                    <Chevron to="down" className="text-mist transition group-open:rotate-180" />
+                  </summary>
+                  <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
+                    {present && (
+                      <li>
+                        <button onClick={present} className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge">
+                          <span className="grid size-7 flex-none place-items-center rounded-full bg-raised text-xs font-black text-chalk">i</span>
+                          {INTRO_LABEL}
+                        </button>
+                      </li>
+                    )}
+                    {cases.map(({ g, first }, i) => (
+                      <li key={first}>
+                        <button
+                          onClick={() => jump(first)}
+                          className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${g === group ? "bg-edge font-semibold" : ""}`}
+                        >
+                          <span className={`grid size-6 flex-none place-items-center rounded-full text-[11px] font-black ${g === group ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{chapter(i)}</span>
+                          {g.title}
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              );
+            })()}
         </div>
 
         <div className={`grid flex-1 content-start items-center gap-4 ${focus ? "" : "md:grid-cols-2 md:content-center md:gap-10"}`}>

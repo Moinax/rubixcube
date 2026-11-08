@@ -230,7 +230,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
   const header = (
     <div className="flex items-center gap-2">
       <details ref={menu} className="group relative min-w-0 flex-1 md:max-w-md">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell py-1.5 pr-3 pl-2 [&::-webkit-details-marker]:hidden">
+        <summary className="flex h-13 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2 [&::-webkit-details-marker]:hidden">
           <PageMark page={stage} current />
           <span className="min-w-0 flex-1">
             {stage > 0 && <span className="block text-xs text-mist">{tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}</span>}

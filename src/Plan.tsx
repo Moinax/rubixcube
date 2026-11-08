@@ -15,12 +15,12 @@ type Props = { stage: number; onStage: (stage: number) => void; onBack: () => vo
 
 /** A small flat drawing of the cube `state` (its top, front and right faces, or its bottom, front and right ones
  * `below`), for a list where a 3D view each would be too many. */
-function IsoCube({ state, below = false }: { state: string; below?: boolean }) {
+function IsoCube({ state, below = false, className = "size-14" }: { state: string; below?: boolean; className?: string }) {
   const [sx, sy] = [Math.sqrt(3) / 2, 0.5];
   const at = ([x, y, z]: number[]) => `${((x - z) * sx).toFixed(3)},${((below ? -sy : sy) * (x + z) - y).toFixed(3)}`;
   const shown = [below ? [0, -1, 0] : [0, 1, 0], [0, 0, 1], [1, 0, 0]].map(String);
   return (
-    <svg viewBox="-2.8 -3.2 5.6 6.4" className="size-14 flex-none" aria-hidden>
+    <svg viewBox="-2.8 -3.2 5.6 6.4" className={`flex-none ${className}`} aria-hidden>
       {STICKERS.map(({ pos, normal }, i) => {
         if (!shown.includes(String(normal))) return null;
         const center = pos.map((p, k) => p + normal[k] * 0.5);
@@ -135,25 +135,32 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
               <>
                 <p className="mt-1 text-mist">
                   {tr({
-                    fr: "Tiens ton cube jaune en haut et trouve le dessin qui lui ressemble (le gris, c'est n'importe quelle couleur). Si plusieurs vont, prends le plus bas dans la liste.",
-                    nl: "Houd je kubus met geel boven en zoek de tekening die erop lijkt (grijs is eender welke kleur). Passen er meerdere, neem dan de onderste in de lijst.",
-                    en: "Hold your cube yellow on top and find the drawing that looks like it (grey is any color). If several fit, take the lowest in the list.",
+                    fr: "Tiens ton cube jaune en haut et trouve la ligne dont le premier dessin lui ressemble (le gris, c'est n'importe quelle couleur) : le second montre ce que l'étape va en faire. Si plusieurs vont, prends la plus basse.",
+                    nl: "Houd je kubus met geel boven en zoek de rij waarvan de eerste tekening erop lijkt (grijs is eender welke kleur): de tweede toont wat de stap ervan maakt. Passen er meerdere, neem dan de onderste.",
+                    en: "Hold your cube yellow on top and find the row whose first drawing looks like it (grey is any color): the second shows what the stage makes of it. If several fit, take the lowest.",
                   })}
                 </p>
                 <ol className="mt-3 grid gap-1.5">
                   {SEEN.map((seen, m) => (
                     <li key={m}>
-                      {/* The stage to do is what the row says first; what your cube looks like comes under it. */}
+                      {/* The stage to do is what the row says first, what your cube looks like under it; the drawings
+                          go from your cube to what the stage makes of it (under the text on a phone). */}
                       <button onClick={() => onStage(m + 1)} className="flex w-full items-center gap-3 rounded-xl bg-raised p-2 pl-3 text-left hover:ring-1 hover:ring-edge">
                         <span className="grid size-9 flex-none place-items-center rounded-full bg-chalk text-base font-black text-plastic">{m + 1}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-semibold">{STAGES[m + 1].title}</span>
-                          <span className="block text-sm text-mist">
-                            {tr({ fr: "Ton cube : ", nl: "Je kubus: ", en: "Your cube: " })}
-                            <Colored text={seen} />
+                        <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-semibold">{STAGES[m + 1].title}</span>
+                            <span className="block text-sm text-mist">
+                              {tr({ fr: "Ton cube : ", nl: "Je kubus: ", en: "Your cube: " })}
+                              <Colored text={seen} />
+                            </span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <IsoCube state={m ? MILESTONES[m] : SCRAMBLED} below={SEEN_FROM_BELOW.includes(m)} className="size-12" />
+                            <Chevron className="text-mist" />
+                            <IsoCube state={MILESTONES[m + 1]} below={SEEN_FROM_BELOW.includes(m + 1)} className="size-12" />
                           </span>
                         </span>
-                        <IsoCube state={m ? MILESTONES[m] : SCRAMBLED} below={SEEN_FROM_BELOW.includes(m)} />
                       </button>
                     </li>
                   ))}

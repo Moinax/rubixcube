@@ -386,11 +386,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
       <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:px-8 md:phone:gap-2 md:phone:pt-2 ${focus ? "max-w-2xl pb-28" : "max-w-5xl pb-8"}`}>
         {focus ? (
           focus.header
-        ) : (
+        ) : course ? null : (
           <p className="-mb-2 text-sm text-mist">
-            {course
-              ? tr({ fr: "Cube d'exemple", nl: "Voorbeeldkubus", en: "Sample cube" })
-              : (
+            {(
                 <>
                   {/* Each color stays with its word when the line wraps on a phone. */}
                   <span className="whitespace-nowrap">
@@ -406,7 +404,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
         )}
 
         <div className="flex flex-col gap-2">
-          {!focus && (
+          {!focus && !course && (
           <div className="flex gap-[3px]">
             {segments.map(({ title, first, count }, i) =>
               count ? (
@@ -424,25 +422,29 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           </div>
           )}
           {focus ? null : stage ? (
-            <details ref={picker} className="group relative">
-              <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 [&::-webkit-details-marker]:hidden">
-                <span className="wide text-lg md:text-xl">{stage.title}</span>
-                <span className="flex items-center gap-1 text-sm whitespace-nowrap text-mist">
-                  {current === 0
-                    ? tr({ fr: "pour commencer", nl: "om te beginnen", en: "to begin" })
-                    : `${tr({ fr: "étape", nl: "stap", en: "step" })} ${nOf(current, stages.length - 1)}`}
-                  <Chevron to="down" className="transition group-open:rotate-180" />
+            // The stage menu looks like the plan's: the number in a circle, where you are above the stage's title.
+            <details ref={picker} className="group relative md:max-w-md">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell py-1.5 pr-3 pl-2 [&::-webkit-details-marker]:hidden">
+                <span className="grid size-8 flex-none place-items-center rounded-full bg-chalk text-sm font-black text-plastic">{current || "i"}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs text-mist">
+                    {current === 0
+                      ? tr({ fr: "Pour commencer", nl: "Om te beginnen", en: "To begin" })
+                      : tr({ fr: `Étape ${current} sur ${stages.length - 1}`, nl: `Stap ${current} van ${stages.length - 1}`, en: `Stage ${current} of ${stages.length - 1}` })}
+                  </span>
+                  <span className="block leading-tight font-semibold">{stage.title}</span>
                 </span>
+                <Chevron to="down" className="text-mist transition group-open:rotate-180" />
               </summary>
-              <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60 md:left-auto md:w-80">
+              <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
                 {stages.map((s, i) => (
                   <li key={s.title}>
                     <button
                       disabled={firsts[i] < 0}
                       onClick={() => jump(firsts[i])}
-                      className={`flex w-full items-baseline gap-2 rounded-xl px-3 py-2 text-left text-sm enabled:hover:bg-edge disabled:text-mist/60 ${i === current ? "bg-edge font-semibold" : ""}`}
+                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm enabled:hover:bg-edge disabled:text-mist/60 ${i === current ? "bg-edge font-semibold" : ""}`}
                     >
-                      <span className="w-4 text-mist">{i}</span>
+                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${i === current ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{i || "i"}</span>
                       <span className="flex-1">{s.title}</span>
                       {firsts[i] < 0 && <span className="text-xs">{tr({ fr: "déjà fait", nl: "al gedaan", en: "already done" })}</span>}
                     </button>

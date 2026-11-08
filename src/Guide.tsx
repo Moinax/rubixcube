@@ -437,7 +437,13 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pair={worked?.pair}
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
-              peek={hidden && { from: hidden, key: step }}
+              peek={
+                learn && !atResult && !atIntro && step === groupStart
+                  ? hidden
+                    ? { from: hidden, key: step }
+                    : { from: [-1, 0, 0], key: step, amount: 0.25 } // nothing hidden: a light sway, so each instruction comes alive
+                  : undefined
+              }
               next={worked?.fingers && move}
             />
             )}

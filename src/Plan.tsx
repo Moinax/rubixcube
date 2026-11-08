@@ -56,7 +56,7 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
 
 /** How to do a stage, in words, over the page: rising from the bottom on a phone, from the right on a wide screen,
  * where the cube stays in view beside it. Closed by ✕, a tap outside it, or Escape. */
-function HowSheet({ title, onClose, onWatch, watchLabel, children }: { title: string; onClose: () => void; onWatch?: () => void; watchLabel: string; children: ReactNode }) {
+function HowSheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
     const close = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     addEventListener("keydown", close);
@@ -76,11 +76,6 @@ function HowSheet({ title, onClose, onWatch, watchLabel, children }: { title: st
         </header>
         <div className="overflow-y-auto px-5 pb-5 text-[15px] leading-relaxed">
           {children}
-          {onWatch && (
-            <button onClick={onWatch} className="btn btn-main mt-5 w-full">
-              {watchLabel}
-            </button>
-          )}
         </div>
       </section>
     </div>
@@ -151,7 +146,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
     onClick: () => (next !== undefined ? onStage(next) : onBack()),
   };
   const howSheet = how && stage > 0 && (
-    <HowSheet title={STAGES[stage].title} onClose={() => setHow(false)} onWatch={watched ? undefined : () => (setHow(false), onView("see"))} watchLabel={watchLabel}>
+    <HowSheet title={STAGES[stage].title} onClose={() => setHow(false)}>
       <h3 className={LABEL}>{tr({ fr: "Ce que tu cherches", nl: "Wat je zoekt", en: "What you look for" })}</h3>
       <p className="mt-1">
         <Colored text={plan.look} />

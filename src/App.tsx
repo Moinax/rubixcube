@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import CubeView from "./CubeView";
 import Guide from "./Guide";
 import { Back, BasicsChoice, Home, InputChoice, modeTitle, type Mode, type Resume } from "./Home";
@@ -13,8 +13,8 @@ import { nOf, tr } from "./i18n";
 
 /** Modes that solve the user's own cube, so need its colors first. */
 type CubeMode = Exclude<Mode, "course">;
-/** `hands`: the course on holding the cube, rather than on reading the moves. */
-type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number; course?: boolean; hands?: boolean; cfop?: boolean };
+/** `hands`: the course on holding the cube, rather than on reading the moves; `plan`: the stage of the plan it was opened from. */
+type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boolean; step: number; course?: boolean; hands?: boolean; cfop?: boolean; plan?: number };
 type Screen =
   | { name: "home" }
   | { name: "basics" }
@@ -144,6 +144,25 @@ export default function App() {
     // The course is always one tap away; only a guide on the user's own cube is worth resuming.
     if (screen.name === "guide" && !screen.course) localStorage.setItem(GUIDE_KEY, JSON.stringify(screen));
   }, [screen]);
+  // The browser's back button (and a phone's back gesture) goes back one screen: each new screen is a history
+  // entry, a change within a screen (a stage, a move) only updates it. A screen restored from history isn't pushed again.
+  const shown = useRef<string>(undefined);
+  const popped = useRef(false);
+  useEffect(() => {
+    if (screen.name === "solving") return;
+    if (shown.current === undefined || popped.current) history.replaceState(screen, "");
+    else if (shown.current !== screen.name) history.pushState(screen, "");
+    else history.replaceState(screen, "");
+    [shown.current, popped.current] = [screen.name, false];
+  }, [screen]);
+  useEffect(() => {
+    const back = (e: PopStateEvent) => {
+      popped.current = true;
+      setScreen(e.state ?? { name: "home" });
+    };
+    addEventListener("popstate", back);
+    return () => removeEventListener("popstate", back);
+  }, []);
   // Read once per visit to the home screen: it rebuilds the saved plan, which costs a solve.
   const saved = useMemo(() => (screen.name === "home" ? resumable() : undefined), [screen.name]);
 
@@ -204,7 +223,7 @@ export default function App() {
             // The course at the first case of that stage.
             const first = COURSE.findIndex((g) => g.stage === stage);
             const step = COURSE.slice(0, first).reduce((n, g) => n + g.moves.length, 0);
-            setScreen({ name: "guide", start: COURSE[0].from!, groups: COURSE, learn: true, step, course: true });
+            setScreen({ name: "guide", start: COURSE[0].from!, groups: COURSE, learn: true, step, course: true, plan: stage });
           }}
           onMyCube={() => setScreen({ name: "input", mode: "learn" })}
         />
@@ -253,7 +272,8 @@ export default function App() {
           stages={screen.course ? courseOf(screen.hands).stages : method(screen.cfop).stages}
           step={screen.step}
           onStep={(step) => setScreen({ ...screen, step })}
-          onHome={() => setScreen({ name: "home" })}
+          onHome={() => setScreen(screen.plan === undefined ? { name: "home" } : { name: "plan", stage: screen.plan })}
+          backLabel={screen.plan === undefined ? undefined : tr({ fr: "Le plan", nl: "Het plan", en: "The plan" })}
           onScan={() => setScreen({ name: "scan", mode })}
           onEdit={(state) => setScreen({ name: "edit", mode, state })}
         />

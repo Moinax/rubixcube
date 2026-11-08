@@ -56,6 +56,8 @@ type GuideProps = {
   step: number;
   onStep: (step: number) => void;
   onHome: () => void;
+  /** The back link's label, when it leads elsewhere than home. */
+  backLabel?: string;
   onScan: () => void;
   onEdit: (state: string) => void;
 };
@@ -89,7 +91,7 @@ const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 // A click leaves the focus where it was, so Space keeps toggling the auto mode.
 const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
-export default function Guide({ start, groups, learn, course, stages = STAGES, step, onStep, onHome, onScan, onEdit }: GuideProps) {
+export default function Guide({ start, groups, learn, course, stages = STAGES, step, onStep, onHome, backLabel = HOME, onScan, onEdit }: GuideProps) {
   const flat = useMemo(() => groups.flatMap((g, group) => g.moves.map((move) => ({ move, group }))), [groups]);
   const states = useMemo(() => planStates(start, groups), [start, groups]);
   const total = flat.length;
@@ -259,7 +261,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
       <div className="flex items-center justify-between gap-3 text-sm text-mist">
         <span className="flex items-center gap-4">
-          <Back label={HOME} onClick={onHome} />
+          <Back label={backLabel} onClick={onHome} />
           <button
             onClick={() => setLexicon({ tab: "moves" })}
             title={tr({ fr: "Lexique (?)", nl: "Woordenlijst (?)", en: "Glossary (?)" })}

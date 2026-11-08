@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import CubeView, { BLANK } from "./CubeView";
 import Guide from "./Guide";
 import Lexicon, { LexiconButton } from "./Lexicon";
-import { Chevron, MiniFace, TopBar, usePopover } from "./Home";
+import { BAR_MENU, Chevron, MiniFace, TopBar, usePopover } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
 import { CASES, MILESTONES, PLAN, PRINCIPLES, SCRAMBLED, SEEN, SEEN_FROM_BELOW, TOPS } from "./plan";
@@ -226,35 +226,29 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
   );
 
 
-  // The pages in one menu at every size.
+  // The pages in one menu, in the top bar.
   const header = (
-    <div className="flex items-center gap-2">
-      <details ref={menu} className="group relative min-w-0 flex-1 md:max-w-md">
-        <summary className="flex h-13 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2 [&::-webkit-details-marker]:hidden">
-          <PageMark page={stage} current />
-          <span className="min-w-0 flex-1">
-            {stage > 0 && <span className="block text-xs text-mist">{tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}</span>}
-            <span className="block leading-tight font-semibold">{pageTitle(stage)}</span>
-          </span>
-          <Chevron to="down" className="text-mist transition group-open:rotate-180" />
-        </summary>
-        <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
-          {PAGES.map((i) => (
-            <li key={i}>
-              <button
-                onClick={() => onStage(i)}
-                aria-current={i === stage ? "step" : undefined}
-                className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${i === stage ? "bg-edge font-semibold" : ""}`}
-              >
-                <PageMark page={i} current={i === stage} />
-                {i > 0 && <span className="text-mist">{tr({ fr: `Étape ${i}`, nl: `Stap ${i}`, en: `Stage ${i}` })} ·</span>}
-                {pageTitle(i)}
-              </button>
-            </li>
-          ))}
-        </ol>
-      </details>
-    </div>
+    <details ref={menu} className="group flex min-w-0 flex-1">
+      <summary className={BAR_MENU.summary}>
+        <PageMark page={stage} current />
+        <span className="line-clamp-2 min-w-0 flex-1 text-sm leading-[1.1] font-semibold">{pageTitle(stage)}</span>
+        <Chevron to="down" className="flex-none text-mist transition group-open:rotate-180" />
+      </summary>
+      <ol className={BAR_MENU.list}>
+        {PAGES.map((i) => (
+          <li key={i}>
+            <button
+              onClick={() => onStage(i)}
+              aria-current={i === stage ? "step" : undefined}
+              className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${i === stage ? "bg-edge font-semibold" : ""}`}
+            >
+              <PageMark page={i} current={i === stage} />
+              {pageTitle(i)}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 
   // Watched: the stage's cases, played in the guide's own player, in this page.
@@ -286,13 +280,12 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
 
   return (
     <>
-      <TopBar back={back}>
+      <TopBar back={back} menu={header}>
         <LexiconButton onClick={() => setLexicon(true)} />
       </TopBar>
       {lexicon && <Lexicon tab="moves" onClose={() => setLexicon(false)} />}
       {/* One column a comfortable line long: the drawings, then the text under them. */}
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4 pb-28 md:px-8">
-        {header}
 
         <div className="grid gap-4 md:gap-6">
           {/* Where you are is a list of drawings already: it takes the whole width. */}

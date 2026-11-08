@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { LexiconButton, type Tab } from "./Lexicon";
-import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
+import { BAR_MENU, Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
 import { applyMove, center, describeMove, invert, isRotation, stickerAt, STICKERS, upright, type Face, type Vec } from "./cube";
@@ -416,16 +416,40 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     </div>
   );
 
+  // The stage menu, in the top bar: the number in a circle, the stage's title; its list under it.
+  const stageMenu = stage && (
+    <details ref={picker} className="group flex min-w-0 flex-1">
+      <summary className={BAR_MENU.summary}>
+        <span className="grid size-7 flex-none place-items-center rounded-full bg-chalk text-xs font-black text-plastic">{current || "i"}</span>
+        <span className="line-clamp-2 min-w-0 flex-1 text-sm leading-[1.1] font-semibold">{stage.title}</span>
+        <Chevron to="down" className="flex-none text-mist transition group-open:rotate-180" />
+      </summary>
+      <ol className={BAR_MENU.list}>
+        {stages.map((s, i) => (
+          <li key={s.title}>
+            <button
+              disabled={firsts[i] < 0}
+              onClick={() => jump(firsts[i])}
+              className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm enabled:hover:bg-edge disabled:text-mist/60 ${i === current ? "bg-edge font-semibold" : ""}`}
+            >
+              <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${i === current ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{i || "i"}</span>
+              <span className="flex-1">{s.title}</span>
+              {firsts[i] < 0 && <span className="text-xs">{tr({ fr: "déjà fait", nl: "al gedaan", en: "already done" })}</span>}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+
   return (
     <>
-      <TopBar back={focus?.back ?? { label: course ? tr({ fr: "Les bases", nl: "De basis", en: "The basics" }) : HOME, onClick: onHome }}>
+      <TopBar back={focus?.back ?? { label: course ? tr({ fr: "Les bases", nl: "De basis", en: "The basics" }) : HOME, onClick: onHome }} menu={focus?.header ?? stageMenu}>
         <LexiconButton onClick={() => setLexicon({ tab: "moves" })} />
       </TopBar>
       {/* In the plan's page, one column a comfortable line long, like the rest of the plan. */}
       <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:px-8 md:phone:gap-2 md:phone:pt-2 ${focus ? "max-w-2xl pb-28" : "max-w-5xl pb-8"}`}>
-        {focus ? (
-          focus.header
-        ) : course ? null : (
+        {focus || course ? null : (
           <p className="-mb-2 text-sm text-mist">
             {(
                 <>
@@ -461,36 +485,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           </div>
           )}
           {focus ? null : stage ? (
-            // The stage menu looks like the plan's: the number in a circle, where you are above the stage's title.
-            <details ref={picker} className="group relative md:max-w-md">
-              <summary className="flex h-13 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2 [&::-webkit-details-marker]:hidden">
-                <span className="grid size-8 flex-none place-items-center rounded-full bg-chalk text-sm font-black text-plastic">{current || "i"}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs text-mist">
-                    {current === 0
-                      ? tr({ fr: "Pour commencer", nl: "Om te beginnen", en: "To begin" })
-                      : tr({ fr: `Étape ${current} sur ${stages.length - 1}`, nl: `Stap ${current} van ${stages.length - 1}`, en: `Stage ${current} of ${stages.length - 1}` })}
-                  </span>
-                  <span className="block leading-tight font-semibold">{stage.title}</span>
-                </span>
-                <Chevron to="down" className="text-mist transition group-open:rotate-180" />
-              </summary>
-              <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
-                {stages.map((s, i) => (
-                  <li key={s.title}>
-                    <button
-                      disabled={firsts[i] < 0}
-                      onClick={() => jump(firsts[i])}
-                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm enabled:hover:bg-edge disabled:text-mist/60 ${i === current ? "bg-edge font-semibold" : ""}`}
-                    >
-                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${i === current ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{i || "i"}</span>
-                      <span className="flex-1">{s.title}</span>
-                      {firsts[i] < 0 && <span className="text-xs">{tr({ fr: "déjà fait", nl: "al gedaan", en: "already done" })}</span>}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            </details>
+            null
           ) : (
             <p className="flex items-baseline justify-between">
               <span className="wide text-lg md:text-xl">{modeTitle("fast")}</span>

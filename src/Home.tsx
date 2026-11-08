@@ -101,21 +101,34 @@ const Back = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button
     onClick={onClick}
     onMouseDown={(e) => e.preventDefault()} // keeps the focus where it was, so the guide's keys keep working
-    className="inline-flex h-10 min-w-0 items-center gap-1.5 rounded-full border border-edge bg-shell pr-4 pl-2.5 text-sm font-semibold whitespace-nowrap text-chalk hover:bg-raised"
+    title={label}
+    aria-label={label}
+    className="grid size-10 flex-none place-items-center rounded-full border border-edge bg-shell text-chalk hover:bg-raised"
   >
     <Chevron to="left" />
-    <span className="truncate">{label}</span>
   </button>
 );
 
-/** The top of every screen: the way back on the left (none at home), the screen's tools then the languages on the right. */
-export const TopBar = ({ back, children }: { back?: { label: string; onClick: () => void }; children?: ReactNode }) => (
-  <header className="mx-auto flex min-h-10 w-full max-w-5xl flex-none items-center gap-2 px-4 pt-4 md:px-8">
-    {back && <Back {...back} />}
-    <span className="ml-auto flex flex-none items-center gap-1.5">
-      {children}
-      <Langs />
-    </span>
+/** Classes for a menu that sits in the top bar: a pill like the back button, its list under it, wider than it. */
+export const BAR_MENU = {
+  summary:
+    "flex h-10 w-full min-w-0 cursor-pointer list-none items-center gap-2 rounded-full border border-edge bg-shell pr-3 pl-1.5 [&::-webkit-details-marker]:hidden",
+  // Under the bar, from its edges on a phone (never past the screen), at the menu's left on a wide screen.
+  list: "absolute inset-x-4 top-full z-40 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60 md:right-auto md:left-20 md:w-96",
+};
+
+/** The top of every screen, kept in view: the way back up one level (an arrow, its tooltip naming where), the
+ * screen's menu (a page or stage to pick), then its tools; the languages only at home, where you choose once. */
+export const TopBar = ({ back, menu, children }: { back?: { label: string; onClick: () => void }; menu?: ReactNode; children?: ReactNode }) => (
+  <header className="sticky top-0 z-30 flex-none bg-plastic/90 backdrop-blur">
+    <div className="relative mx-auto flex h-16 w-full max-w-5xl items-center gap-2 px-4 md:px-8">
+      {back && <Back {...back} />}
+      {menu && <div className="flex min-w-0 flex-1 md:max-w-sm">{menu}</div>}
+      <span className="ml-auto flex flex-none items-center gap-1.5">
+        {children}
+        {!back && <Langs />}
+      </span>
+    </div>
   </header>
 );
 

@@ -88,7 +88,6 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
 export default function Plan({ stage, cases: step, onStage, onCases, onBack, onMyCube }: Props) {
   const plan = PLAN[stage];
   const [intro, where] = [stage === 0, stage === WHERE];
-  const cases = CASES[stage]?.length;
   const page = PAGES.indexOf(stage);
   const next = PAGES[page + 1];
   const { ref: menu } = usePopover(stage);
@@ -104,7 +103,7 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
   const back = { label: tr({ fr: "Les bases", nl: "De basis", en: "The basics" }), onClick: onBack };
   // What the stage starts from and ends on: beside its text when read, as its presentation when watched.
   const beforeAfter = (
-    <div className="md:sticky md:top-6">
+    <div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
         <Milestone
           at={intro ? 0 : stage - 1}
@@ -227,14 +226,15 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
   return (
     <>
       <TopBar back={back} />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 p-4 pb-28 md:p-8 md:pb-28">
+      {/* One column a comfortable line long: the drawings, then the text under them. */}
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4 pb-28 md:p-8 md:pb-28">
         {header}
 
-        <div className="grid gap-6 md:grid-cols-2 md:items-start md:gap-10">
+        <div className="grid gap-6">
           {/* Where you are is a list of drawings already: it takes the whole width. */}
           {!where && beforeAfter}
 
-          <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0 md:col-span-2 md:mx-auto md:w-full md:max-w-2xl" : ""}`}>
+          <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
             {/* The phone menu above already says which page this is. */}
             <p className={`${LABEL} max-md:hidden`}>
               {intro || where ? tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }) : tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}
@@ -328,27 +328,6 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
                   <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
                   <Colored text={plan.done} />
                 </p>
-                {/* Named after the stage: what opens is that stage played out, not a list to browse. */}
-                <button onClick={() => choose("see")} className="mt-4 flex w-full items-center gap-3 rounded-[0.875rem] border border-edge bg-raised p-3 text-left hover:border-mist/60">
-                  <span className="grid size-10 flex-none place-items-center rounded-full bg-chalk text-plastic">
-                    <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden>
-                      <path d="M7 5v14l12-7z" />
-                    </svg>
-                  </span>
-                  <span>
-                    <span className="block font-semibold">
-                      {tr({ fr: "Montre-moi : ", nl: "Laat zien: ", en: "Show me: " })}
-                      {STAGES[stage].title[0].toLowerCase() + STAGES[stage].title.slice(1)}
-                    </span>
-                    <span className="block text-sm text-mist">
-                      {tr({
-                        fr: `${cases} situation${cases > 1 ? "s jouées" : " jouée"} coup par coup sur un cube en 3D`,
-                        nl: `${cases} ${cases > 1 ? "situaties" : "situatie"}, zet voor zet gespeeld op een 3D-kubus`,
-                        en: `${cases} situation${cases > 1 ? "s" : ""}, played move by move on a 3D cube`,
-                      })}
-                    </span>
-                  </span>
-                </button>
               </>
             )}
           </section>
@@ -356,7 +335,7 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
 
         {/* Fixed, like the guide's player: the next stage is always under the same thumb. */}
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 md:px-8">
+          <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3 md:px-8">
             <button className="btn border border-edge bg-shell hover:bg-raised" disabled={!page} onClick={() => onStage(PAGES[page - 1])}>
               <Chevron to="left" />
               {tr({ fr: "Précédent", nl: "Vorige", en: "Previous" })}

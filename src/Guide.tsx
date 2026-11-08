@@ -308,7 +308,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           <span className="max-sm:hidden">{tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}</span>
         </button>
       </TopBar>
-      <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-24 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
+      {/* In the plan's page, one column a comfortable line long, like the rest of the plan. */}
+      <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 pb-24 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2 ${focus ? "max-w-2xl" : "max-w-5xl"}`}>
         {focus ? (
           focus.header
         ) : (
@@ -421,12 +422,12 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           )}
         </div>
 
-        <div className="grid flex-1 content-start items-center gap-4 md:grid-cols-2 md:content-center md:gap-10">
+        <div className={`grid flex-1 content-start items-center gap-4 ${focus ? "" : "md:grid-cols-2 md:content-center md:gap-10"}`}>
           {atIntro && intro ? (
             <div className={`transition-opacity duration-200 ${fading ? "opacity-0" : ""}`}>{intro.cubes}</div>
           ) : (
           <div
-            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
+            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${focus ? "md:max-h-[40dvh]" : "md:max-h-[60dvh]"} md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
           >
             <CubeView
               state={anim?.from ?? state}

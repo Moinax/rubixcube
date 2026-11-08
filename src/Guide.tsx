@@ -412,7 +412,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
           >
             {atIntro && intro ? (
-              <CubeView state={intro.from} moves={intro.moves} replay={introRun} />
+              <CubeView state={intro.from} moves={intro.moves} replay={introRun} onReplay={() => setIntroRun((n) => n + 1)} />
             ) : (
             <CubeView
               state={anim?.from ?? state}
@@ -435,12 +435,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 <p className="mt-1">
                   <Colored text={intro.text} />
                 </p>
-                <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                  <button onClick={() => setIntroRun((n) => n + 1)} onMouseDown={keepFocus} className="font-semibold underline underline-offset-2 hover:text-white">
-                    {tr({ fr: "↻ Revoir", nl: "↻ Opnieuw", en: "↻ Watch again" })}
-                  </button>
-                  <span className="text-mist">{tr({ fr: "Puis ▶ Suite : chaque situation, une par une.", nl: "Dan ▶ Verder: elke situatie, één voor één.", en: "Then ▶ Next: each situation, one by one." })}</span>
-                </p>
+                <p className="mt-3 text-sm text-mist">{tr({ fr: "Puis ▶ Suite : chaque situation, une par une.", nl: "Dan ▶ Verder: elke situatie, één voor één.", en: "Then ▶ Next: each situation, one by one." })}</p>
               </section>
             ) : done ? (
               <div>

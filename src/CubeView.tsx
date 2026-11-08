@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -8,6 +8,7 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { findPiece, homeOf } from "./beginner";
 import { riders, type Finger } from "./course";
+import { tr } from "./i18n";
 import { applyMove, FACE_COLORS, inLayer, isRotation, moveAxis, quarterTurns, stickerAt, type Face, type Vec } from "./cube";
 
 // BoxGeometry material order: +x, -x, +y, -y, +z, -z.
@@ -72,6 +73,7 @@ type Props = {
   next?: string;
   autoRotate?: boolean;
   below?: boolean;
+  onReplay?: () => void;
 };
 
 /**
@@ -80,13 +82,21 @@ type Props = {
  * so are `pair`, a second piece that goes with it (an F2L edge), and `pairPlace`. A new `replay` count
  * plays the same moves again. `grip` marks where the fingers rest in the home grip: before `next` (the move to
  * play), its fingers stand out and the ones in its way fade; while a move plays, its fingers ride with the face
- * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face.
+ * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face. A ↻ in the
+ * corner puts back a view turned by hand, shown once it was; with `onReplay`, it is always there and plays again too.
  */
-export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false }: Props) {
+export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, onReplay }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void }>(null);
   const ended = useRef(onEnd);
   ended.current = onEnd;
+  const [turned, setTurned] = useState(false);
+  const home = () => {
+    const { controls } = scene.current!;
+    controls.reset();
+    controls.object.position.set(CAMERA[0], below ? -CAMERA[1] : CAMERA[1], CAMERA[2]);
+    controls.update();
+  };
 
   useEffect(() => {
     const el = host.current!;
@@ -104,6 +114,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     camera.position.set(...CAMERA);
     const controls = new OrbitControls(camera, renderer.domElement);
     Object.assign(controls, { enableDamping: true, enablePan: false, minDistance: 6, maxDistance: 14 });
+    controls.addEventListener("start", () => setTurned(true));
     const root = new THREE.Group();
     world.add(root);
     scene.current = { root, controls };
@@ -141,11 +152,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     scene.current!.controls.autoRotate = autoRotate;
   }, [autoRotate]);
 
-  useEffect(() => {
-    const { controls } = scene.current!;
-    controls.object.position.set(CAMERA[0], below ? -CAMERA[1] : CAMERA[1], CAMERA[2]);
-    controls.update();
-  }, [below]);
+  useEffect(home, [below]);
 
   // The pieces to follow, each with the place it goes to.
   const tracked = ([[piece, place], [pair, pairPlace]] as [string | undefined, string | undefined][]).filter((t): t is [string, string | undefined] => !!t[0]);
@@ -247,5 +254,26 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     show(state, 0);
   }, [state, moves?.join(" "), piece, place, pair, pairPlace, replay, grip, next]);
 
-  return <div ref={host} className="relative h-full w-full touch-none" />;
+  return (
+    <div ref={host} className="relative h-full w-full touch-none">
+      {(onReplay || turned) && (
+        <button
+          onClick={() => {
+            home();
+            setTurned(false);
+            onReplay?.();
+          }}
+          onMouseDown={(e) => e.preventDefault()} // the guide's keys keep working
+          title={onReplay ? tr({ fr: "Revoir", nl: "Opnieuw bekijken", en: "Watch again" }) : tr({ fr: "Remettre le cube en place", nl: "Kubus terugzetten", en: "Put the cube back" })}
+          aria-label={onReplay ? tr({ fr: "Revoir", nl: "Opnieuw bekijken", en: "Watch again" }) : tr({ fr: "Remettre le cube en place", nl: "Kubus terugzetten", en: "Put the cube back" })}
+          className="absolute top-0 right-0 z-10 grid size-9 place-items-center rounded-full border border-edge bg-shell/80 text-mist backdrop-blur hover:text-chalk"
+        >
+          <svg viewBox="0 0 24 24" className="size-4.5 fill-none stroke-current stroke-2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
 }

@@ -3,12 +3,11 @@ import CubeView from "./CubeView";
 import Guide from "./Guide";
 import { BasicsChoice, Home, InputChoice, modeTitle, TopBar, type Mode, type Resume } from "./Home";
 import Plan from "./Plan";
-import { CASES } from "./plan";
 import NetEditor from "./NetEditor";
 import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
 import { CFOP_STAGES, cfopSolve } from "./cfop";
-import { COURSE, HAND_STAGES, HANDS, INTROS } from "./course";
+import { COURSE, HAND_STAGES, HANDS } from "./course";
 import { phaseTwo, randomCube, SOLVED, solve, suspects, upright, validate } from "./cube";
 import { nOf, tr } from "./i18n";
 
@@ -19,7 +18,7 @@ type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boole
 type Screen =
   | { name: "home" }
   | { name: "basics" }
-  /** `cases`: the step in the stage's cases, open over the plan. */
+  /** `cases`: the step in the stage's cases, when they are watched. */
   | { name: "plan"; stage: number; cases?: number }
   | { name: "input"; mode: CubeMode }
   | { name: "scan"; mode: CubeMode; scan?: Scan }
@@ -146,26 +145,19 @@ export default function App() {
     // The course is always one tap away; only a guide on the user's own cube is worth resuming.
     if (screen.name === "guide" && !screen.course) localStorage.setItem(GUIDE_KEY, JSON.stringify(screen));
   }, [screen]);
-  // The browser's back button (and a phone's back gesture) goes back one screen, or closes the cases open over
-  // the plan: each is a history entry, a change within it (a stage, a move) only updates it. A screen restored
-  // from history isn't pushed again.
+  // The browser's back button (and a phone's back gesture) goes back one screen: each is a history entry, a change
+  // within it (a stage, a move) only updates it. A screen restored from history isn't pushed again.
   const shown = useRef<string>(undefined);
   const popped = useRef(false);
-  // The open cases have their own history entry: closing them goes back to the plan's.
-  const casesPushed = useRef(false);
   useEffect(() => {
     if (screen.name === "solving") return;
-    const key = screen.name === "plan" && screen.cases !== undefined ? "cases" : screen.name;
-    if (shown.current === undefined || popped.current || shown.current === key) history.replaceState(screen, "");
-    else {
-      history.pushState(screen, "");
-      casesPushed.current = key === "cases";
-    }
-    [shown.current, popped.current] = [key, false];
+    if (shown.current === undefined || popped.current || shown.current === screen.name) history.replaceState(screen, "");
+    else history.pushState(screen, "");
+    [shown.current, popped.current] = [screen.name, false];
   }, [screen]);
   useEffect(() => {
     const back = (e: PopStateEvent) => {
-      [popped.current, casesPushed.current] = [true, false];
+      popped.current = true;
       setScreen(e.state ?? { name: "home" });
     };
     addEventListener("popstate", back);
@@ -222,33 +214,15 @@ export default function App() {
       return (
         <Plan
           stage={screen.stage}
+          cases={screen.cases}
+          onCases={(cases) => setScreen({ ...screen, cases })}
           onStage={(stage) => {
             setScreen({ name: "plan", stage });
             scrollTo(0, 0);
           }}
           onBack={() => setScreen({ name: "basics" })}
-          onCases={() => setScreen({ ...screen, cases: 0 })}
           onMyCube={() => setScreen({ name: "input", mode: "learn" })}
-        >
-          {screen.cases !== undefined && (
-            <Guide
-              start={CASES[screen.stage][0].from!}
-              groups={CASES[screen.stage]}
-              learn
-              course
-              step={screen.cases}
-              onStep={(cases) => setScreen({ ...screen, cases })}
-              focus={{
-                title: STAGES[screen.stage].title,
-                intro: INTROS[screen.stage],
-                onClose: () => (casesPushed.current ? history.back() : setScreen({ name: "plan", stage: screen.stage })),
-              }}
-              onHome={() => setScreen({ name: "home" })}
-              onScan={() => {}}
-              onEdit={() => {}}
-            />
-          )}
-        </Plan>
+        />
       );
     case "input":
       return (

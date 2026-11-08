@@ -8,17 +8,16 @@ colors in, or take a random scramble (handy for testing). Then follow the moves
 one by one on an animated 3D cube:
 
 - **Learn the basics** (no scan), in three parts. Understanding the method
-  (`src/plan.ts`): the idea, then each of the 8 stages for any cube, before and
-  after on two 3D cubes with what doesn't count yet greyed out, what to look for,
-  what to do, why it breaks nothing, and a "where am I?" checklist. Then
-  (`src/course.ts`): reading the
-  moves, the notation then the beginner method case by case, each case a demo
-  cube built backwards from its algorithm, what its stage doesn't use yet greyed
-  out (the daisy's cases end on the whole daisy, after a presentation that plays
-  the whole stage once on a scrambled cube), to recognise on your own cube; or
-  holding the cube, the home grip marked on the 3D cube and the finger or wrist
-  that makes R, L, U and the sexy move, the fingers riding with the face they
-  turn.
+  (`src/plan.ts`): the idea, a "where am I?" list of drawings, then each of the
+  8 stages for any cube, watched or read (the viewer's choice stays). Watched,
+  the stage's cases play in the guide's player in the page: first the stage
+  before and after on two 3D cubes, what doesn't count yet greyed out, then each
+  case (`src/course.ts`), a demo cube built backwards from its algorithm, what its
+  stage doesn't use greyed out. Read, the before/after and the whole text: what
+  to look for, what to do, why it breaks nothing. Then reading the moves (the
+  notation, then the beginner method case by case), or holding the cube: the home
+  grip marked on the 3D cube and the finger or wrist that makes R, L, U and the
+  sexy move, the fingers riding with the face they turn.
 - **Beginner method**: layer by layer (`src/beginner.ts`), ~170 moves split into
   8 stages (daisy, white cross, white corners, middle layer, yellow cross, yellow
   edges, yellow corners placed then oriented), each with the rule it teaches and

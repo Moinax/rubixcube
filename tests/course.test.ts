@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { beginnerSolve, planStates, STAGES } from "../src/beginner.ts";
 import { cfopSolve } from "../src/cfop.ts";
-import { COURSE, HAND_STAGES, HANDS, INTROS, riders } from "../src/course.ts";
+import { COURSE, HAND_STAGES, HANDS, riders } from "../src/course.ts";
 import { applyMove, colorsOf, PIECES, SOLVED, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
 
 const at = (s: string, pos: Vec, normal: Vec) => s[stickerAt(pos, normal)!];
@@ -116,12 +116,3 @@ test("a demo shows only what its stage works with, and the daisy's demos end on 
   for (const stage of [3, 4, 5, 6]) assert.ok(COURSE.filter((g) => g.stage === stage).every((g) => g.from!.includes(".")), `stage ${stage}`);
 });
 
-test("the daisy's presentation plays the whole stage, from a scrambled cube to the daisy", () => {
-  const { from, moves } = INTROS[1]!;
-  const petals = (s: string) => [[-1, 1, 0], [1, 1, 0], [0, 1, -1], [0, 1, 1]].filter((p) => at(s, p as Vec, [0, 1, 0]) === "U").length;
-  assert.equal(center(from, [0, 1, 0]), "D"); // held yellow up
-  assert.equal([...from].filter((c) => c !== ".").length, 6 + 8); // the centers and the white edges only
-  assert.equal(petals(from), 0);
-  assert.equal(petals(moves.reduce(applyMove, from)), 4);
-  assert.ok(moves.every((m, i) => !i || m[0] !== moves[i - 1][0]), moves.join(" ")); // no move undone right after it
-});

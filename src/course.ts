@@ -1,5 +1,5 @@
-import { algOf, beginnerSolve, CYCLE, FLIP, LEFT, planStates, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group, type Stage } from "./beginner.ts";
-import { colorsOf, invert as undo, PIECES, simplify, SOLVED } from "./cube.ts";
+import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group, type Stage } from "./beginner.ts";
+import { colorsOf, invert as undo, PIECES, SOLVED } from "./cube.ts";
 import { tr, type Lang } from "./i18n.ts";
 
 // The beginner method as a course, for a cube the app has not seen: each case
@@ -43,27 +43,6 @@ const focusOn = (stage: number, s: string) => {
 const demo = (stage: number, texts: Texts, moves: string[], goal = YELLOW_UP, piece?: string, split?: number[]) =>
   group(stage, texts, moves, focusOn(stage, play(goal, undo(moves))), piece, split);
 const lesson = (texts: Texts, moves: string[]) => group(0, texts, moves, SOLVED);
-
-/** A stage's presentation, played once before its cases: a scrambled cube, focused on the stage, through the moves the
- * beginner guide plays for it, to the stage done. `text` says what the stage is and what it is for. */
-export type Intro = { from: string; moves: string[]; text: string };
-function intro(stage: number, scramble: string, text: Record<Lang, string>): Intro {
-  const start = play(SOLVED, scramble.split(" ")); // the guide takes a cube as scanned, white up, and turns it over
-  const plan = beginnerSolve(start);
-  const first = plan.findIndex((g) => g.stage === stage);
-  const from = planStates(start, plan)[plan.slice(0, first).reduce((n, g) => n + g.moves.length, 0)];
-  // Each piece is solved on its own, so one may start by undoing the move the last one ended on: played in one go,
-  // those cancel out.
-  return { from: focusOn(stage, from), moves: simplify(plan.filter((g) => g.stage === stage).flatMap((g) => g.moves)), text: tr(text) };
-}
-export const INTROS: Partial<Record<number, Intro>> = {
-  // Its 4 white edges each start in another of the daisy's 4 cases.
-  1: intro(1, "F R2 F2 U' R' U R2 F' R' U' F' R", {
-    fr: "La marguerite, ce sont les 4 arêtes blanches rangées autour du centre jaune, blanc vers le haut, comme les pétales d'une fleur. On les gare en haut, où il n'y a encore rien à casser : à l'étape suivante, chacune descendra à sa place pour faire la croix blanche.",
-    nl: "Het madeliefje: de 4 witte randstukken rond het gele middenstuk, met wit naar boven, zoals de blaadjes van een bloem. Je parkeert ze bovenaan, waar nog niets stuk kan: in de volgende stap zakt elk naar zijn plek om het witte kruis te maken.",
-    en: "The daisy is the 4 white edges around the yellow center, white facing up, like the petals of a flower. You park them on top, where nothing can break yet: in the next stage, each drops to its place to make the white cross.",
-  }),
-};
 
 // Pieces by color letters (white U, yellow D, green F, blue B, red R, orange L).
 const WHITE_GREEN = "FU";

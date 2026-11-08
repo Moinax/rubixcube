@@ -1,5 +1,6 @@
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useState } from "react";
 import CubeView, { BLANK } from "./CubeView";
+import Guide from "./Guide";
 import { Chevron, MiniFace, TopBar, usePopover } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
@@ -10,8 +11,20 @@ import { tr } from "./i18n";
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 const LAST = PLAN.length - 1;
 
-/** `children`: the stage's cases, when they are open over the plan. */
-type Props = { stage: number; onStage: (stage: number) => void; onBack: () => void; onCases: () => void; onMyCube: () => void; children?: ReactNode };
+/** `cases`: the step in the stage's cases, when they are watched (« Voir ») rather than read; none yet on its
+ * presentation. */
+type Props = { stage: number; cases?: number; onStage: (stage: number) => void; onCases: (step?: number) => void; onBack: () => void; onMyCube: () => void };
+
+/** A stage is watched (its cases played in the guide's player) or read (the whole text); each viewer's choice stays. */
+type Mode = "see" | "read";
+const MODE_KEY = "rubixcube:plan-mode";
+function savedMode(): Mode {
+  try {
+    return localStorage.getItem(MODE_KEY) === "read" ? "read" : "see";
+  } catch {
+    return "see";
+  }
+}
 
 /** A small flat drawing of the cube `state` (its top, front and right faces, or its bottom, front and right ones
  * `below`), for a list where a 3D view each would be too many. */
@@ -72,80 +85,154 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
 );
 
 /** The beginner method as a map: the idea of it, where you stand, then each stage on its own, for any cube. */
-export default function Plan({ stage, onStage, onBack, onCases, onMyCube, children }: Props) {
+export default function Plan({ stage, cases: step, onStage, onCases, onBack, onMyCube }: Props) {
   const plan = PLAN[stage];
   const [intro, where] = [stage === 0, stage === WHERE];
   const cases = CASES[stage]?.length;
   const page = PAGES.indexOf(stage);
   const next = PAGES[page + 1];
   const { ref: menu } = usePopover(stage);
-  return (
-    <>
-      <TopBar back={{ label: tr({ fr: "Les bases", nl: "De basis", en: "The basics" }), onClick: onBack }} />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 p-4 pb-28 md:p-8 md:pb-28">
+  const [mode, setMode] = useState(savedMode);
+  const choose = (m: Mode) => {
+    setMode(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {
+      // storage blocked: the choice lasts this visit
+    }
+  };
+  const back = { label: tr({ fr: "Les bases", nl: "De basis", en: "The basics" }), onClick: onBack };
+  // What the stage starts from and ends on: beside its text when read, as its presentation when watched.
+  const beforeAfter = (
+    <div className="md:sticky md:top-6">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+        <Milestone
+          at={intro ? 0 : stage - 1}
+          label={intro ? tr({ fr: "Au départ", nl: "Bij het begin", en: "At the start" }) : tr({ fr: "Tu pars de", nl: "Je begint bij", en: "You start from" })}
+        />
+        <Chevron className="mb-8 text-mist" />
+        <Milestone
+          at={intro ? LAST : stage}
+          label={intro ? tr({ fr: "À la fin", nl: "Op het einde", en: "At the end" }) : tr({ fr: "Tu arrives à", nl: "Je komt uit bij", en: "You end up with" })}
+        />
+      </div>
+      <p className="mt-3 flex items-start justify-center gap-2 text-center text-xs text-mist">
+        <i className="mt-0.5 size-3 flex-none rounded-[3px] " style={{ background: BLANK }} />
+        {tr({
+          fr: "Gris : n'importe quelle couleur, ça ne compte pas encore. Fais tourner les cubes du doigt.",
+          nl: "Grijs: eender welke kleur, het telt nog niet mee. Draai de kubussen met je vinger.",
+          en: "Grey: any color, it doesn't count yet. Spin the cubes with your finger.",
+        })}
+      </p>
+    </div>
+  );
+  const watched = mode === "see" && stage > 0;
 
-        {/* Every page at a glance on a wide screen; a menu on a phone, where the row would scroll sideways. */}
-        <nav className="flex gap-1.5 max-md:hidden" aria-label={tr({ fr: "Les étapes", nl: "De stappen", en: "The stages" })}>
+  // The pages in one menu at every size; a stage's page also switches between watching and reading it.
+  const header = (
+    <div className="flex items-center gap-2">
+      <details ref={menu} className="group relative min-w-0 flex-1 md:max-w-md">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell py-1.5 pr-3 pl-2 [&::-webkit-details-marker]:hidden">
+          <PageMark page={stage} current />
+          <span className="min-w-0 flex-1">
+            {stage > 0 && <span className="block text-xs text-mist">{tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}</span>}
+            <span className="block leading-tight font-semibold">{pageTitle(stage)}</span>
+          </span>
+          <Chevron to="down" className="text-mist transition group-open:rotate-180" />
+        </summary>
+        <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
           {PAGES.map((i) => (
+            <li key={i}>
+              <button
+                onClick={() => onStage(i)}
+                aria-current={i === stage ? "step" : undefined}
+                className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${i === stage ? "bg-edge font-semibold" : ""}`}
+              >
+                <PageMark page={i} current={i === stage} />
+                {i > 0 && <span className="text-mist">{tr({ fr: `Étape ${i}`, nl: `Stap ${i}`, en: `Stage ${i}` })} ·</span>}
+                {pageTitle(i)}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </details>
+      {stage > 0 && (
+        <div className="flex flex-none gap-0.5 rounded-full border border-edge bg-shell p-1 text-sm font-semibold" role="group">
+          {(
+            [
+              ["see", "▶", tr({ fr: "Voir", nl: "Bekijken", en: "Watch" })],
+              ["read", "≡", tr({ fr: "Lire", nl: "Lezen", en: "Read" })],
+            ] as const
+          ).map(([m, icon, label]) => (
             <button
-              key={i}
-              onClick={() => onStage(i)}
-              aria-current={i === stage ? "step" : undefined}
-              title={i > 0 ? STAGES[i].title : undefined}
-              className={`h-9 flex-none rounded-full px-3 text-sm font-semibold ${i === stage ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"} ${i > 0 ? "min-w-9" : ""}`}
+              key={m}
+              onClick={() => choose(m)}
+              aria-pressed={mode === m}
+              title={label}
+              className={`flex h-9 items-center gap-1.5 rounded-full px-3 ${mode === m ? "bg-chalk text-plastic" : "text-mist hover:text-chalk"}`}
             >
-              {i > 0 ? i : pageTitle(i)}
+              <span aria-hidden>{icon}</span>
+              <span className="max-sm:sr-only">{label}</span>
             </button>
           ))}
-        </nav>
-        <details ref={menu} className="group relative md:hidden">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell py-1.5 pr-3 pl-2 [&::-webkit-details-marker]:hidden">
-            <PageMark page={stage} current />
-            <span className="min-w-0 flex-1 leading-tight font-semibold">{pageTitle(stage)}</span>
-            {stage > 0 && <span className="text-sm whitespace-nowrap text-mist">{tr({ fr: `${stage} sur ${LAST}`, nl: `${stage} van ${LAST}`, en: `${stage} of ${LAST}` })}</span>}
-            <Chevron to="down" className="text-mist transition group-open:rotate-180" />
-          </summary>
-          <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
-            {PAGES.map((i) => (
-              <li key={i}>
-                <button
-                  onClick={() => onStage(i)}
-                  aria-current={i === stage ? "step" : undefined}
-                  className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${i === stage ? "bg-edge font-semibold" : ""}`}
-                >
-                  <PageMark page={i} current={i === stage} />
-                  {pageTitle(i)}
-                </button>
-              </li>
-            ))}
-          </ol>
-        </details>
+        </div>
+      )}
+    </div>
+  );
+
+  // Watched: the stage's cases, played in the guide's own player, in this page.
+  if (watched)
+    return (
+      <Guide
+        key={stage}
+        start={CASES[stage][0].from!}
+        groups={CASES[stage]}
+        learn
+        course
+        step={step ?? 0}
+        onStep={onCases}
+        onHome={onBack}
+        onScan={() => {}}
+        onEdit={() => {}}
+        focus={{
+          title: STAGES[stage].title,
+          back,
+          header,
+          intro: {
+            cubes: beforeAfter,
+            text: (
+              <>
+                <p className="wide text-lg leading-snug">
+                  <Colored text={STAGES[stage].goal} />
+                </p>
+                <p className="mt-2 text-mist">
+                  <Colored text={PLAN[stage].look} />
+                </p>
+              </>
+            ),
+          },
+          atIntro: step === undefined,
+          onIntro: (on) => {
+            if (on && step !== undefined) onCases(undefined);
+            else if (!on && step === undefined) onCases(0);
+          },
+          next:
+            stage < LAST
+              ? { label: tr({ fr: `Étape suivante · ${STAGES[stage + 1].title}`, nl: `Volgende stap · ${STAGES[stage + 1].title}`, en: `Next stage · ${STAGES[stage + 1].title}` }), onClick: () => onStage(stage + 1) }
+              : { label: tr({ fr: "Le faire sur mon cube", nl: "Doen op mijn kubus", en: "Do it on my cube" }), onClick: onMyCube },
+        }}
+      />
+    );
+
+  return (
+    <>
+      <TopBar back={back} />
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 p-4 pb-28 md:p-8 md:pb-28">
+        {header}
 
         <div className="grid gap-6 md:grid-cols-2 md:items-start md:gap-10">
           {/* Where you are is a list of drawings already: it takes the whole width. */}
-          {!where && (
-          <div className="md:sticky md:top-6">
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
-              <Milestone
-                at={intro ? 0 : stage - 1}
-                label={intro ? tr({ fr: "Au départ", nl: "Bij het begin", en: "At the start" }) : tr({ fr: "Tu pars de", nl: "Je begint bij", en: "You start from" })}
-              />
-              <Chevron className="mb-8 text-mist" />
-              <Milestone
-                at={intro ? LAST : stage}
-                label={intro ? tr({ fr: "À la fin", nl: "Op het einde", en: "At the end" }) : tr({ fr: "Tu arrives à", nl: "Je komt uit bij", en: "You end up with" })}
-              />
-            </div>
-            <p className="mt-3 flex items-start justify-center gap-2 text-center text-xs text-mist">
-              <i className="mt-0.5 size-3 flex-none rounded-[3px] " style={{ background: BLANK }} />
-              {tr({
-                fr: "Gris : n'importe quelle couleur, ça ne compte pas encore. Fais tourner les cubes du doigt.",
-                nl: "Grijs: eender welke kleur, het telt nog niet mee. Draai de kubussen met je vinger.",
-                en: "Grey: any color, it doesn't count yet. Spin the cubes with your finger.",
-              })}
-            </p>
-          </div>
-          )}
+          {!where && beforeAfter}
 
           <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0 md:col-span-2 md:mx-auto md:w-full md:max-w-2xl" : ""}`}>
             {/* The phone menu above already says which page this is. */}
@@ -242,7 +329,7 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
                   <Colored text={plan.done} />
                 </p>
                 {/* Named after the stage: what opens is that stage played out, not a list to browse. */}
-                <button onClick={onCases} className="mt-4 flex w-full items-center gap-3 rounded-[0.875rem] border border-edge bg-raised p-3 text-left hover:border-mist/60">
+                <button onClick={() => choose("see")} className="mt-4 flex w-full items-center gap-3 rounded-[0.875rem] border border-edge bg-raised p-3 text-left hover:border-mist/60">
                   <span className="grid size-10 flex-none place-items-center rounded-full bg-chalk text-plastic">
                     <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden>
                       <path d="M7 5v14l12-7z" />
@@ -300,8 +387,6 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
           </div>
         </div>
 
-        {/* The cases cover the plan, which stays as it was under them: closing them lands where the reader left it. */}
-        {children && <div className="fixed inset-0 z-30 flex flex-col overflow-y-auto overscroll-contain bg-plastic">{children}</div>}
       </main>
     </>
   );

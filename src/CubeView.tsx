@@ -76,7 +76,6 @@ type Props = {
   next?: string;
   autoRotate?: boolean;
   below?: boolean;
-  onReplay?: () => void;
   peek?: { from: Vec; key: number };
 };
 
@@ -87,11 +86,11 @@ type Props = {
  * plays the same moves again. `grip` marks where the fingers rest in the home grip: before `next` (the move to
  * play), its fingers stand out and the ones in its way fade; while a move plays, its fingers ride with the face
  * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face. A ↻ in the
- * corner puts back a view turned by hand, shown once it was; with `onReplay`, it is always there and plays again too.
+ * corner puts back a view turned by hand, shown once it was.
  * A new `peek` tilts the cube the way a hand would to glance at its side `from` (a face the camera doesn't see) and
  * brings it back as it is held to play, slowing near that face without stopping; a hand on the cube stops it.
  */
-export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, onReplay, peek }: Props) {
+export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, peek }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; onCamera?: (t: number) => void }>(null);
   const ended = useRef(onEnd);
@@ -295,16 +294,15 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
 
   return (
     <div ref={host} className="relative h-full w-full touch-none">
-      {(onReplay || turned) && (
+      {turned && (
         <button
           onClick={() => {
             home();
             setTurned(false);
-            onReplay?.();
           }}
           onMouseDown={(e) => e.preventDefault()} // the guide's keys keep working
-          title={onReplay ? tr({ fr: "Revoir", nl: "Opnieuw bekijken", en: "Watch again" }) : tr({ fr: "Remettre le cube en place", nl: "Kubus terugzetten", en: "Put the cube back" })}
-          aria-label={onReplay ? tr({ fr: "Revoir", nl: "Opnieuw bekijken", en: "Watch again" }) : tr({ fr: "Remettre le cube en place", nl: "Kubus terugzetten", en: "Put the cube back" })}
+          title={tr({ fr: "Remettre le cube en place", nl: "Kubus terugzetten", en: "Put the cube back" })}
+          aria-label={tr({ fr: "Remettre le cube en place", nl: "Kubus terugzetten", en: "Put the cube back" })}
           className="absolute top-0 right-0 z-10 grid size-9 place-items-center rounded-full border border-edge bg-shell/80 text-mist backdrop-blur hover:text-chalk"
         >
           <svg viewBox="0 0 24 24" className="size-4.5 fill-none stroke-current stroke-2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

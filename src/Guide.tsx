@@ -1,10 +1,9 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { type Tab } from "./Lexicon";
 import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
-import type { Intro } from "./course";
 import { applyMove, describeMove, invert, stickerAt, upright, type Face, type Vec } from "./cube";
 import { nOf, tr } from "./i18n";
 
@@ -41,9 +40,19 @@ type GuideProps = {
   step: number;
   onStep: (step: number) => void;
   onHome: () => void;
-  /** The cases of one stage, shown on their own over another screen: no progress bar, stage list or glossary
-   * button, only the cases and a way back. */
-  focus?: { title: string; onClose: () => void; intro?: Intro };
+  /** The cases of one stage, inside the plan's page for that stage: no progress bar or stage list; `header` (the
+   * page's own) takes their place, `back` the way back, `next` the way on at the end; `intro` presents the stage. */
+  focus?: {
+    title: string;
+    back: { label: string; onClick: () => void };
+    header: ReactNode;
+    /** The stage presented before its cases: what it starts from and ends on, and a text. */
+    intro?: { cubes: ReactNode; text: ReactNode };
+    /** Whether the presentation shows (it and the first case both start at move 0); `onIntro` hears it change. */
+    atIntro?: boolean;
+    onIntro?: (on: boolean) => void;
+    next: { label: string; onClick: () => void };
+  };
   onScan: () => void;
   onEdit: (state: string) => void;
 };
@@ -107,8 +116,10 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const [atResult, setAtResult] = useState(false);
   // The stage's presentation, before its first case: the whole stage played once, then ▶ goes on to the cases.
   const intro = focus?.intro;
-  const [atIntro, setAtIntro] = useState(!!intro && step === 0);
-  const [introRun, setIntroRun] = useState(0);
+  const [atIntro, setAtIntro] = useState(!!intro && (focus?.atIntro ?? step === 0));
+  useEffect(() => {
+    focus?.onIntro?.(atIntro);
+  }, [atIntro]);
   const done = step === total;
   const gi = atResult ? flat[step - 1].group : flat[step]?.group;
   const group = gi === undefined ? undefined : groups[gi];
@@ -149,7 +160,6 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const showIntro = () => {
     jump(0);
     setAtIntro(true);
-    setIntroRun((n) => n + 1);
   };
   // ⏮ ⏭ jump between the starts of the instructions (a case, a piece, a phase): back to this one's start, or the
   // one before when already there (then the presentation); on to the next one's, or the end.
@@ -202,7 +212,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     const onKey = (e: KeyboardEvent) => {
       if (lexicon) return; // the glossary is open over the guide
       if (e.key === "?" && !(e.target as Element).closest("input, textarea")) return setLexicon({ tab: "moves" });
-      if (e.key === "Escape") return focus ? focus.onClose() : closePicker();
+      if (e.key === "Escape") closePicker();
       // A focused control already handles Space itself.
       if (e.key === " " && (e.target as Element).closest("button, summary, input")) return;
       if (e.key === " ") {
@@ -284,7 +294,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
 
   return (
     <>
-      <TopBar back={focus ? { label: tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }), onClick: focus.onClose } : { label: HOME, onClick: onHome }}>
+      <TopBar back={focus?.back ?? { label: HOME, onClick: onHome }}>
         <button
           onClick={() => setLexicon({ tab: "moves" })}
           onMouseDown={keepFocus}
@@ -300,10 +310,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
       </TopBar>
       <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-24 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
         {focus ? (
-          <div className={cases.length > 1 ? "max-md:hidden" : ""}>
-            <p className={LABEL}>{tr({ fr: "Les cas", nl: "De gevallen", en: "The cases" })}</p>
-            <p className="wide text-lg md:text-xl">{focus.title}</p>
-          </div>
+          focus.header
         ) : (
           <p className="-mb-2 text-sm text-mist">
             {course
@@ -374,13 +381,12 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               <span className="text-sm text-mist">{moves(total)}</span>
             </p>
           )}
-          {/* The cases: chips on a wide screen, a menu on a phone, where chips would take two lines or scroll. */}
-          {cases.length > 1 && (
-            <details ref={casePicker} className="group relative md:hidden">
+          {/* The cases: one menu, at every size, so they read as the parts of one stage. */}
+          {(cases.length > 1 || intro) && (
+            <details ref={casePicker} className="group relative md:max-w-md">
               <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell px-3 py-1.5 [&::-webkit-details-marker]:hidden">
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-mist">
-                    {focus && `${focus.title} · `}
                     {atIntro ? INTRO_LABEL.toLowerCase() : done ? DONE.toLowerCase() : `${tr({ fr: "cas", nl: "geval", en: "case" })} ${nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}`}
                   </span>
                   <span className="block leading-tight font-semibold">{atIntro ? tr({ fr: "L'étape en entier", nl: "De hele stap", en: "The whole stage" }) : done ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" }) : group?.title}</span>
@@ -413,41 +419,15 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               </ol>
             </details>
           )}
-          {cases.length > 1 && (
-            <ol className="flex flex-wrap gap-1.5 max-md:hidden">
-              {intro && (
-                <li className="shrink-0">
-                  <button
-                    onClick={showIntro}
-                    onMouseDown={keepFocus}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${atIntro ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
-                  >
-                    {INTRO_LABEL}
-                  </button>
-                </li>
-              )}
-              {cases.map(({ g, first }) => (
-                <li key={first} className="shrink-0">
-                  <button
-                    onClick={() => jump(first)}
-                    onMouseDown={keepFocus}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${g === group && !atIntro ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
-                  >
-                    {g.title}
-                  </button>
-                </li>
-              ))}
-            </ol>
-          )}
         </div>
 
         <div className="grid flex-1 content-start items-center gap-4 md:grid-cols-2 md:content-center md:gap-10">
+          {atIntro && intro ? (
+            <div className={`transition-opacity duration-200 ${fading ? "opacity-0" : ""}`}>{intro.cubes}</div>
+          ) : (
           <div
             className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
           >
-            {atIntro && intro ? (
-              <CubeView state={intro.from} moves={intro.moves} replay={introRun} onReplay={() => setIntroRun((n) => n + 1)} />
-            ) : (
             <CubeView
               state={anim?.from ?? state}
               moves={anim ? [anim.move] : undefined}
@@ -460,16 +440,14 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               peek={hidden && { from: hidden, key: step }}
               next={worked?.fingers && move}
             />
-            )}
           </div>
+          )}
 
           <div className="flex flex-col gap-4">
             {atIntro && intro ? (
               <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
                 <p className={LABEL}>{INTRO_LABEL}</p>
-                <p className="mt-1">
-                  <Colored text={intro.text} />
-                </p>
+                <div className="mt-1">{intro.text}</div>
                 <p className="mt-3 text-sm text-mist">{tr({ fr: "Puis ▶ Suite : chaque situation, une par une.", nl: "Dan ▶ Verder: elke situatie, één voor één.", en: "Then ▶ Next: each situation, one by one." })}</p>
               </section>
             ) : done ? (
@@ -484,9 +462,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 <p className="mt-2 text-mist">
                   {focus
                     ? tr({
-                        fr: "Essaie-les sur ton cube, puis reviens au plan pour l'étape suivante.",
-                        nl: "Probeer ze op je kubus, en ga dan terug naar het plan voor de volgende stap.",
-                        en: "Try them on your cube, then go back to the plan for the next stage.",
+                        fr: "Essaie-les sur ton cube, puis passe à l'étape suivante.",
+                        nl: "Probeer ze op je kubus, en ga dan naar de volgende stap.",
+                        en: "Try them on your cube, then go on to the next stage.",
                       })
                     : course
                     ? tr({
@@ -498,6 +476,12 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       ? `${moves(total)}${tr({ fr: ", bravo.", nl: ", goed gedaan.", en: ", well done." })}`
                       : tr({ fr: "Ton cube était déjà résolu.", nl: "Je kubus was al opgelost.", en: "Your cube was already solved." })}
                 </p>
+                {focus && (
+                  <button onClick={focus.next.onClick} className="btn btn-main mt-5">
+                    {focus.next.label}
+                    <Chevron />
+                  </button>
+                )}
               </div>
             ) : (
               group && (

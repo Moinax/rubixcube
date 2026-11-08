@@ -74,7 +74,7 @@ type Props = {
   autoRotate?: boolean;
   below?: boolean;
   onReplay?: () => void;
-  peek?: { from: Vec; key: number; amount?: number };
+  peek?: { from: Vec; key: number };
 };
 
 /**
@@ -86,8 +86,7 @@ type Props = {
  * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face. A ↻ in the
  * corner puts back a view turned by hand, shown once it was; with `onReplay`, it is always there and plays again too.
  * A new `peek` tilts the cube the way a hand would to glance at its side `from` (a face the camera doesn't see) and
- * brings it back as it is held to play, slowing near that face without stopping; a hand on the cube stops it. A
- * smaller `amount` only sways the cube that way.
+ * brings it back as it is held to play, slowing near that face without stopping; a hand on the cube stops it.
  */
 export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, onReplay, peek }: Props) {
   const host = useRef<HTMLDivElement>(null);
@@ -182,7 +181,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
       const k = Math.min(1, (t - start) / glance);
       const d = k - 0.5;
       const slowed = 0.5 + (Math.sign(d) * Math.abs(2 * d) ** 1.35) / 2;
-      camera.position.copy(held).lerp(look, ((peek.amount ?? 1) * (1 - Math.cos(2 * Math.PI * slowed))) / 2).setLength(held.length());
+      camera.position.copy(held).lerp(look, (1 - Math.cos(2 * Math.PI * slowed)) / 2).setLength(held.length());
       if (k === 1) done();
     };
     setTurned(false);

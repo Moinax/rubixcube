@@ -110,7 +110,7 @@ const Back = ({ label, onClick }: { label: string; onClick: () => void }) => (
 
 /** The top of every screen: the way back on the left (none at home), the screen's tools then the languages on the right. */
 export const TopBar = ({ back, children }: { back?: { label: string; onClick: () => void }; children?: ReactNode }) => (
-  <header className="mx-auto flex min-h-10 w-full max-w-5xl items-center gap-2 px-4 pt-4 md:px-8">
+  <header className="mx-auto flex min-h-10 w-full max-w-5xl flex-none items-center gap-2 px-4 pt-4 md:px-8">
     {back && <Back {...back} />}
     <span className="ml-auto flex flex-none items-center gap-1.5">
       {children}

@@ -213,7 +213,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   }, [auto, step, atResult, wait, fading, lexicon]);
 
   // Progress: one segment per stage (per phase in the fast mode), as long as its moves.
-  const current = group?.stage ?? stages.length - 1;
+  // At the end, the stage of the last instruction: the cases opened from the plan are one stage's.
+  const current = group?.stage ?? groups.at(-1)?.stage ?? stages.length - 1;
   const firsts = stages.map((_, i) => flat.findIndex((f) => groups[f.group].stage === i));
   const segments = learn
     ? stages.map((s, i) => ({ title: s.title, first: firsts[i], count: flat.filter((f) => groups[f.group].stage === i).length }))
@@ -361,9 +362,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-mist">
                     {focus && `${focus.title} · `}
-                    {atIntro ? INTRO_LABEL.toLowerCase() : `${tr({ fr: "cas", nl: "geval", en: "case" })} ${nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}`}
+                    {atIntro ? INTRO_LABEL.toLowerCase() : done ? DONE.toLowerCase() : `${tr({ fr: "cas", nl: "geval", en: "case" })} ${nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}`}
                   </span>
-                  <span className="block leading-tight font-semibold">{atIntro ? tr({ fr: "L'étape en entier", nl: "De hele stap", en: "The whole stage" }) : group?.title}</span>
+                  <span className="block leading-tight font-semibold">{atIntro ? tr({ fr: "L'étape en entier", nl: "De hele stap", en: "The whole stage" }) : done ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" }) : group?.title}</span>
                 </span>
                 <Chevron to="down" className="text-mist transition group-open:rotate-180" />
               </summary>
@@ -421,7 +422,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           )}
         </div>
 
-        <div className="grid flex-1 items-center gap-4 md:grid-cols-2 md:gap-10">
+        <div className="grid flex-1 content-start items-center gap-4 md:grid-cols-2 md:content-center md:gap-10">
           <div
             className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
           >
@@ -437,13 +438,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pair={worked?.pair}
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
-              peek={
-                learn && !atResult && !atIntro && step === groupStart
-                  ? hidden
-                    ? { from: hidden, key: step }
-                    : { from: [-1, 0, 0], key: step, amount: 0.25 } // nothing hidden: a light sway, so each instruction comes alive
-                  : undefined
-              }
+              peek={hidden && { from: hidden, key: step }}
               next={worked?.fingers && move}
             />
             )}

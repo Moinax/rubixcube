@@ -4,8 +4,15 @@ import Lexicon, { LexiconButton, type Tab } from "./Lexicon";
 import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
-import { applyMove, describeMove, invert, isRotation, stickerAt, STICKERS, upright, type Face, type Vec } from "./cube";
+import { applyMove, center, describeMove, invert, isRotation, stickerAt, STICKERS, upright, type Face, type Vec } from "./cube";
 import { nOf, tr } from "./i18n";
+
+/** Whether `piece` sits in its place, turned right: each of its stickers matches the center of its face. */
+function isHome(s: string, piece: string) {
+  const pos = findPiece(s, piece);
+  const axis = (k: number) => pos.map((v, j) => (j === k ? v : 0)) as Vec;
+  return pos.every((v, k) => !v || s[stickerAt(pos, axis(k))!] === center(s, axis(k)));
+}
 
 /** « L'arête blanc-vert », "the white-green edge", named as the instructions name it. */
 function pieceName(piece: string) {
@@ -251,15 +258,31 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   // Its key never meets an instruction's start.
   const endPeek = (() => {
     if (!learn || step === 0) return;
-    const end = atResult || done ? step : partEnds.includes(step) && step > groupStart ? step : -1;
+    // The end of the instruction just played (a result stop, the end, or the next one starting on the same cube), or
+    // of one of its parts.
+    const closing = atResult || done || step === groupStart;
+    const end = closing || (partEnds.includes(step) && step > groupStart) ? step : -1;
     if (end < 0) return;
-    const from = atResult || done ? flat.findIndex((f) => f.group === flat[step - 1].group) : end - parts[partEnds.indexOf(end)].count;
+    const worked = closing ? groups[flat[step - 1].group] : group!;
+    const from = closing ? flat.findIndex((f) => f.group === flat[step - 1].group) : end - parts[partEnds.indexOf(end)].count;
     const turns = flat.slice(from, end).map((f) => f.move).filter(isRotation);
     const before = play(states[from], turns);
     const after = atResult ? ends[flat[step - 1].group] : states[end];
-    const keyOn = (s: string, n: Vec) => STICKERS.filter((t, i) => `${t.normal}` === `${n}` && s[i] === "U").length;
-    const away = ([[0, -1, 0]] as Vec[]).find((n) => keyOn(after, n) > keyOn(before, n));
-    return away && { from: away, key: -1 - step - (atResult ? 0.5 : 0) };
+    const key = -1 - step - (atResult ? 0.5 : 0);
+    // A piece the instruction works on, just landed home (in its place, turned right) where the view doesn't reach:
+    // the glance looks from the opposite side of each hidden face it shows.
+    const tracked = [worked.piece, worked.pair].filter((p): p is string => !!p);
+    if (tracked.length) {
+      for (const p of tracked) {
+        if (isHome(before, p) || !isHome(after, p)) continue;
+        const pos = findPiece(after, p);
+        if (pos.some((v) => v < 0)) return { from: pos.map((v) => (v < 0 ? -1 : 0)) as Vec, key };
+      }
+      return;
+    }
+    // No single piece (the four petals dropped one after the other): white squares that came onto the bottom face.
+    const whiteBelow = (s: string) => STICKERS.filter((t, i) => t.normal[1] === -1 && s[i] === "U").length;
+    return whiteBelow(after) > whiteBelow(before) ? { from: [0, -1, 0] as Vec, key } : undefined;
   })();
   // At the start of an instruction, a piece the view doesn't show is glanced at first, the way a hand tilts the cube:
   // a piece hidden whole (down, left or back), or its white or yellow (which tells how it is turned) facing away.
@@ -542,7 +565,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pair={worked?.pair}
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
-              peek={hidden ? { from: hidden, key: step } : endPeek}
+              peek={endPeek ?? (hidden && { from: hidden, key: step })}
               next={worked?.fingers && move}
             />
           </div>

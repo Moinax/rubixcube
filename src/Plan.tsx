@@ -138,7 +138,8 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
   // Fixed at the bottom in both modes, the guide's player floating over it when watched: the next stage is always
   // under the same thumb.
   const bar = (
-  <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+  <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur before:pointer-events-none before:absolute before:inset-x-0 before:-top-10 before:h-10 before:bg-linear-to-t before:from-plastic before:to-transparent">
+    {/* The page fades out above the bar (the before: layer), so the text plainly runs on under it. */}
     <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3 md:px-8">
       <button className="btn border border-edge bg-shell hover:bg-raised" disabled={!page} onClick={() => onStage(PAGES[page - 1])}>
         <Chevron to="left" />

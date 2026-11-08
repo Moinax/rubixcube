@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import CubeView from "./CubeView";
 import Guide from "./Guide";
-import { Back, BasicsChoice, Home, InputChoice, modeTitle, type Mode, type Resume } from "./Home";
+import { BasicsChoice, Home, InputChoice, modeTitle, TopBar, type Mode, type Resume } from "./Home";
 import Plan from "./Plan";
 import { CASES } from "./plan";
 import NetEditor from "./NetEditor";
@@ -322,56 +322,58 @@ function Editor({ state, mode, scanned, onChange, onScan, onBack, onSolve }: Edi
     </div>
   );
   return (
-    <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-5 p-5 md:p-10">
-      <div>
-        {/* After a scan, going back means scanning again; after typing colors in, back to the choice. */}
-        <Back
-          label={scanned ? tr({ fr: "Rescanner", nl: "Opnieuw scannen", en: "Scan again" }) : tr({ fr: "Retour", nl: "Terug", en: "Back" })}
-          onClick={scanned ? onScan : onBack}
-        />
-      </div>
-      <div>
-        <h1 className="wide text-3xl">{tr({ fr: "Vérifie les couleurs", nl: "Controleer de kleuren", en: "Check the colors" })}</h1>
-        <p className="mt-1 text-mist">
-          {tr({
-            fr: "Touche une couleur, puis les cases à corriger.",
-            nl: "Tik een kleur aan, dan de vakjes die je wilt corrigeren.",
-            en: "Tap a color, then the squares to fix.",
-          })}
-        </p>
-      </div>
-      <div className="grid gap-6 md:grid-cols-[3fr_2fr] md:items-start md:gap-10">
-        <div className="flex flex-col gap-4">
-          <p
-            className={`flex items-start gap-2.5 rounded-2xl border p-3 text-sm ${
-              error ? "border-amber-400/30 bg-amber-400/10 text-amber-200" : "border-place/30 bg-place/10 text-emerald-200"
-            }`}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden className="mt-0.5 size-4 flex-none fill-none stroke-current stroke-2">
-              <path d={error ? "M12 4l9 16H3zM12 10v4M12 17v.5" : "M5 12.5l4.5 4.5L19 7.5"} />
-            </svg>
-            <span>{error ? <Colored text={error} /> : tr({ fr: "Ce cube est valide.", nl: "Deze kubus is geldig.", en: "This cube is valid." })}</span>
+    <>
+      <TopBar
+        back={{
+          label: scanned ? tr({ fr: "Rescanner", nl: "Opnieuw scannen", en: "Scan again" }) : tr({ fr: "Annuler", nl: "Annuleren", en: "Cancel" }),
+          onClick: scanned ? onScan : onBack,
+        }}
+      />
+      <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-5 p-4 md:p-8">
+        {/* After a scan, going back means scanning again; after typing colors in, dropping them for the choice. */}
+        <div>
+          <h1 className="wide text-3xl">{tr({ fr: "Vérifie les couleurs", nl: "Controleer de kleuren", en: "Check the colors" })}</h1>
+          <p className="mt-1 text-mist">
+            {tr({
+              fr: "Touche une couleur, puis les cases à corriger.",
+              nl: "Tik een kleur aan, dan de vakjes die je wilt corrigeren.",
+              en: "Tap a color, then the squares to fix.",
+            })}
           </p>
-          <NetEditor state={state} onChange={onChange} highlight={error ? suspects(state) : undefined} />
-          {!wide && (
-            <details className="rounded-2xl border border-edge bg-shell">
-              <summary className="cursor-pointer p-3 text-sm">
-                <span className="font-semibold">{tr({ fr: "Voir en 3D", nl: "Bekijk in 3D", en: "See in 3D" })}</span>{" "}
-                <span className="text-mist">
-                  {tr({ fr: "pour comparer avec ton cube", nl: "om te vergelijken met je kubus", en: "to compare with your cube" })}
-                </span>
-              </summary>
-              <div className="px-3 pb-3">{cube}</div>
-            </details>
-          )}
         </div>
-        {wide && cube}
-      </div>
-      <button className="btn btn-main mt-auto w-full md:mt-0 md:w-auto md:self-start" disabled={!!error} onClick={onSolve}>
-        {mode === "fast"
-          ? tr({ fr: "Voir la solution", nl: "Oplossing bekijken", en: "See the solution" })
-          : tr({ fr: "Commencer le guide", nl: "Start de gids", en: "Start the guide" })}
-      </button>
-    </main>
+        <div className="grid gap-6 md:grid-cols-[3fr_2fr] md:items-start md:gap-10">
+          <div className="flex flex-col gap-4">
+            <p
+              className={`flex items-start gap-2.5 rounded-2xl border p-3 text-sm ${
+                error ? "border-amber-400/30 bg-amber-400/10 text-amber-200" : "border-place/30 bg-place/10 text-emerald-200"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden className="mt-0.5 size-4 flex-none fill-none stroke-current stroke-2">
+                <path d={error ? "M12 4l9 16H3zM12 10v4M12 17v.5" : "M5 12.5l4.5 4.5L19 7.5"} />
+              </svg>
+              <span>{error ? <Colored text={error} /> : tr({ fr: "Ce cube est valide.", nl: "Deze kubus is geldig.", en: "This cube is valid." })}</span>
+            </p>
+            <NetEditor state={state} onChange={onChange} highlight={error ? suspects(state) : undefined} />
+            {!wide && (
+              <details className="rounded-2xl border border-edge bg-shell">
+                <summary className="cursor-pointer p-3 text-sm">
+                  <span className="font-semibold">{tr({ fr: "Voir en 3D", nl: "Bekijk in 3D", en: "See in 3D" })}</span>{" "}
+                  <span className="text-mist">
+                    {tr({ fr: "pour comparer avec ton cube", nl: "om te vergelijken met je kubus", en: "to compare with your cube" })}
+                  </span>
+                </summary>
+                <div className="px-3 pb-3">{cube}</div>
+              </details>
+            )}
+          </div>
+          {wide && cube}
+        </div>
+        <button className="btn btn-main mt-auto w-full md:mt-0 md:w-auto md:self-start" disabled={!!error} onClick={onSolve}>
+          {mode === "fast"
+            ? tr({ fr: "Voir la solution", nl: "Oplossing bekijken", en: "See the solution" })
+            : tr({ fr: "Commencer le guide", nl: "Start de gids", en: "Start the guide" })}
+        </button>
+      </main>
+    </>
   );
 }

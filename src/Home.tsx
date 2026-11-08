@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import CubeView from "./CubeView";
 import { applyMove, FACE_COLORS, SOLVED, type Face } from "./cube";
 import { lang, LANGS, setLang, tr, type Lang } from "./i18n";
@@ -77,19 +78,34 @@ export const Chevron = ({ to = "right", className = "" }: { to?: keyof typeof CH
   </svg>
 );
 
-/** The "← Label" link at the top of every screen. */
-export const Back = ({ label, onClick }: { label: string; onClick: () => void }) => (
-  <button onClick={onClick} className="inline-flex items-center gap-1 text-sm whitespace-nowrap text-mist hover:text-chalk">
+/** The way back, named after where it leads: the same button in the same place on every screen. */
+const Back = ({ label, onClick }: { label: string; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    onMouseDown={(e) => e.preventDefault()} // keeps the focus where it was, so the guide's keys keep working
+    className="inline-flex h-10 min-w-0 items-center gap-1.5 rounded-full border border-edge bg-shell pr-4 pl-2.5 text-sm font-semibold whitespace-nowrap text-chalk hover:bg-raised"
+  >
     <Chevron to="left" />
-    {label}
+    <span className="truncate">{label}</span>
   </button>
+);
+
+/** The top of every screen: the way back on the left (none at home), the screen's tools then the languages on the right. */
+export const TopBar = ({ back, children }: { back?: { label: string; onClick: () => void }; children?: ReactNode }) => (
+  <header className="mx-auto flex min-h-10 w-full max-w-5xl items-center gap-2 px-4 pt-4 md:px-8">
+    {back && <Back {...back} />}
+    <span className="ml-auto flex flex-none items-center gap-1.5">
+      {children}
+      <Langs />
+    </span>
+  </header>
 );
 
 const LANG_NAMES: Record<Lang, string> = { fr: "Français", nl: "Nederlands", en: "English" };
 
-/** The three languages, at the top of every screen. */
-export const Langs = () => (
-  <nav className="mx-auto flex w-full max-w-5xl justify-end gap-1 px-4 pt-2 text-xs font-semibold md:px-8">
+/** The three languages, at the top right of every screen. */
+const Langs = () => (
+  <nav className="flex gap-0.5 text-xs font-semibold" aria-label="Language">
     {LANGS.map((l) => (
       <button
         key={l}
@@ -98,7 +114,7 @@ export const Langs = () => (
         aria-label={LANG_NAMES[l]}
         aria-pressed={l === lang}
         onClick={() => l !== lang && setLang(l)}
-        className={`rounded-full px-2.5 py-1 ${l === lang ? "bg-shell text-chalk" : "text-mist hover:text-chalk"}`}
+        className={`h-8 rounded-full px-2 ${l === lang ? "bg-shell text-chalk" : "text-mist hover:text-chalk"}`}
       >
         {l.toUpperCase()}
       </button>
@@ -112,54 +128,57 @@ type HomeProps = { resume?: Resume; onResume: () => void; onMode: (mode: Mode) =
 /** The mode comes first; how to show the cube is asked next, only when the mode needs it. */
 export function Home({ resume, onResume, onMode }: HomeProps) {
   return (
-    <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col p-5 md:p-10">
-      <header className="flex items-center gap-3">
-        <img src="/favicon.svg" alt="" className="size-9" />
-        <div>
-          <p className="wide text-xl leading-none">Cubiste</p>
-          <p className="mt-1 text-sm text-mist">
-            {tr({ fr: "Résous ton cube, coup par coup.", nl: "Los je kubus op, zet voor zet.", en: "Solve your cube, move by move." })}
-          </p>
+    <>
+      <TopBar />
+      <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-2 p-4 md:p-8 md:pt-4">
+        <header className="flex items-center gap-3">
+          <img src="/favicon.svg" alt="" className="size-9" />
+          <div>
+            <p className="wide text-xl leading-none">Cubiste</p>
+            <p className="mt-1 text-sm text-mist">
+              {tr({ fr: "Résous ton cube, coup par coup.", nl: "Los je kubus op, zet voor zet.", en: "Solve your cube, move by move." })}
+            </p>
+          </div>
+        </header>
+        <div className="grid flex-1 content-center items-center gap-6 py-6 md:grid-cols-2 md:gap-14">
+          <div className="mx-auto aspect-square w-full max-w-56 md:max-w-md">
+            <CubeView state={SHOWCASE} autoRotate />
+          </div>
+          <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+            {resume && (
+              <button
+                onClick={onResume}
+                className="flex items-center gap-3 rounded-2xl border border-edge bg-shell p-3 text-left hover:bg-raised"
+              >
+                <MiniFace cells={resume.face} />
+                <span className="flex-1">
+                  <span className="block font-semibold">{resume.title}</span>
+                  <span className="text-sm text-mist">{resume.detail}</span>
+                </span>
+                <Chevron />
+              </button>
+            )}
+            <h1 className="wide pt-2 text-2xl md:text-3xl">{tr({ fr: "Que veux-tu faire\u00a0?", nl: "Wat wil je doen?", en: "What do you want to do?" })}</h1>
+            <ul className="overflow-hidden rounded-2xl border border-edge">
+              {MODES.map((m) => (
+                <li key={m.id} className="border-edge not-first:border-t">
+                  <button onClick={() => onMode(m.id)} className="flex w-full items-center gap-3 bg-shell p-3.5 text-left hover:bg-raised">
+                    <MiniFace cells={m.face} marks={m.marks} />
+                    <span className="flex-1">
+                      <span className="block font-semibold">{m.title}</span>
+                      <span className="block text-sm leading-snug text-mist">{m.text}</span>
+                    </span>
+                    <span className="text-mist">
+                      <Chevron />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </header>
-      <div className="grid flex-1 content-center items-center gap-6 py-6 md:grid-cols-2 md:gap-14">
-        <div className="mx-auto aspect-square w-full max-w-56 md:max-w-md">
-          <CubeView state={SHOWCASE} autoRotate />
-        </div>
-        <div className="mx-auto flex w-full max-w-md flex-col gap-4">
-          {resume && (
-            <button
-              onClick={onResume}
-              className="flex items-center gap-3 rounded-2xl border border-edge bg-shell p-3 text-left hover:bg-raised"
-            >
-              <MiniFace cells={resume.face} />
-              <span className="flex-1">
-                <span className="block font-semibold">{resume.title}</span>
-                <span className="text-sm text-mist">{resume.detail}</span>
-              </span>
-              <Chevron />
-            </button>
-          )}
-          <h1 className="wide pt-2 text-2xl md:text-3xl">{tr({ fr: "Que veux-tu faire\u00a0?", nl: "Wat wil je doen?", en: "What do you want to do?" })}</h1>
-          <ul className="overflow-hidden rounded-2xl border border-edge">
-            {MODES.map((m) => (
-              <li key={m.id} className="border-edge not-first:border-t">
-                <button onClick={() => onMode(m.id)} className="flex w-full items-center gap-3 bg-shell p-3.5 text-left hover:bg-raised">
-                  <MiniFace cells={m.face} marks={m.marks} />
-                  <span className="flex-1">
-                    <span className="block font-semibold">{m.title}</span>
-                    <span className="block text-sm leading-snug text-mist">{m.text}</span>
-                  </span>
-                  <span className="text-mist">
-                    <Chevron />
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
 
@@ -169,75 +188,75 @@ type InputProps = { mode: Mode; onScan: () => void; onManual: () => void; onRand
 export function InputChoice({ mode: id, onScan, onManual, onRandom, onBack }: InputProps) {
   const m = mode(id);
   return (
-    <main className="mx-auto flex w-full flex-1 max-w-2xl flex-col gap-5 p-5 md:justify-center md:p-10">
-      <div>
-        <Back label={HOME} onClick={onBack} />
-      </div>
-      <div className="flex items-center gap-2 self-start rounded-full border border-edge bg-shell py-1 pr-3 pl-1 text-sm">
-        <MiniFace cells={m.face} marks={m.marks} small />
-        {m.title}
-        <button onClick={onBack} className="text-mist underline underline-offset-2 hover:text-chalk">
-          {tr({ fr: "Changer", nl: "Wijzigen", en: "Change" })}
-        </button>
-      </div>
-      <div>
-        <h1 className="wide text-3xl">{tr({ fr: "Montre-moi ton cube", nl: "Laat me je kubus zien", en: "Show me your cube" })}</h1>
-        <p className="mt-1 text-mist">
+    <>
+      <TopBar back={{ label: HOME, onClick: onBack }} />
+      <main className="mx-auto flex w-full flex-1 max-w-2xl flex-col gap-5 p-5 md:justify-center md:p-10">
+        <div className="flex items-center gap-2 self-start rounded-full border border-edge bg-shell py-1 pr-3 pl-1 text-sm">
+          <MiniFace cells={m.face} marks={m.marks} small />
+          {m.title}
+          <button onClick={onBack} className="text-mist underline underline-offset-2 hover:text-chalk">
+            {tr({ fr: "Changer", nl: "Wijzigen", en: "Change" })}
+          </button>
+        </div>
+        <div>
+          <h1 className="wide text-3xl">{tr({ fr: "Montre-moi ton cube", nl: "Laat me je kubus zien", en: "Show me your cube" })}</h1>
+          <p className="mt-1 text-mist">
+            {tr({
+              fr: `Il me faut ses couleurs pour ${id === "fast" ? "calculer la solution" : "te guider pas à pas"}.`,
+              nl: `Ik heb de kleuren nodig om ${id === "fast" ? "de oplossing te berekenen" : "je stap voor stap te begeleiden"}.`,
+              en: `I need its colors to ${id === "fast" ? "work out the solution" : "guide you step by step"}.`,
+            })}
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <button onClick={onScan} className="grid gap-1.5 rounded-2xl bg-chalk p-5 text-left text-plastic hover:bg-white">
+            <svg viewBox="0 0 24 24" aria-hidden className="mb-1 size-8 fill-none stroke-current stroke-[1.8]">
+              <path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <circle cx="12" cy="12.5" r="3.5" />
+            </svg>
+            <span className="text-lg font-bold">{tr({ fr: "Scanner avec la caméra", nl: "Scannen met de camera", en: "Scan with the camera" })}</span>
+            <span className="text-sm text-[#4b4f58]">
+              {tr({
+                fr: "Montre les 6 faces une par une, elles se capturent toutes seules. Environ une minute.",
+                nl: "Toon de 6 kanten één voor één, ze worden vanzelf vastgelegd. Ongeveer een minuut.",
+                en: "Show the 6 faces one by one, they capture themselves. About a minute.",
+              })}
+            </span>
+          </button>
+          <button onClick={onManual} className="grid gap-1.5 rounded-2xl border border-edge bg-shell p-5 text-left hover:bg-raised">
+            <svg viewBox="0 0 24 24" aria-hidden className="mb-1 size-8 fill-none stroke-current stroke-[1.8]">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16" />
+            </svg>
+            <span className="text-lg font-bold">{ENTER_COLORS}</span>
+            <span className="text-sm text-mist">
+              {tr({
+                fr: "Touche les cases d'un patron à plat. Pratique sans caméra ou sous une lumière difficile.",
+                nl: "Tik de vakjes aan op een uitgeklapte kubus. Handig zonder camera of bij lastig licht.",
+                en: "Tap the squares of a flat pattern. Handy without a camera or in tricky light.",
+              })}
+            </span>
+          </button>
+        </div>
+        <p className="text-sm text-mist">
+          {tr({ fr: "Pas de cube sous la main ? ", nl: "Geen kubus bij de hand? ", en: "No cube at hand? " })}
+          <button onClick={onRandom} className="font-semibold text-chalk underline underline-offset-2">
+            {tr({ fr: "Prendre un cube mélangé au hasard", nl: "Neem een willekeurig gemengde kubus", en: "Take a randomly scrambled cube" })}
+          </button>
+        </p>
+        <p className="mt-auto flex items-start gap-2 text-xs text-mist md:mt-2">
+          <svg viewBox="0 0 24 24" aria-hidden className="size-3.5 flex-none fill-none stroke-current stroke-2">
+            <rect x="5" y="11" width="14" height="9" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          </svg>
           {tr({
-            fr: `Il me faut ses couleurs pour ${id === "fast" ? "calculer la solution" : "te guider pas à pas"}.`,
-            nl: `Ik heb de kleuren nodig om ${id === "fast" ? "de oplossing te berekenen" : "je stap voor stap te begeleiden"}.`,
-            en: `I need its colors to ${id === "fast" ? "work out the solution" : "guide you step by step"}.`,
+            fr: "L'image de la caméra reste sur ton appareil, rien n'est envoyé.",
+            nl: "Het camerabeeld blijft op je toestel, er wordt niets verstuurd.",
+            en: "The camera image stays on your device, nothing is sent.",
           })}
         </p>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <button onClick={onScan} className="grid gap-1.5 rounded-2xl bg-chalk p-5 text-left text-plastic hover:bg-white">
-          <svg viewBox="0 0 24 24" aria-hidden className="mb-1 size-8 fill-none stroke-current stroke-[1.8]">
-            <path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <circle cx="12" cy="12.5" r="3.5" />
-          </svg>
-          <span className="text-lg font-bold">{tr({ fr: "Scanner avec la caméra", nl: "Scannen met de camera", en: "Scan with the camera" })}</span>
-          <span className="text-sm text-[#4b4f58]">
-            {tr({
-              fr: "Montre les 6 faces une par une, elles se capturent toutes seules. Environ une minute.",
-              nl: "Toon de 6 kanten één voor één, ze worden vanzelf vastgelegd. Ongeveer een minuut.",
-              en: "Show the 6 faces one by one, they capture themselves. About a minute.",
-            })}
-          </span>
-        </button>
-        <button onClick={onManual} className="grid gap-1.5 rounded-2xl border border-edge bg-shell p-5 text-left hover:bg-raised">
-          <svg viewBox="0 0 24 24" aria-hidden className="mb-1 size-8 fill-none stroke-current stroke-[1.8]">
-            <rect x="4" y="4" width="16" height="16" rx="2" />
-            <path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16" />
-          </svg>
-          <span className="text-lg font-bold">{ENTER_COLORS}</span>
-          <span className="text-sm text-mist">
-            {tr({
-              fr: "Touche les cases d'un patron à plat. Pratique sans caméra ou sous une lumière difficile.",
-              nl: "Tik de vakjes aan op een uitgeklapte kubus. Handig zonder camera of bij lastig licht.",
-              en: "Tap the squares of a flat pattern. Handy without a camera or in tricky light.",
-            })}
-          </span>
-        </button>
-      </div>
-      <p className="text-sm text-mist">
-        {tr({ fr: "Pas de cube sous la main ? ", nl: "Geen kubus bij de hand? ", en: "No cube at hand? " })}
-        <button onClick={onRandom} className="font-semibold text-chalk underline underline-offset-2">
-          {tr({ fr: "Prendre un cube mélangé au hasard", nl: "Neem een willekeurig gemengde kubus", en: "Take a randomly scrambled cube" })}
-        </button>
-      </p>
-      <p className="mt-auto flex items-start gap-2 text-xs text-mist md:mt-2">
-        <svg viewBox="0 0 24 24" aria-hidden className="size-3.5 flex-none fill-none stroke-current stroke-2">
-          <rect x="5" y="11" width="14" height="9" rx="2" />
-          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-        </svg>
-        {tr({
-          fr: "L'image de la caméra reste sur ton appareil, rien n'est envoyé.",
-          nl: "Het camerabeeld blijft op je toestel, er wordt niets verstuurd.",
-          en: "The camera image stays on your device, nothing is sent.",
-        })}
-      </p>
-    </main>
+      </main>
+    </>
   );
 }
 
@@ -276,23 +295,23 @@ export function BasicsChoice({ onPick, onBack }: BasicsProps) {
     ],
   ];
   return (
-    <main className="mx-auto flex w-full flex-1 max-w-2xl flex-col gap-5 p-5 md:justify-center md:p-10">
-      <div>
-        <Back label={HOME} onClick={onBack} />
-      </div>
-      <h1 className="wide text-3xl">{tr({ fr: "Par quoi commencer\u00a0?", nl: "Waarmee begin je?", en: "Where to start?" })}</h1>
-      <div className="grid gap-3 md:grid-cols-2">
-        {parts.map(([id, title, text]) => (
-          <button
-            key={id}
-            onClick={() => onPick(id)}
-            className={`grid gap-1.5 rounded-2xl p-5 text-left ${id === "plan" ? "bg-chalk text-plastic hover:bg-white md:col-span-2" : "border border-edge bg-shell hover:bg-raised"}`}
-          >
-            <span className="text-lg font-bold">{title}</span>
-            <span className={`text-sm ${id === "plan" ? "text-[#4b4f58]" : "text-mist"}`}>{text}</span>
-          </button>
-        ))}
-      </div>
-    </main>
+    <>
+      <TopBar back={{ label: HOME, onClick: onBack }} />
+      <main className="mx-auto flex w-full flex-1 max-w-2xl flex-col gap-5 p-5 md:justify-center md:p-10">
+        <h1 className="wide text-3xl">{tr({ fr: "Par quoi commencer\u00a0?", nl: "Waarmee begin je?", en: "Where to start?" })}</h1>
+        <div className="grid gap-3 md:grid-cols-2">
+          {parts.map(([id, title, text]) => (
+            <button
+              key={id}
+              onClick={() => onPick(id)}
+              className={`grid gap-1.5 rounded-2xl p-5 text-left ${id === "plan" ? "bg-chalk text-plastic hover:bg-white md:col-span-2" : "border border-edge bg-shell hover:bg-raised"}`}
+            >
+              <span className="text-lg font-bold">{title}</span>
+              <span className={`text-sm ${id === "plan" ? "text-[#4b4f58]" : "text-mist"}`}>{text}</span>
+            </button>
+          ))}
+        </div>
+      </main>
+    </>
   );
 }

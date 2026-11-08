@@ -1,7 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import { Langs } from "./Home";
 import { lang, tr } from "./i18n";
 import "./index.css";
 
@@ -12,11 +11,10 @@ document.title = tr({
   en: "Cubiste: solve your Rubik's Cube",
 });
 
-// Every screen fills the height left under the language bar.
+// Every screen fills the height, its own top bar (back, tools, languages) first.
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <div className="flex min-h-dvh flex-col">
-      <Langs />
       <App />
     </div>
   </StrictMode>,

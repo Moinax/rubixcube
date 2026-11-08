@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Back, ENTER_COLORS } from "./Home";
+import { ENTER_COLORS, TopBar } from "./Home";
 import { classify, FACE_COLORS, FACE_NAMES, FACES, feminine, INFLECTED, vivid, type Face, type RGB } from "./cube";
 import { capitalize, tr } from "./i18n";
 
@@ -213,131 +213,132 @@ export default function Scanner({ initial, onDone, onManual, onCancel }: Props) 
   const current = step === null ? undefined : STEPS[step];
   const filled = flash ? 100 : steady * 100;
   return (
-    <main className="mx-auto flex w-full flex-1 max-w-xl flex-col gap-4 p-4 md:py-10">
-      <div className="flex items-center justify-between">
-        <Back label={tr({ fr: "Annuler", nl: "Annuleren", en: "Cancel" })} onClick={onCancel} />
+    <>
+      <TopBar back={{ label: tr({ fr: "Annuler", nl: "Annuleren", en: "Cancel" }), onClick: onCancel }}>
         <button
           onClick={() => setMirror((m) => !m)}
           aria-pressed={mirror}
-          className={`rounded-full border px-3 py-1 text-xs font-semibold ${mirror ? "border-chalk/40 text-chalk" : "border-edge text-mist"}`}
+          className={`h-8 rounded-full border px-3 text-xs font-semibold ${mirror ? "border-chalk/40 text-chalk" : "border-edge text-mist"}`}
         >
           {tr({ fr: "Miroir", nl: "Spiegelen", en: "Mirror" })}
         </button>
-      </div>
+      </TopBar>
+      <main className="mx-auto flex w-full flex-1 max-w-xl flex-col gap-4 p-4 md:py-10">
 
-      {/* The 6 faces double as progress: captured, current (ringed), still to do (center only). */}
-      <div className="grid grid-cols-6 gap-2">
-        {STEPS.map((s, i) => (
-          <button
-            key={s.face}
-            onClick={() => goTo(i)}
-            title={redoLabel(s.face)}
-            aria-label={redoLabel(s.face)}
-            aria-current={i === step ? "step" : undefined}
-            className={`grid aspect-square grid-cols-3 gap-px rounded-lg bg-black p-1 ${i === step ? "ring-2 ring-chalk" : ""} ${mirror ? "-scale-x-100" : ""}`}
-          >
-            {Array.from({ length: 9 }, (_, k) => (
-              <span
-                key={k}
-                className="rounded-[2px]"
-                style={{ background: faces[i] ? rgb(faces[i]![k]) : k === 4 ? FACE_COLORS[s.face] : "var(--color-blank)" }}
-              />
-            ))}
-          </button>
-        ))}
-      </div>
-
-      {error ? (
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
-          {error}
-          <button onClick={onManual} className="btn btn-main">
-            {ENTER_COLORS}
-          </button>
-        </div>
-      ) : (
-        <>
-          <div>
-            {current ? (
-              <>
-                <h1 className="wide flex items-center gap-2.5 text-2xl">
-                  <span className="size-4 rounded" style={{ background: FACE_COLORS[current.face] }} />
-                  {faceTitle(current.face)}
-                </h1>
-                <p className="mt-1 text-mist">
-                  <Colored
-                    text={tr({
-                      fr: `${faces[step!] ? "Refais cette face." : current.hint} Le ${FACE_NAMES[current.top]} en haut, tiens-la immobile dans le cadre.`,
-                      nl: `${faces[step!] ? "Doe deze kant opnieuw." : current.hint} ${capitalize(FACE_NAMES[current.top])} boven, houd de kubus stil in het kader.`,
-                      en: `${faces[step!] ? "Redo this face." : current.hint} ${capitalize(FACE_NAMES[current.top])} on top, hold it still in the frame.`,
-                    })}
-                  />
-                </p>
-              </>
-            ) : (
-              <>
-                <h1 className="wide text-2xl">{tr({ fr: "Les 6 faces sont prises", nl: "Alle 6 kanten zijn vastgelegd", en: "All 6 faces are in" })}</h1>
-                <p className="mt-1 text-mist">
-                  {tr({
-                    fr: "Une miniature ne ressemble pas à ton cube ? Touche-la pour refaire cette face.",
-                    nl: "Lijkt een miniatuur niet op je kubus? Tik erop om die kant opnieuw te doen.",
-                    en: "A thumbnail doesn't match your cube? Tap it to redo that face.",
-                  })}
-                </p>
-              </>
-            )}
-          </div>
-          <div className="relative overflow-hidden rounded-3xl bg-black">
-            <video ref={video} playsInline muted className={`block w-full ${mirror ? "-scale-x-100" : ""}`} />
-            {box > 0 && (
-              <div
-                className={`absolute top-1/2 left-1/2 grid aspect-square -translate-1/2 grid-cols-3 overflow-hidden rounded-2xl ring-2 transition ${
-                  flash ? "bg-place/40 ring-place" : "ring-chalk/90"
-                } ${step === null ? "opacity-40" : ""} ${mirror ? "-scale-x-100" : ""}`}
-                style={{ width: `${box}%` }}
-              >
-                {live.map((c, i) => (
-                  <div key={i} className="grid place-items-center border border-white/30">
-                    <span className="size-4 rounded-full ring-2 ring-white" style={{ background: rgb(c) }} />
-                  </div>
-                ))}
-              </div>
-            )}
-            {current && box > 0 && (
-              <p className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 py-1.5 pr-3 pl-1.5 text-sm whitespace-nowrap backdrop-blur">
-                <span
-                  className="size-5 rounded-full [mask:radial-gradient(circle_6px,transparent_98%,#000)]"
-                  style={{ background: `conic-gradient(var(--color-place) ${filled}%, #ffffff30 0)` }}
-                />
-                {flash
-                  ? tr({ fr: "Capturée", nl: "Vastgelegd", en: "Captured" })
-                  : steady > 0
-                    ? tr({ fr: "Ne bouge plus…", nl: "Niet bewegen…", en: "Hold still…" })
-                    : tr({ fr: "Place la face dans le cadre", nl: "Plaats de kant in het kader", en: "Fit the face in the frame" })}
-              </p>
-            )}
-          </div>
-          {current ? (
+        {/* The 6 faces double as progress: captured, current (ringed), still to do (center only). */}
+        <div className="grid grid-cols-6 gap-2">
+          {STEPS.map((s, i) => (
             <button
-              onClick={capture}
-              disabled={!live.length}
-              className="self-center text-sm text-mist underline underline-offset-4 hover:text-chalk disabled:opacity-40"
+              key={s.face}
+              onClick={() => goTo(i)}
+              title={redoLabel(s.face)}
+              aria-label={redoLabel(s.face)}
+              aria-current={i === step ? "step" : undefined}
+              className={`grid aspect-square grid-cols-3 gap-px rounded-lg bg-black p-1 ${i === step ? "ring-2 ring-chalk" : ""} ${mirror ? "-scale-x-100" : ""}`}
             >
-              {tr({ fr: "Capturer maintenant", nl: "Nu vastleggen", en: "Capture now" })}
+              {Array.from({ length: 9 }, (_, k) => (
+                <span
+                  key={k}
+                  className="rounded-[2px]"
+                  style={{ background: faces[i] ? rgb(faces[i]![k]) : k === 4 ? FACE_COLORS[s.face] : "var(--color-blank)" }}
+                />
+              ))}
             </button>
-          ) : (
-            <button onClick={finish} className="btn btn-main">
-              {tr({ fr: "Valider les 6 faces", nl: "De 6 kanten bevestigen", en: "Confirm the 6 faces" })}
+          ))}
+        </div>
+
+        {error ? (
+          <div className="flex flex-col items-start gap-3 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
+            {error}
+            <button onClick={onManual} className="btn btn-main">
+              {ENTER_COLORS}
             </button>
-          )}
-          <p className="text-center text-xs text-mist">
-            {tr({
-              fr: "Bonne lumière, sans reflet. Tu pourras corriger chaque case ensuite.",
-              nl: "Goed licht, zonder weerspiegeling. Je kunt elk vakje achteraf nog corrigeren.",
-              en: "Good light, no glare. You can fix any square afterwards.",
-            })}
-          </p>
-        </>
-      )}
-    </main>
+          </div>
+        ) : (
+          <>
+            <div>
+              {current ? (
+                <>
+                  <h1 className="wide flex items-center gap-2.5 text-2xl">
+                    <span className="size-4 rounded" style={{ background: FACE_COLORS[current.face] }} />
+                    {faceTitle(current.face)}
+                  </h1>
+                  <p className="mt-1 text-mist">
+                    <Colored
+                      text={tr({
+                        fr: `${faces[step!] ? "Refais cette face." : current.hint} Le ${FACE_NAMES[current.top]} en haut, tiens-la immobile dans le cadre.`,
+                        nl: `${faces[step!] ? "Doe deze kant opnieuw." : current.hint} ${capitalize(FACE_NAMES[current.top])} boven, houd de kubus stil in het kader.`,
+                        en: `${faces[step!] ? "Redo this face." : current.hint} ${capitalize(FACE_NAMES[current.top])} on top, hold it still in the frame.`,
+                      })}
+                    />
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="wide text-2xl">{tr({ fr: "Les 6 faces sont prises", nl: "Alle 6 kanten zijn vastgelegd", en: "All 6 faces are in" })}</h1>
+                  <p className="mt-1 text-mist">
+                    {tr({
+                      fr: "Une miniature ne ressemble pas à ton cube ? Touche-la pour refaire cette face.",
+                      nl: "Lijkt een miniatuur niet op je kubus? Tik erop om die kant opnieuw te doen.",
+                      en: "A thumbnail doesn't match your cube? Tap it to redo that face.",
+                    })}
+                  </p>
+                </>
+              )}
+            </div>
+            <div className="relative overflow-hidden rounded-3xl bg-black">
+              <video ref={video} playsInline muted className={`block w-full ${mirror ? "-scale-x-100" : ""}`} />
+              {box > 0 && (
+                <div
+                  className={`absolute top-1/2 left-1/2 grid aspect-square -translate-1/2 grid-cols-3 overflow-hidden rounded-2xl ring-2 transition ${
+                    flash ? "bg-place/40 ring-place" : "ring-chalk/90"
+                  } ${step === null ? "opacity-40" : ""} ${mirror ? "-scale-x-100" : ""}`}
+                  style={{ width: `${box}%` }}
+                >
+                  {live.map((c, i) => (
+                    <div key={i} className="grid place-items-center border border-white/30">
+                      <span className="size-4 rounded-full ring-2 ring-white" style={{ background: rgb(c) }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {current && box > 0 && (
+                <p className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 py-1.5 pr-3 pl-1.5 text-sm whitespace-nowrap backdrop-blur">
+                  <span
+                    className="size-5 rounded-full [mask:radial-gradient(circle_6px,transparent_98%,#000)]"
+                    style={{ background: `conic-gradient(var(--color-place) ${filled}%, #ffffff30 0)` }}
+                  />
+                  {flash
+                    ? tr({ fr: "Capturée", nl: "Vastgelegd", en: "Captured" })
+                    : steady > 0
+                      ? tr({ fr: "Ne bouge plus…", nl: "Niet bewegen…", en: "Hold still…" })
+                      : tr({ fr: "Place la face dans le cadre", nl: "Plaats de kant in het kader", en: "Fit the face in the frame" })}
+                </p>
+              )}
+            </div>
+            {current ? (
+              <button
+                onClick={capture}
+                disabled={!live.length}
+                className="self-center text-sm text-mist underline underline-offset-4 hover:text-chalk disabled:opacity-40"
+              >
+                {tr({ fr: "Capturer maintenant", nl: "Nu vastleggen", en: "Capture now" })}
+              </button>
+            ) : (
+              <button onClick={finish} className="btn btn-main">
+                {tr({ fr: "Valider les 6 faces", nl: "De 6 kanten bevestigen", en: "Confirm the 6 faces" })}
+              </button>
+            )}
+            <p className="text-center text-xs text-mist">
+              {tr({
+                fr: "Bonne lumière, sans reflet. Tu pourras corriger chaque case ensuite.",
+                nl: "Goed licht, zonder weerspiegeling. Je kunt elk vakje achteraf nog corrigeren.",
+                en: "Good light, no glare. You can fix any square afterwards.",
+              })}
+            </p>
+          </>
+        )}
+      </main>
+    </>
   );
 }

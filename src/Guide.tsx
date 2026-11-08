@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { type Tab } from "./Lexicon";
-import { Back, Chevron, HOME, modeTitle } from "./Home";
+import { Chevron, HOME, modeTitle, TopBar } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
 import { applyMove, describeMove, invert, upright, type Face } from "./cube";
@@ -259,389 +259,384 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           : { icon: "play", label: move, title: `${tr({ fr: "Jouer", nl: "Speel", en: "Play" })} ${move}` };
 
   return (
-    <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
-      {focus ? (
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
+    <>
+      <TopBar back={focus ? { label: tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }), onClick: focus.onClose } : { label: HOME, onClick: onHome }}>
+        <button
+          onClick={() => setLexicon({ tab: "moves" })}
+          onMouseDown={keepFocus}
+          title={tr({ fr: "Lexique (?)", nl: "Woordenlijst (?)", en: "Glossary (?)" })}
+          aria-label={tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}
+          className="flex h-8 items-center gap-1.5 rounded-full border border-edge px-2.5 text-sm text-chalk hover:border-mist/60"
+        >
+          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
+            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z" />
+          </svg>
+          <span className="max-sm:hidden">{tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}</span>
+        </button>
+      </TopBar>
+      <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
+        {focus ? (
+          <div>
             <p className={LABEL}>{tr({ fr: "Les cas", nl: "De gevallen", en: "The cases" })}</p>
-            <p className="wide truncate text-lg md:text-xl">{focus.title}</p>
+            <p className="wide text-lg md:text-xl">{focus.title}</p>
           </div>
-          <button onClick={focus.onClose} onMouseDown={keepFocus} className="btn btn-main flex-none">
-            <Chevron to="left" />
-            {tr({ fr: "Retour au plan", nl: "Terug naar het plan", en: "Back to the plan" })}
-          </button>
-        </div>
-      ) : (
-      <div className="flex items-center justify-between gap-3 text-sm text-mist">
-        <span className="flex items-center gap-4">
-          <Back label={HOME} onClick={onHome} />
-          <button
-            onClick={() => setLexicon({ tab: "moves" })}
-            title={tr({ fr: "Lexique (?)", nl: "Woordenlijst (?)", en: "Glossary (?)" })}
-            className="flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-0.5 text-chalk hover:border-mist/60"
-          >
-            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
-              <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z" />
-            </svg>
-            {tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}
-          </button>
-        </span>
-        <p className="text-right">
-          {course
-            ? tr({ fr: "Cube d'exemple", nl: "Voorbeeldkubus", en: "Sample cube" })
-            : (
-              <>
-                {/* Each color stays with its word when the line wraps on a phone. */}
-                <span className="whitespace-nowrap">
-                  <Chip face={state[4] as Face} /> {tr({ fr: "en haut", nl: "boven", en: "on top" })},
-                </span>{" "}
-                <span className="whitespace-nowrap">
-                  <Chip face={state[22] as Face} /> {tr({ fr: "devant", nl: "vooraan", en: "in front" })}
-                </span>
-                {!learn && tr({ fr: ", sans le retourner", nl: ", zonder hem om te draaien", en: ", without turning it over" })}
-              </>
-            )}
-        </p>
-      </div>
-      )}
-
-      <div className="flex flex-col gap-2">
-        {!focus && (
-        <div className="flex gap-[3px]">
-          {segments.map(({ title, first, count }, i) =>
-            count ? (
-              <button key={i} onClick={() => jump(first)} onMouseDown={keepFocus} title={title} aria-label={title} className="-my-2 min-w-0 py-2" style={{ flexGrow: count }}>
-                <span className="block h-1.5 overflow-hidden rounded-full bg-edge">
-                  <span
-                    className={`block h-full ${i < reached ? "bg-mist/70" : "bg-chalk"}`}
-                    style={{ width: i < reached ? "100%" : i === reached ? `${(100 * (step - first)) / count}%` : 0 }}
-                  />
-                </span>
-              </button>
-            ) : null,
-          )}
-          {!total && <span className="h-1.5 flex-1 rounded-full bg-edge" />}
-        </div>
+        ) : (
+          <p className="-mb-2 text-sm text-mist">
+            {course
+              ? tr({ fr: "Cube d'exemple", nl: "Voorbeeldkubus", en: "Sample cube" })
+              : (
+                <>
+                  {/* Each color stays with its word when the line wraps on a phone. */}
+                  <span className="whitespace-nowrap">
+                    <Chip face={state[4] as Face} /> {tr({ fr: "en haut", nl: "boven", en: "on top" })},
+                  </span>{" "}
+                  <span className="whitespace-nowrap">
+                    <Chip face={state[22] as Face} /> {tr({ fr: "devant", nl: "vooraan", en: "in front" })}
+                  </span>
+                  {!learn && tr({ fr: ", sans le retourner", nl: ", zonder hem om te draaien", en: ", without turning it over" })}
+                </>
+              )}
+          </p>
         )}
-        {focus ? null : stage ? (
-          <details ref={picker} className="group relative">
-            <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 [&::-webkit-details-marker]:hidden">
-              <span className="wide text-lg md:text-xl">{stage.title}</span>
-              <span className="flex items-center gap-1 text-sm whitespace-nowrap text-mist">
-                {current === 0
-                  ? tr({ fr: "pour commencer", nl: "om te beginnen", en: "to begin" })
-                  : `${tr({ fr: "étape", nl: "stap", en: "step" })} ${nOf(current, stages.length - 1)}`}
-                <Chevron to="down" className="transition group-open:rotate-180" />
-              </span>
-            </summary>
-            <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60 md:left-auto md:w-80">
-              {stages.map((s, i) => (
-                <li key={s.title}>
+
+        <div className="flex flex-col gap-2">
+          {!focus && (
+          <div className="flex gap-[3px]">
+            {segments.map(({ title, first, count }, i) =>
+              count ? (
+                <button key={i} onClick={() => jump(first)} onMouseDown={keepFocus} title={title} aria-label={title} className="-my-2 min-w-0 py-2" style={{ flexGrow: count }}>
+                  <span className="block h-1.5 overflow-hidden rounded-full bg-edge">
+                    <span
+                      className={`block h-full ${i < reached ? "bg-mist/70" : "bg-chalk"}`}
+                      style={{ width: i < reached ? "100%" : i === reached ? `${(100 * (step - first)) / count}%` : 0 }}
+                    />
+                  </span>
+                </button>
+              ) : null,
+            )}
+            {!total && <span className="h-1.5 flex-1 rounded-full bg-edge" />}
+          </div>
+          )}
+          {focus ? null : stage ? (
+            <details ref={picker} className="group relative">
+              <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                <span className="wide text-lg md:text-xl">{stage.title}</span>
+                <span className="flex items-center gap-1 text-sm whitespace-nowrap text-mist">
+                  {current === 0
+                    ? tr({ fr: "pour commencer", nl: "om te beginnen", en: "to begin" })
+                    : `${tr({ fr: "étape", nl: "stap", en: "step" })} ${nOf(current, stages.length - 1)}`}
+                  <Chevron to="down" className="transition group-open:rotate-180" />
+                </span>
+              </summary>
+              <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60 md:left-auto md:w-80">
+                {stages.map((s, i) => (
+                  <li key={s.title}>
+                    <button
+                      disabled={firsts[i] < 0}
+                      onClick={() => jump(firsts[i])}
+                      className={`flex w-full items-baseline gap-2 rounded-xl px-3 py-2 text-left text-sm enabled:hover:bg-edge disabled:text-mist/60 ${i === current ? "bg-edge font-semibold" : ""}`}
+                    >
+                      <span className="w-4 text-mist">{i}</span>
+                      <span className="flex-1">{s.title}</span>
+                      {firsts[i] < 0 && <span className="text-xs">{tr({ fr: "déjà fait", nl: "al gedaan", en: "already done" })}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          ) : (
+            <p className="flex items-baseline justify-between">
+              <span className="wide text-lg md:text-xl">{modeTitle("fast")}</span>
+              <span className="text-sm text-mist">{moves(total)}</span>
+            </p>
+          )}
+          {cases.length > 1 && (
+            <ol className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
+              {cases.map(({ g, first }) => (
+                <li key={first} className="shrink-0">
                   <button
-                    disabled={firsts[i] < 0}
-                    onClick={() => jump(firsts[i])}
-                    className={`flex w-full items-baseline gap-2 rounded-xl px-3 py-2 text-left text-sm enabled:hover:bg-edge disabled:text-mist/60 ${i === current ? "bg-edge font-semibold" : ""}`}
+                    onClick={() => jump(first)}
+                    onMouseDown={keepFocus}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${g === group ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
                   >
-                    <span className="w-4 text-mist">{i}</span>
-                    <span className="flex-1">{s.title}</span>
-                    {firsts[i] < 0 && <span className="text-xs">{tr({ fr: "déjà fait", nl: "al gedaan", en: "already done" })}</span>}
+                    {g.title}
                   </button>
                 </li>
               ))}
             </ol>
-          </details>
-        ) : (
-          <p className="flex items-baseline justify-between">
-            <span className="wide text-lg md:text-xl">{modeTitle("fast")}</span>
-            <span className="text-sm text-mist">{moves(total)}</span>
-          </p>
-        )}
-        {cases.length > 1 && (
-          <ol className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
-            {cases.map(({ g, first }) => (
-              <li key={first} className="shrink-0">
-                <button
-                  onClick={() => jump(first)}
-                  onMouseDown={keepFocus}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${g === group ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
-                >
-                  {g.title}
-                </button>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
-      <div className="grid flex-1 items-center gap-6 md:grid-cols-2 md:gap-10">
-        <div
-          className={`aspect-square max-h-[40dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
-        >
-          <CubeView
-            state={anim?.from ?? state}
-            moves={anim ? [anim.move] : undefined}
-            onEnd={() => setAnim(null)}
-            piece={worked?.piece}
-            place={worked && slots.get(worked)!.piece}
-            pair={worked?.pair}
-            pairPlace={worked && slots.get(worked)!.pair}
-            grip={!!worked?.fingers}
-            next={worked?.fingers && move}
-          />
-        </div>
-
-        <div className="flex flex-col gap-4">
-          {done ? (
-            <div>
-              <p className="wide text-4xl">
-                {focus
-                  ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" })
-                  : course
-                  ? tr({ fr: "Cours terminé", nl: "Cursus voltooid", en: "Course complete" })
-                  : tr({ fr: "Résolu !", nl: "Opgelost!", en: "Solved!" })}
-              </p>
-              <p className="mt-2 text-mist">
-                {focus
-                  ? tr({
-                      fr: "Essaie-les sur ton cube, puis reviens au plan pour l'étape suivante.",
-                      nl: "Probeer ze op je kubus, en ga dan terug naar het plan voor de volgende stap.",
-                      en: "Try them on your cube, then go back to the plan for the next stage.",
-                    })
-                  : course
-                  ? tr({
-                      fr: "Prends ton cube et refais chaque étape : la liste des étapes te ramène à n'importe quel cas.",
-                      nl: "Neem je kubus en doe elke stap opnieuw: via de lijst met stappen kom je terug bij elk geval.",
-                      en: "Grab your cube and redo each step: the step list takes you back to any case.",
-                    })
-                  : total
-                    ? `${moves(total)}${tr({ fr: ", bravo.", nl: ", goed gedaan.", en: ", well done." })}`
-                    : tr({ fr: "Ton cube était déjà résolu.", nl: "Je kubus was al opgelost.", en: "Your cube was already solved." })}
-              </p>
-            </div>
-          ) : (
-            group && (
-              <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
-                <p className={LABEL}>
-                  {tr({ fr: "Le but", nl: "Het doel", en: "The goal" })}
-                  {learn && group.stage > 0 && group.title && <span className="font-normal tracking-normal normal-case"> · {group.title}</span>}
-                </p>
-                <p className="wide mt-1 text-lg leading-snug">{learn && group.stage > 0 ? stages[group.stage].goal : (group.title ?? stage?.goal)}</p>
-                {piece && (
-                  <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                    <PieceChip piece={piece} />
-                    {group.pair && <PieceChip piece={group.pair} />}
-                    <span className="text-mist">→</span>
-                    <span className="flex items-center gap-1.5 rounded-lg bg-raised py-0.5 pr-2 pl-1 ring-1 ring-place">
-                      <i className="h-3.5 w-3.5 rounded-[2px] bg-place" />
-                      {placeOf(group.pair)}
-                    </span>
-                  </p>
-                )}
-                {group.text && (
-                  <p className="mt-2 text-mist">
-                    <Colored text={group.text} />
-                  </p>
-                )}
-                {group.fingers && (
-                  <p className="mt-2 flex gap-4 text-sm">
-                    <span className="flex items-center gap-1.5">
-                      <i className="size-3 rounded-full" style={{ background: THUMB_COLOR }} />
-                      {tr({ fr: "les pouces", nl: "de duimen", en: "the thumbs" })}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <i className="size-3 rounded-full" style={{ background: INDEX_COLOR }} />
-                      {tr({ fr: "les index", nl: "de wijsvingers", en: "the index fingers" })}
-                    </span>
-                  </p>
-                )}
-
-                <p className={`${LABEL} mt-4 border-t border-edge pt-3`}>{tr({ fr: "Comment", nl: "Hoe", en: "How" })}</p>
-                <ol className="mt-2 grid gap-3">
-                  {(group.steps ?? [{ text: "", count: group.moves.length }]).map((part, j, parts) => {
-                    const first = groupStart + parts.slice(0, j).reduce((sum, p) => sum + p.count, 0);
-                    const own = flat.slice(first, first + part.count).map((f) => f.move);
-                    const [passed, here] = [atResult || step >= first + part.count, !atResult && step >= first && step < first + part.count];
-                    // A sequence played several times shows each time apart, and which one is playing.
-                    const rep = algOf(own);
-                    const size = rep && !rep.setup && rep.reps > 1 ? rep.moves.length : own.length;
-                    const runs = Array.from({ length: own.length / size }, (_, r) => r * size);
-                    return (
-                      <li key={j} className={`grid grid-cols-[1.25rem_1fr] gap-2.5 ${passed ? "opacity-55" : ""}`}>
-                        <span className={`mt-0.5 grid size-5 place-items-center rounded-full text-[11px] font-bold ${here ? "bg-chalk text-plastic" : "bg-raised text-mist"} ${part.text ? "" : "invisible"}`}>
-                          {j + 1}
-                        </span>
-                        <div className="min-w-0">
-                          {part.text && (
-                            <p>
-                              <Colored text={part.text} />
-                              {here && runs.length > 1 && (
-                                <span className="ml-1.5 rounded-md bg-piece px-1.5 py-px align-[1px] text-[11px] font-bold text-plastic">
-                                  {Math.floor((step - first) / size) + 1}/{runs.length}
-                                </span>
-                              )}
-                            </p>
-                          )}
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            {runs.map((r) => (
-                              <span key={r} className={`flex flex-wrap gap-1 ${runs.length > 1 ? "rounded-[10px] p-0.5 ring-1 ring-edge" : ""}`}>
-                                {own.slice(r, r + size).map((m, c) => {
-                                  const i = first + r + c;
-                                  return (
-                                    <button
-                                      key={i}
-                                      onClick={() => jump(i)}
-                                      onMouseDown={keepFocus}
-                                      title={describeMove(m).join(", ")}
-                                      className={`min-w-8 rounded-lg px-1 py-0.5 text-sm font-semibold [font-stretch:125%] ${
-                                        here && i === step ? "bg-chalk text-plastic" : passed || i < step ? "bg-raised text-mist/60" : "bg-raised text-chalk"
-                                      }`}
-                                    >
-                                      {m}
-                                    </button>
-                                  );
-                                })}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
-                {stage && !(course && !group.stage) && (
-                  <p className="mt-4 text-sm text-mist">
-                    <span className="text-chalk/80">{tr({ fr: "Pourquoi ça marche : ", nl: "Waarom het werkt: ", en: "Why it works: " })}</span>
-                    <Colored text={stage.why} />
-                  </p>
-                )}
-              </section>
-            )
           )}
         </div>
-      </div>
 
-      {!course && (
-        <div className="flex justify-center gap-4 text-sm text-mist">
-          <span>{tr({ fr: "Perdu ?", nl: "Kwijt?", en: "Lost?" })}</span>
-          <button className="font-semibold text-chalk underline underline-offset-2" onClick={onScan}>
-            {tr({ fr: "Rescanner le cube", nl: "Kubus opnieuw scannen", en: "Rescan the cube" })}
-          </button>
-          <button className="font-semibold text-chalk underline underline-offset-2" onClick={() => onEdit(upright(state))}>
-            {tr({ fr: "Corriger les couleurs", nl: "Kleuren corrigeren", en: "Fix the colors" })}
-          </button>
-        </div>
-      )}
-
-      {/* The player, pinned to the bottom: its buttons never move or resize, so a pointer can rest on ▶. */}
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-        <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 py-3 md:grid md:h-18 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-6 md:px-8 md:py-0">
-          <div className="flex min-w-0 items-center gap-3">
-            {/* The move's letter opens the glossary on it. */}
-            <button
-              onClick={() => move && setLexicon({ tab: "moves", focus: move })}
-              onMouseDown={keepFocus}
-              disabled={!move}
-              title={move && tr({ fr: "Ce coup dans le lexique", nl: "Deze zet in de woordenlijst", en: "This move in the glossary" })}
-              className="wide min-w-12 flex-none text-left text-4xl leading-none enabled:hover:text-white enabled:hover:underline enabled:hover:decoration-2 enabled:hover:underline-offset-4"
-            >
-              {move ?? "✓"}
-            </button>
-            <div className="min-w-0 text-sm leading-snug">
-              <p className="text-xs text-mist">
-                {ending
-                    ? ENDINGS[ending].label
-                    : done
-                      ? DONE
-                      : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
-                {move && part && ` · ${part}`}
-              </p>
-              {ending && (
-                <p className="font-semibold">{ending === "demo" || !learn ? group?.title : stages[group!.stage].title}</p>
-              )}
-              {move && (
-                <div className="md:line-clamp-2">
-                  <MoveText move={move} finger={group?.fingers?.[step - groupStart]} />
-                </div>
-              )}
-            </div>
+        <div className="grid flex-1 items-center gap-6 md:grid-cols-2 md:gap-10">
+          <div
+            className={`aspect-square max-h-[40dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
+          >
+            <CubeView
+              state={anim?.from ?? state}
+              moves={anim ? [anim.move] : undefined}
+              onEnd={() => setAnim(null)}
+              piece={worked?.piece}
+              place={worked && slots.get(worked)!.piece}
+              pair={worked?.pair}
+              pairPlace={worked && slots.get(worked)!.pair}
+              grip={!!worked?.fingers}
+              next={worked?.fingers && move}
+            />
           </div>
 
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex gap-1 rounded-full bg-white/8 p-1 ring-1 ring-white/15">
-              <button
-                onClick={back}
-                onMouseDown={keepFocus}
-                disabled={!step}
-                title={tr({ fr: "Coup précédent (←)", nl: "Vorige zet (←)", en: "Previous move (←)" })}
-                aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
-                className="grid h-10 w-12 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
-              >
-                <Icon name="back" />
-              </button>
-              <button
-                onClick={toggleAuto}
-                onMouseDown={keepFocus}
-                disabled={done}
-                aria-pressed={auto}
-                title={tr({ fr: "Lecture automatique (espace)", nl: "Automatisch afspelen (spatie)", en: "Autoplay (space)" })}
-                aria-label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })}
-                className={`relative grid h-10 w-12 place-items-center rounded-full text-zinc-200 disabled:opacity-30 ${auto ? "bg-white/12" : "enabled:hover:bg-white/15"}`}
-              >
-                {auto && (
-                  <svg viewBox="0 0 48 40" className="absolute inset-0" aria-hidden>
-                    <rect key={`${step}|${atResult}|${wait}`} x="1.5" y="1.5" width="45" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
-                  </svg>
-                )}
-                <Icon name={auto ? "pause" : "auto"} />
-              </button>
-              <button
-                onClick={() => forward()}
-                onMouseDown={keepFocus}
-                disabled={done}
-                title={`${next.title} (→)`}
-                aria-label={next.title}
-                className="flex h-10 w-24 items-center justify-center gap-1.5 rounded-full bg-chalk text-plastic enabled:hover:bg-white disabled:opacity-40"
-              >
-                <Icon name={next.icon} />
-                {next.label && <span className="wide min-w-7 text-left text-base">{next.label}</span>}
-              </button>
-            </div>
-            <button
-              popoverTarget={settings}
-              onMouseDown={keepFocus}
-              title={tr({ fr: "Durée par coup en lecture automatique", nl: "Duur per zet bij automatisch afspelen", en: "Time per move in autoplay" })}
-              className={`h-8 w-12 rounded-full border text-xs font-semibold ${auto ? "border-place text-chalk" : "border-edge text-mist hover:text-chalk"}`}
-            >
-              {delay} s
+          <div className="flex flex-col gap-4">
+            {done ? (
+              <div>
+                <p className="wide text-4xl">
+                  {focus
+                    ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" })
+                    : course
+                    ? tr({ fr: "Cours terminé", nl: "Cursus voltooid", en: "Course complete" })
+                    : tr({ fr: "Résolu !", nl: "Opgelost!", en: "Solved!" })}
+                </p>
+                <p className="mt-2 text-mist">
+                  {focus
+                    ? tr({
+                        fr: "Essaie-les sur ton cube, puis reviens au plan pour l'étape suivante.",
+                        nl: "Probeer ze op je kubus, en ga dan terug naar het plan voor de volgende stap.",
+                        en: "Try them on your cube, then go back to the plan for the next stage.",
+                      })
+                    : course
+                    ? tr({
+                        fr: "Prends ton cube et refais chaque étape : la liste des étapes te ramène à n'importe quel cas.",
+                        nl: "Neem je kubus en doe elke stap opnieuw: via de lijst met stappen kom je terug bij elk geval.",
+                        en: "Grab your cube and redo each step: the step list takes you back to any case.",
+                      })
+                    : total
+                      ? `${moves(total)}${tr({ fr: ", bravo.", nl: ", goed gedaan.", en: ", well done." })}`
+                      : tr({ fr: "Ton cube était déjà résolu.", nl: "Je kubus was al opgelost.", en: "Your cube was already solved." })}
+                </p>
+              </div>
+            ) : (
+              group && (
+                <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
+                  <p className={LABEL}>
+                    {tr({ fr: "Le but", nl: "Het doel", en: "The goal" })}
+                    {learn && group.stage > 0 && group.title && <span className="font-normal tracking-normal normal-case"> · {group.title}</span>}
+                  </p>
+                  <p className="wide mt-1 text-lg leading-snug">{learn && group.stage > 0 ? stages[group.stage].goal : (group.title ?? stage?.goal)}</p>
+                  {piece && (
+                    <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                      <PieceChip piece={piece} />
+                      {group.pair && <PieceChip piece={group.pair} />}
+                      <span className="text-mist">→</span>
+                      <span className="flex items-center gap-1.5 rounded-lg bg-raised py-0.5 pr-2 pl-1 ring-1 ring-place">
+                        <i className="h-3.5 w-3.5 rounded-[2px] bg-place" />
+                        {placeOf(group.pair)}
+                      </span>
+                    </p>
+                  )}
+                  {group.text && (
+                    <p className="mt-2 text-mist">
+                      <Colored text={group.text} />
+                    </p>
+                  )}
+                  {group.fingers && (
+                    <p className="mt-2 flex gap-4 text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <i className="size-3 rounded-full" style={{ background: THUMB_COLOR }} />
+                        {tr({ fr: "les pouces", nl: "de duimen", en: "the thumbs" })}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <i className="size-3 rounded-full" style={{ background: INDEX_COLOR }} />
+                        {tr({ fr: "les index", nl: "de wijsvingers", en: "the index fingers" })}
+                      </span>
+                    </p>
+                  )}
+
+                  <p className={`${LABEL} mt-4 border-t border-edge pt-3`}>{tr({ fr: "Comment", nl: "Hoe", en: "How" })}</p>
+                  <ol className="mt-2 grid gap-3">
+                    {(group.steps ?? [{ text: "", count: group.moves.length }]).map((part, j, parts) => {
+                      const first = groupStart + parts.slice(0, j).reduce((sum, p) => sum + p.count, 0);
+                      const own = flat.slice(first, first + part.count).map((f) => f.move);
+                      const [passed, here] = [atResult || step >= first + part.count, !atResult && step >= first && step < first + part.count];
+                      // A sequence played several times shows each time apart, and which one is playing.
+                      const rep = algOf(own);
+                      const size = rep && !rep.setup && rep.reps > 1 ? rep.moves.length : own.length;
+                      const runs = Array.from({ length: own.length / size }, (_, r) => r * size);
+                      return (
+                        <li key={j} className={`grid grid-cols-[1.25rem_1fr] gap-2.5 ${passed ? "opacity-55" : ""}`}>
+                          <span className={`mt-0.5 grid size-5 place-items-center rounded-full text-[11px] font-bold ${here ? "bg-chalk text-plastic" : "bg-raised text-mist"} ${part.text ? "" : "invisible"}`}>
+                            {j + 1}
+                          </span>
+                          <div className="min-w-0">
+                            {part.text && (
+                              <p>
+                                <Colored text={part.text} />
+                                {here && runs.length > 1 && (
+                                  <span className="ml-1.5 rounded-md bg-piece px-1.5 py-px align-[1px] text-[11px] font-bold text-plastic">
+                                    {Math.floor((step - first) / size) + 1}/{runs.length}
+                                  </span>
+                                )}
+                              </p>
+                            )}
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                              {runs.map((r) => (
+                                <span key={r} className={`flex flex-wrap gap-1 ${runs.length > 1 ? "rounded-[10px] p-0.5 ring-1 ring-edge" : ""}`}>
+                                  {own.slice(r, r + size).map((m, c) => {
+                                    const i = first + r + c;
+                                    return (
+                                      <button
+                                        key={i}
+                                        onClick={() => jump(i)}
+                                        onMouseDown={keepFocus}
+                                        title={describeMove(m).join(", ")}
+                                        className={`min-w-8 rounded-lg px-1 py-0.5 text-sm font-semibold [font-stretch:125%] ${
+                                          here && i === step ? "bg-chalk text-plastic" : passed || i < step ? "bg-raised text-mist/60" : "bg-raised text-chalk"
+                                        }`}
+                                      >
+                                        {m}
+                                      </button>
+                                    );
+                                  })}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  {stage && !(course && !group.stage) && (
+                    <p className="mt-4 text-sm text-mist">
+                      <span className="text-chalk/80">{tr({ fr: "Pourquoi ça marche : ", nl: "Waarom het werkt: ", en: "Why it works: " })}</span>
+                      <Colored text={stage.why} />
+                    </p>
+                  )}
+                </section>
+              )
+            )}
+          </div>
+        </div>
+
+        {!course && (
+          <div className="flex justify-center gap-4 text-sm text-mist">
+            <span>{tr({ fr: "Perdu ?", nl: "Kwijt?", en: "Lost?" })}</span>
+            <button className="font-semibold text-chalk underline underline-offset-2" onClick={onScan}>
+              {tr({ fr: "Rescanner le cube", nl: "Kubus opnieuw scannen", en: "Rescan the cube" })}
             </button>
-            <div
-              id={settings}
-              popover="auto"
-              className="inset-auto bottom-40 left-1/2 m-0 w-64 -translate-x-1/2 rounded-2xl border border-edge bg-shell p-3 text-chalk shadow-2xl shadow-black/60 md:bottom-20"
-            >
-              <p className="mb-2 text-xs text-mist">{tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })}</p>
-              <div className="flex gap-1 rounded-xl bg-plastic p-1">
-                {DELAYS.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => chooseDelay(d)}
-                    onMouseDown={keepFocus}
-                    aria-pressed={d === delay}
-                    className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${d === delay ? "bg-chalk text-plastic" : "text-mist hover:text-chalk"}`}
-                  >
-                    {d} s
-                  </button>
-                ))}
+            <button className="font-semibold text-chalk underline underline-offset-2" onClick={() => onEdit(upright(state))}>
+              {tr({ fr: "Corriger les couleurs", nl: "Kleuren corrigeren", en: "Fix the colors" })}
+            </button>
+          </div>
+        )}
+
+        {/* The player, pinned to the bottom: its buttons never move or resize, so a pointer can rest on ▶. */}
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+          <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 py-3 md:grid md:h-18 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-6 md:px-8 md:py-0">
+            <div className="flex min-w-0 items-center gap-3">
+              {/* The move's letter opens the glossary on it. */}
+              <button
+                onClick={() => move && setLexicon({ tab: "moves", focus: move })}
+                onMouseDown={keepFocus}
+                disabled={!move}
+                title={move && tr({ fr: "Ce coup dans le lexique", nl: "Deze zet in de woordenlijst", en: "This move in the glossary" })}
+                className="wide min-w-12 flex-none text-left text-4xl leading-none enabled:hover:text-white enabled:hover:underline enabled:hover:decoration-2 enabled:hover:underline-offset-4"
+              >
+                {move ?? "✓"}
+              </button>
+              <div className="min-w-0 text-sm leading-snug">
+                <p className="text-xs text-mist">
+                  {ending
+                      ? ENDINGS[ending].label
+                      : done
+                        ? DONE
+                        : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
+                  {move && part && ` · ${part}`}
+                </p>
+                {ending && (
+                  <p className="font-semibold">{ending === "demo" || !learn ? group?.title : stages[group!.stage].title}</p>
+                )}
+                {move && (
+                  <div className="md:line-clamp-2">
+                    <MoveText move={move} finger={group?.fingers?.[step - groupStart]} />
+                  </div>
+                )}
               </div>
             </div>
-          </div>
 
-          <p className="hidden text-right text-xs text-mist pointer-fine:md:block">
-            {tr({ fr: "← → coup par coup · espace : auto · ? : lexique", nl: "← → zet per zet · spatie: auto · ?: woordenlijst", en: "← → move by move · space: auto · ?: glossary" })}
-          </p>
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex gap-1 rounded-full bg-white/8 p-1 ring-1 ring-white/15">
+                <button
+                  onClick={back}
+                  onMouseDown={keepFocus}
+                  disabled={!step}
+                  title={tr({ fr: "Coup précédent (←)", nl: "Vorige zet (←)", en: "Previous move (←)" })}
+                  aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
+                  className="grid h-10 w-12 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
+                >
+                  <Icon name="back" />
+                </button>
+                <button
+                  onClick={toggleAuto}
+                  onMouseDown={keepFocus}
+                  disabled={done}
+                  aria-pressed={auto}
+                  title={tr({ fr: "Lecture automatique (espace)", nl: "Automatisch afspelen (spatie)", en: "Autoplay (space)" })}
+                  aria-label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })}
+                  className={`relative grid h-10 w-12 place-items-center rounded-full text-zinc-200 disabled:opacity-30 ${auto ? "bg-white/12" : "enabled:hover:bg-white/15"}`}
+                >
+                  {auto && (
+                    <svg viewBox="0 0 48 40" className="absolute inset-0" aria-hidden>
+                      <rect key={`${step}|${atResult}|${wait}`} x="1.5" y="1.5" width="45" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
+                    </svg>
+                  )}
+                  <Icon name={auto ? "pause" : "auto"} />
+                </button>
+                <button
+                  onClick={() => forward()}
+                  onMouseDown={keepFocus}
+                  disabled={done}
+                  title={`${next.title} (→)`}
+                  aria-label={next.title}
+                  className="flex h-10 w-24 items-center justify-center gap-1.5 rounded-full bg-chalk text-plastic enabled:hover:bg-white disabled:opacity-40"
+                >
+                  <Icon name={next.icon} />
+                  {next.label && <span className="wide min-w-7 text-left text-base">{next.label}</span>}
+                </button>
+              </div>
+              <button
+                popoverTarget={settings}
+                onMouseDown={keepFocus}
+                title={tr({ fr: "Durée par coup en lecture automatique", nl: "Duur per zet bij automatisch afspelen", en: "Time per move in autoplay" })}
+                className={`h-8 w-12 rounded-full border text-xs font-semibold ${auto ? "border-place text-chalk" : "border-edge text-mist hover:text-chalk"}`}
+              >
+                {delay} s
+              </button>
+              <div
+                id={settings}
+                popover="auto"
+                className="inset-auto bottom-40 left-1/2 m-0 w-64 -translate-x-1/2 rounded-2xl border border-edge bg-shell p-3 text-chalk shadow-2xl shadow-black/60 md:bottom-20"
+              >
+                <p className="mb-2 text-xs text-mist">{tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })}</p>
+                <div className="flex gap-1 rounded-xl bg-plastic p-1">
+                  {DELAYS.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => chooseDelay(d)}
+                      onMouseDown={keepFocus}
+                      aria-pressed={d === delay}
+                      className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${d === delay ? "bg-chalk text-plastic" : "text-mist hover:text-chalk"}`}
+                    >
+                      {d} s
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <p className="hidden text-right text-xs text-mist pointer-fine:md:block">
+              {tr({ fr: "← → coup par coup · espace : auto · ? : lexique", nl: "← → zet per zet · spatie: auto · ?: woordenlijst", en: "← → move by move · space: auto · ?: glossary" })}
+            </p>
+          </div>
         </div>
-      </div>
-      {lexicon && <Lexicon tab={lexicon.tab} focus={lexicon.focus} onClose={() => setLexicon(null)} />}
-    </main>
+        {lexicon && <Lexicon tab={lexicon.tab} focus={lexicon.focus} onClose={() => setLexicon(null)} />}
+      </main>
+    </>
   );
 }

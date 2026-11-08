@@ -382,7 +382,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       onClick={showIntro}
                       className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${atIntro ? "bg-edge font-semibold" : ""}`}
                     >
-                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${atIntro ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>▷</span>
+                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${atIntro ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>i</span>
                       {INTRO_LABEL}
                     </button>
                   </li>
@@ -410,7 +410,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                     onMouseDown={keepFocus}
                     className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${atIntro ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
                   >
-                    ▷ {INTRO_LABEL}
+                    {INTRO_LABEL}
                   </button>
                 </li>
               )}
@@ -628,7 +628,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 title={move && tr({ fr: "Ce coup dans le lexique", nl: "Deze zet in de woordenlijst", en: "This move in the glossary" })}
                 className="wide min-w-12 flex-none text-left text-4xl leading-none enabled:hover:text-white enabled:hover:underline enabled:hover:decoration-2 enabled:hover:underline-offset-4"
               >
-                {move ?? (atIntro ? "▷" : "✓")}
+                {move ?? (atIntro ? "" : "✓")}
               </button>
               <div className="min-w-0 text-sm leading-snug">
                 <p className="text-xs text-mist">

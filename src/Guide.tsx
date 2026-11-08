@@ -56,8 +56,9 @@ type GuideProps = {
   step: number;
   onStep: (step: number) => void;
   onHome: () => void;
-  /** The back link's label, when it leads elsewhere than home. */
-  backLabel?: string;
+  /** The cases of one stage, shown on their own over another screen: no progress bar, stage list or glossary
+   * button, only the cases and a way back. */
+  focus?: { title: string; onClose: () => void };
   onScan: () => void;
   onEdit: (state: string) => void;
 };
@@ -91,7 +92,7 @@ const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 // A click leaves the focus where it was, so Space keeps toggling the auto mode.
 const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
-export default function Guide({ start, groups, learn, course, stages = STAGES, step, onStep, onHome, backLabel = HOME, onScan, onEdit }: GuideProps) {
+export default function Guide({ start, groups, learn, course, stages = STAGES, step, onStep, onHome, focus, onScan, onEdit }: GuideProps) {
   const flat = useMemo(() => groups.flatMap((g, group) => g.moves.map((move) => ({ move, group }))), [groups]);
   const states = useMemo(() => planStates(start, groups), [start, groups]);
   const total = flat.length;
@@ -184,7 +185,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     const onKey = (e: KeyboardEvent) => {
       if (lexicon) return; // the glossary is open over the guide
       if (e.key === "?" && !(e.target as Element).closest("input, textarea")) return setLexicon({ tab: "moves" });
-      if (e.key === "Escape") closePicker();
+      if (e.key === "Escape") return focus ? focus.onClose() : closePicker();
       // A focused control already handles Space itself.
       if (e.key === " " && (e.target as Element).closest("button, summary, input")) return;
       if (e.key === " ") {
@@ -259,9 +260,21 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
 
   return (
     <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
+      {focus ? (
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className={LABEL}>{tr({ fr: "Les cas", nl: "De gevallen", en: "The cases" })}</p>
+            <p className="wide truncate text-lg md:text-xl">{focus.title}</p>
+          </div>
+          <button onClick={focus.onClose} onMouseDown={keepFocus} className="btn btn-main flex-none">
+            <Chevron to="left" />
+            {tr({ fr: "Retour au plan", nl: "Terug naar het plan", en: "Back to the plan" })}
+          </button>
+        </div>
+      ) : (
       <div className="flex items-center justify-between gap-3 text-sm text-mist">
         <span className="flex items-center gap-4">
-          <Back label={backLabel} onClick={onHome} />
+          <Back label={HOME} onClick={onHome} />
           <button
             onClick={() => setLexicon({ tab: "moves" })}
             title={tr({ fr: "Lexique (?)", nl: "Woordenlijst (?)", en: "Glossary (?)" })}
@@ -290,8 +303,10 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             )}
         </p>
       </div>
+      )}
 
       <div className="flex flex-col gap-2">
+        {!focus && (
         <div className="flex gap-[3px]">
           {segments.map(({ title, first, count }, i) =>
             count ? (
@@ -307,7 +322,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           )}
           {!total && <span className="h-1.5 flex-1 rounded-full bg-edge" />}
         </div>
-        {stage ? (
+        )}
+        {focus ? null : stage ? (
           <details ref={picker} className="group relative">
             <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 [&::-webkit-details-marker]:hidden">
               <span className="wide text-lg md:text-xl">{stage.title}</span>
@@ -378,12 +394,20 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           {done ? (
             <div>
               <p className="wide text-4xl">
-                {course
+                {focus
+                  ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" })
+                  : course
                   ? tr({ fr: "Cours terminé", nl: "Cursus voltooid", en: "Course complete" })
                   : tr({ fr: "Résolu !", nl: "Opgelost!", en: "Solved!" })}
               </p>
               <p className="mt-2 text-mist">
-                {course
+                {focus
+                  ? tr({
+                      fr: "Essaie-les sur ton cube, puis reviens au plan pour l'étape suivante.",
+                      nl: "Probeer ze op je kubus, en ga dan terug naar het plan voor de volgende stap.",
+                      en: "Try them on your cube, then go back to the plan for the next stage.",
+                    })
+                  : course
                   ? tr({
                       fr: "Prends ton cube et refais chaque étape : la liste des étapes te ramène à n'importe quel cas.",
                       nl: "Neem je kubus en doe elke stap opnieuw: via de lijst met stappen kom je terug bij elk geval.",

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import CubeView from "./CubeView";
 import { Back, Chevron, MiniFace } from "./Home";
 import { Colored } from "./Scanner";
@@ -8,7 +9,8 @@ import { tr } from "./i18n";
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 const LAST = PLAN.length - 1;
 
-type Props = { stage: number; onStage: (stage: number) => void; onBack: () => void; onCases: (stage: number) => void; onMyCube: () => void };
+/** `children`: the stage's cases, when they are open over the plan. */
+type Props = { stage: number; onStage: (stage: number) => void; onBack: () => void; onCases: () => void; onMyCube: () => void; children?: ReactNode };
 
 /** The cube at a milestone, with what it shows; greyed stickers can be anything. */
 function Milestone({ at, label }: { at: number; label: string }) {
@@ -25,7 +27,7 @@ function Milestone({ at, label }: { at: number; label: string }) {
 }
 
 /** The beginner method as a map: stage 0 is the idea of it, then each stage on its own, for any cube. */
-export default function Plan({ stage, onStage, onBack, onCases, onMyCube }: Props) {
+export default function Plan({ stage, onStage, onBack, onCases, onMyCube, children }: Props) {
   const plan = PLAN[stage];
   const intro = stage === 0;
   return (
@@ -148,7 +150,7 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube }: Prop
                 <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
                 <Colored text={plan.done} />
               </p>
-              <button onClick={() => onCases(stage)} className="mt-4 text-sm font-semibold underline underline-offset-2 hover:text-white">
+              <button onClick={onCases} className="btn mt-4 w-full border border-edge bg-raised hover:border-mist/60">
                 {tr({ fr: "Voir chaque cas en 3D, coup par coup", nl: "Elk geval in 3D bekijken, zet voor zet", en: "See each case in 3D, move by move" })}
               </button>
             </>
@@ -179,6 +181,9 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube }: Prop
           )}
         </div>
       </div>
+
+      {/* The cases cover the plan, which stays as it was under them: closing them lands where the reader left it. */}
+      {children && <div className="fixed inset-0 z-30 flex flex-col overflow-y-auto overscroll-contain bg-plastic">{children}</div>}
     </main>
   );
 }

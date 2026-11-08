@@ -26,6 +26,8 @@ export const MILESTONES: string[] = [
   COURSE.find((g) => g.stage === 8)!.from!, // every corner placed, twisted
   YELLOW_UP,
 ];
+/** The course's demos of each stage, its cases. */
+export const CASES = MILESTONES.map((_, i) => COURSE.filter((g) => g.stage === i));
 /** The milestones whose work sits at the bottom, seen from below. */
 export const SEEN_FROM_BELOW = [2, 3];
 

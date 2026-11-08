@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import CubeView from "./CubeView";
+import CubeView, { BLANK } from "./CubeView";
 import { Chevron, MiniFace, TopBar } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
-import { CASES, MILESTONES, PLAN, PRINCIPLES, SEEN_FROM_BELOW, TOPS } from "./plan";
+import { CASES, MILESTONES, PLAN, PRINCIPLES, SCRAMBLED, SEEN, SEEN_FROM_BELOW, TOPS } from "./plan";
+import { FACE_COLORS, STICKERS, type Face } from "./cube";
 import { tr } from "./i18n";
 
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
@@ -11,6 +12,34 @@ const LAST = PLAN.length - 1;
 
 /** `children`: the stage's cases, when they are open over the plan. */
 type Props = { stage: number; onStage: (stage: number) => void; onBack: () => void; onCases: () => void; onMyCube: () => void; children?: ReactNode };
+
+/** A small flat drawing of the cube `state` (its top, front and right faces, or its bottom, front and right ones
+ * `below`), for a list where a 3D view each would be too many. */
+function IsoCube({ state, below = false }: { state: string; below?: boolean }) {
+  const [sx, sy] = [Math.sqrt(3) / 2, 0.5];
+  const at = ([x, y, z]: number[]) => `${((x - z) * sx).toFixed(3)},${((below ? -sy : sy) * (x + z) - y).toFixed(3)}`;
+  const shown = [below ? [0, -1, 0] : [0, 1, 0], [0, 0, 1], [1, 0, 0]].map(String);
+  return (
+    <svg viewBox="-2.8 -3.2 5.6 6.4" className="size-14 flex-none" aria-hidden>
+      {STICKERS.map(({ pos, normal }, i) => {
+        if (!shown.includes(String(normal))) return null;
+        const center = pos.map((p, k) => p + normal[k] * 0.5);
+        const [u, v] = [0, 1, 2].filter((k) => !normal[k]);
+        const corner = (a: number, b: number) => at(center.map((c, k) => c + (k === u ? a : k === v ? b : 0) * 0.44));
+        return (
+          <polygon
+            key={i}
+            points={[corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)].join(" ")}
+            fill={FACE_COLORS[state[i] as Face] ?? BLANK}
+            stroke="#16171b"
+            strokeWidth="0.08"
+            strokeLinejoin="round"
+          />
+        );
+      })}
+    </svg>
+  );
+}
 
 /** The cube at a milestone, with what it shows; greyed stickers can be anything. */
 function Milestone({ at, label }: { at: number; label: string }) {
@@ -64,7 +93,7 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
               />
             </div>
             <p className="mt-3 flex items-start justify-center gap-2 text-center text-xs text-mist">
-              <i className="mt-0.5 size-3 flex-none rounded-[3px] bg-[#3a3d46]" />
+              <i className="mt-0.5 size-3 flex-none rounded-[3px] " style={{ background: BLANK }} />
               {tr({
                 fr: "Gris : n'importe quelle couleur, ça ne compte pas encore. Fais tourner les cubes du doigt.",
                 nl: "Grijs: eender welke kleur, het telt nog niet mee. Draai de kubussen met je vinger.",
@@ -93,32 +122,31 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
                 <h2 className="mt-5 border-t border-edge pt-4 font-semibold">{tr({ fr: "Où j'en suis ?", nl: "Waar ben ik?", en: "Where am I?" })}</h2>
                 <p className="mt-1 text-mist">
                   {tr({
-                    fr: "Tiens ton cube jaune en haut et réponds dans l'ordre. À la première réponse « non », tu as trouvé ton étape.",
-                    nl: "Houd je kubus met geel boven en antwoord in volgorde. Bij het eerste „nee” heb je je stap gevonden.",
-                    en: "Hold your cube yellow on top and answer in order. At the first “no”, you've found your stage.",
+                    fr: "Tiens ton cube jaune en haut et trouve le dessin qui lui ressemble (le gris, c'est n'importe quelle couleur). Si plusieurs vont, prends le plus bas dans la liste.",
+                    nl: "Houd je kubus met geel boven en zoek de tekening die erop lijkt (grijs is eender welke kleur). Passen er meerdere, neem dan de onderste in de lijst.",
+                    en: "Hold your cube yellow on top and find the drawing that looks like it (grey is any color). If several fit, take the lowest in the list.",
                   })}
                 </p>
                 <ol className="mt-3 grid gap-1.5">
-                  {PLAN.slice(1, LAST).map((p, j) => (
-                    <li key={j}>
-                      <button onClick={() => onStage(j + 1)} className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl bg-raised p-2.5 text-left text-sm hover:ring-1 hover:ring-edge">
-                        <span>
-                          <Colored text={p.done} />
+                  {SEEN.map((seen, m) => (
+                    <li key={m}>
+                      <button onClick={() => onStage(m + 1)} className="flex w-full items-center gap-3 rounded-xl bg-raised p-2 text-left text-sm hover:ring-1 hover:ring-edge">
+                        <IsoCube state={m ? MILESTONES[m] : SCRAMBLED} below={SEEN_FROM_BELOW.includes(m)} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block">
+                            <Colored text={seen} />
+                          </span>
+                          <span className="mt-0.5 block text-xs text-mist">
+                            {tr({ fr: "À faire :", nl: "Te doen:", en: "To do:" })}{" "}
+                            <span className="font-semibold text-chalk">
+                              {tr({ fr: "étape", nl: "stap", en: "stage" })} {m + 1} · {STAGES[m + 1].title}
+                            </span>
+                          </span>
                         </span>
-                        <span className="text-xs whitespace-nowrap text-mist">
-                          {tr({ fr: "non → étape", nl: "nee → stap", en: "no → stage" })} {j + 1}
-                        </span>
+                        <Chevron className="text-mist" />
                       </button>
                     </li>
                   ))}
-                  <li>
-                    <button onClick={() => onStage(LAST)} className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl bg-raised p-2.5 text-left text-sm hover:ring-1 hover:ring-edge">
-                      <span>{tr({ fr: "Oui à tout, mais pas encore résolu ?", nl: "Overal ja, maar nog niet opgelost?", en: "Yes to all, but not solved yet?" })}</span>
-                      <span className="text-xs whitespace-nowrap text-mist">
-                        {tr({ fr: "étape", nl: "stap", en: "stage" })} {LAST}
-                      </span>
-                    </button>
-                  </li>
                 </ol>
               </>
             ) : (

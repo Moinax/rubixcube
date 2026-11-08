@@ -34,6 +34,43 @@ export const SEEN_FROM_BELOW = [2, 3];
 /** The top of the cube, back row first, at each shape the yellow cross stage meets. */
 export const TOPS: Record<number, (string | undefined)[]> = { 5: ["....D....", ".D.DD....", "...DDD...", ".D.DDD.D."] };
 
+/** A scrambled cube, where nothing is done yet: the start of the "where am I?" list. */
+export const SCRAMBLED = play(YELLOW_UP, "R U F' L2 D B' R2 U'".split(" "));
+
+/** What the cube looks like at each milestone but the last, said the way you'd see it on yours. */
+export const SEEN: string[] = tr({
+  fr: [
+    "Un cube mélangé : rien n'est encore en place.",
+    "Une marguerite : 4 pétales blancs autour du centre jaune.",
+    "Une croix blanche en bas, chaque branche sous le centre de sa couleur.",
+    "Toute la face du dessous blanche : la première couronne est finie.",
+    "Les deux couronnes du bas sont finies.",
+    "Une croix jaune sur le dessus.",
+    "La croix jaune, chaque arête au-dessus du centre de sa couleur.",
+    "Chaque coin du haut à sa place, mais certains mal tournés.",
+  ],
+  nl: [
+    "Een gemengde kubus: nog niets zit op zijn plek.",
+    "Een madeliefje: 4 witte blaadjes rond het gele middenstuk.",
+    "Een wit kruis onderaan, elke arm onder het middenstuk van zijn kleur.",
+    "De hele onderkant wit: de eerste laag is klaar.",
+    "De twee onderste lagen zijn klaar.",
+    "Een geel kruis bovenop.",
+    "Het gele kruis, elk randstuk boven het middenstuk van zijn kleur.",
+    "Elk hoekstuk bovenaan op zijn plek, maar sommige verkeerd gedraaid.",
+  ],
+  en: [
+    "A scrambled cube: nothing is in place yet.",
+    "A daisy: 4 white petals around the yellow center.",
+    "A white cross at the bottom, each arm under the center of its color.",
+    "The whole bottom face white: the first layer is done.",
+    "The two bottom layers are done.",
+    "A yellow cross on top.",
+    "The yellow cross, each edge above the center of its color.",
+    "Every top corner in its place, but some twisted.",
+  ],
+});
+
 export type PlanStage = { look: string; how: string[]; why: string; done: string };
 
 /** Before the stages: the idea of the method, in a few headed paragraphs. */

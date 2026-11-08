@@ -55,7 +55,7 @@ const material = (color: string) => {
 
 const CAMERA: Vec = [4.6, 4, 6.2];
 // A sticker that doesn't matter yet: a blank ("."), dimmer than any color.
-const BLANK = "#3a3d46";
+export const BLANK = "#3a3d46";
 
 const ease = (k: number) => k * k * (3 - 2 * k);
 

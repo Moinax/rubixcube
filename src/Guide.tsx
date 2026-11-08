@@ -225,14 +225,19 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const { ref: casePicker } = usePopover(`${step}|${atIntro}`);
 
   const piece = group?.piece;
-  // At the start of a course case, a white sticker of its piece facing away (down, left, back) is shown first: the
-  // cube tilts toward it, the way a hand would, then comes back as it is held.
+  // At the start of an instruction, a piece the view doesn't show is glanced at first, the way a hand tilts the cube:
+  // a piece hidden whole (down, left or back), or its white or yellow (which tells how it is turned) facing away.
   const hidden = (() => {
-    if (!course || atResult || atIntro || step !== groupStart || !piece) return;
-    const pos = findPiece(state, piece);
-    return ([0, 1, 2] as const)
-      .map((k) => pos.map((_, j) => (j === k ? pos[k] : 0)) as Vec)
-      .find((normal) => normal.some((v) => v < 0) && state[stickerAt(pos, normal)!] === "U");
+    if (!learn || atResult || atIntro || step !== groupStart) return;
+    for (const p of [piece, group?.pair]) {
+      if (!p) continue;
+      const pos = findPiece(state, p);
+      if (pos.every((v) => v <= 0)) return pos;
+      const away = ([0, 1, 2] as const)
+        .map((k) => pos.map((_, j) => (j === k ? pos[k] : 0)) as Vec)
+        .find((normal) => normal.some((v) => v < 0) && "UD".includes(state[stickerAt(pos, normal)!]));
+      if (away) return away;
+    }
   })();
   /** What one case of a stage does toward it; lessons (stage 0) and the fast mode's phases have none. */
   const aim = learn && group && group.stage > 0 ? (stages[group.stage].aim ?? stages[group.stage].goal) : undefined;

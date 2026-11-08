@@ -85,8 +85,8 @@ type Props = {
  * play), its fingers stand out and the ones in its way fade; while a move plays, its fingers ride with the face
  * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face. A ↻ in the
  * corner puts back a view turned by hand, shown once it was; with `onReplay`, it is always there and plays again too.
- * A new `peek` tilts the cube the way a hand would to glance at its side `from` (a face the camera doesn't see) and
- * brings it back as it is held to play, in one smooth motion; a hand on the cube stops it.
+ * A new `peek` tilts the cube the way a hand would to glance at its side `from` (a face the camera doesn't see), stops
+ * a beat, and brings it back as it is held to play; a hand on the cube stops it.
  */
 export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, onReplay, peek }: Props) {
   const host = useRef<HTMLDivElement>(null);
@@ -165,7 +165,8 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     // From the holding angle to the same one mirrored across the hidden face's axis: the cube shows that face.
     const held = new THREE.Vector3(...CAMERA);
     const look = new THREE.Vector3(...CAMERA.map((c, k) => (peek.from[k] < 0 ? -c : c)));
-    const glance = 1400; // there and back in one smooth motion, like a glance with the cube in hand
+    // There, a beat to take it in, and back: a glance with the cube in hand.
+    const [go, beat] = [600, 350];
     let start: number | undefined;
     // A hand on the cube stops the tilt where it is: the hand turns it from there.
     const done = () => {
@@ -175,9 +176,10 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     ctx.controls.addEventListener("start", done);
     ctx.onCamera = (t) => {
       start ??= t;
-      const k = Math.min(1, (t - start) / glance);
-      camera.position.copy(held).lerp(look, (1 - Math.cos(2 * Math.PI * k)) / 2).setLength(held.length());
-      if (k === 1) done();
+      const k = t - start;
+      const w = k < go ? ease(k / go) : k < go + beat ? 1 : ease(Math.max(0, 1 - (k - go - beat) / go));
+      camera.position.copy(held).lerp(look, w).setLength(held.length());
+      if (k >= 2 * go + beat) done();
     };
     setTurned(false);
     return done;

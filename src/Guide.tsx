@@ -230,6 +230,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const stage = learn ? stages[current] : undefined;
   // The stage list is a popover: it closes on any step change, a tap outside it, or Escape.
   const { ref: picker, close: closePicker } = usePopover(step);
+  const { ref: casePicker } = usePopover(step);
 
   const piece = group?.piece;
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
@@ -269,7 +270,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
       </TopBar>
       <main className="mx-auto flex w-full flex-1 max-w-5xl flex-col gap-4 p-4 pb-44 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2">
         {focus ? (
-          <div>
+          <div className={cases.length > 1 ? "max-md:hidden" : ""}>
             <p className={LABEL}>{tr({ fr: "Les cas", nl: "De gevallen", en: "The cases" })}</p>
             <p className="wide text-lg md:text-xl">{focus.title}</p>
           </div>
@@ -343,8 +344,36 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               <span className="text-sm text-mist">{moves(total)}</span>
             </p>
           )}
+          {/* The cases: chips on a wide screen, a menu on a phone, where chips would take two lines or scroll. */}
           {cases.length > 1 && (
-            <ol className="flex flex-wrap gap-1.5">
+            <details ref={casePicker} className="group relative md:hidden">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell px-3 py-1.5 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs text-mist">
+                    {focus && `${focus.title} · `}
+                    {tr({ fr: "cas", nl: "geval", en: "case" })} {nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}
+                  </span>
+                  <span className="block truncate font-semibold">{group?.title}</span>
+                </span>
+                <Chevron to="down" className="text-mist transition group-open:rotate-180" />
+              </summary>
+              <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
+                {cases.map(({ g, first }, k) => (
+                  <li key={first}>
+                    <button
+                      onClick={() => jump(first)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${g === group ? "bg-edge font-semibold" : ""}`}
+                    >
+                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${g === group ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{k + 1}</span>
+                      {g.title}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+          {cases.length > 1 && (
+            <ol className="flex flex-wrap gap-1.5 max-md:hidden">
               {cases.map(({ g, first }) => (
                 <li key={first} className="shrink-0">
                   <button
@@ -360,9 +389,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           )}
         </div>
 
-        <div className="grid flex-1 items-center gap-6 md:grid-cols-2 md:gap-10">
+        <div className="grid flex-1 items-center gap-4 md:grid-cols-2 md:gap-10">
           <div
-            className={`aspect-square max-h-[40dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
+            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
           >
             <CubeView
               state={anim?.from ?? state}

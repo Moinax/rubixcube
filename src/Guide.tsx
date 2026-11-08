@@ -50,7 +50,15 @@ type GuideProps = {
   /** The cases of one stage, inside the plan's page for that stage: no progress bar or stage list; `header` (the
    * page's own) takes their place, `back` is the way back, `onPresent` goes back to the stage's presentation (before
    * the first case), `footer` goes under the card. */
-  focus?: { title: string; back: { label: string; onClick: () => void }; header: ReactNode; onPresent?: () => void; footer?: ReactNode };
+  focus?: {
+    title: string;
+    back: { label: string; onClick: () => void };
+    header: ReactNode;
+    onPresent?: () => void;
+    footer?: ReactNode;
+    /** The way on, shown once every case is seen. */
+    next?: { label: string; onClick: () => void };
+  };
   onScan: () => void;
   onEdit: (state: string) => void;
 };
@@ -600,6 +608,12 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       ? `${moves(total)}${tr({ fr: ", bravo.", nl: ", goed gedaan.", en: ", well done." })}`
                       : tr({ fr: "Ton cube était déjà résolu.", nl: "Je kubus was al opgelost.", en: "Your cube was already solved." })}
                 </p>
+                {focus?.next && (
+                  <button onClick={focus.next.onClick} className="btn btn-main mt-5 w-full leading-tight text-balance">
+                    {focus.next.label}
+                    <Chevron />
+                  </button>
+                )}
               </div>
             ) : (
               group && (

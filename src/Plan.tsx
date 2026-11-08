@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import CubeView, { BLANK } from "./CubeView";
 import Guide from "./Guide";
 import Lexicon, { LexiconButton } from "./Lexicon";
@@ -12,9 +12,9 @@ import { tr } from "./i18n";
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 const LAST = PLAN.length - 1;
 
-/** A stage opens on its presentation; `view` is what was chosen from it, its whole text read or its cases watched
- * (`cases`: the step in them). */
-export type View = "read" | "see";
+/** A stage opens on its presentation; `view` "see" plays its cases (`cases`: the step in them). How to do it, in
+ * words, opens over either. */
+export type View = "see";
 type Props = {
   stage: number;
   view?: View;
@@ -24,17 +24,6 @@ type Props = {
   onCases: (step?: number) => void;
   onBack: () => void;
 };
-
-/** What a viewer chose last, put first among the choices of the next presentation. */
-type Mode = View;
-const MODE_KEY = "rubixcube:plan-mode";
-function savedMode(): Mode {
-  try {
-    return localStorage.getItem(MODE_KEY) === "read" ? "read" : "see";
-  } catch {
-    return "see";
-  }
-}
 
 /** A small flat drawing of the cube `state` (its top, front and right faces, or its bottom, front and right ones
  * `below`), for a list where a 3D view each would be too many. */
@@ -94,17 +83,47 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
   </span>
 );
 
+/** How to do a stage, in words, over the page: rising from the bottom on a phone, from the right on a wide screen,
+ * where the cube stays in view beside it. Closed by ✕, a tap outside it, or Escape. */
+function HowSheet({ title, onClose, onWatch, watchLabel, children }: { title: string; onClose: () => void; onWatch?: () => void; watchLabel: string; children: ReactNode }) {
+  useEffect(() => {
+    const close = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    addEventListener("keydown", close);
+    return () => removeEventListener("keydown", close);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-40" role="dialog" aria-modal aria-label={title}>
+      <button aria-label={tr({ fr: "Fermer", nl: "Sluiten", en: "Close" })} onClick={onClose} className="absolute inset-0 bg-black/60" />
+      <section className="absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col rounded-t-3xl border-t border-edge bg-shell shadow-2xl shadow-black md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:w-[26rem] md:rounded-none md:border-t-0 md:border-l">
+        <header className="flex flex-none items-center gap-3 px-5 pt-4 pb-2">
+          <h2 className="min-w-0 flex-1 font-semibold">
+            {tr({ fr: "Comment faire", nl: "Hoe je het doet", en: "How to do it" })} <span className="text-mist">· {title}</span>
+          </h2>
+          <button onClick={onClose} aria-label={tr({ fr: "Fermer", nl: "Sluiten", en: "Close" })} className="grid size-9 flex-none place-items-center rounded-full border border-edge text-mist hover:text-chalk">
+            ✕
+          </button>
+        </header>
+        <div className="overflow-y-auto px-5 pb-5 text-[15px] leading-relaxed">
+          {children}
+          {onWatch && (
+            <button onClick={onWatch} className="btn btn-main mt-5 w-full">
+              {watchLabel}
+            </button>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /** The beginner method as a map: the idea of it, where you stand, then each stage on its own, for any cube. */
 export default function Plan({ stage, view, cases: step, onStage, onView, onCases, onBack }: Props) {
   const plan = PLAN[stage];
   const [intro, where] = [stage === 0, stage === WHERE];
-  const page = PAGES.indexOf(stage);
-  const next = PAGES[page + 1];
   const { ref: menu } = usePopover(stage);
-  const [preferred, setPreferred] = useState(savedMode);
   const [lexicon, setLexicon] = useState(false);
+  const [how, setHow] = useState(false);
   const watched = view === "see" && stage > 0;
-  const reading = view === "read" && stage > 0;
   // "?" opens the glossary here too; the guide listens for itself when it shows.
   useEffect(() => {
     if (watched) return;
@@ -112,17 +131,8 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
     addEventListener("keydown", open);
     return () => removeEventListener("keydown", open);
   }, [watched]);
-  const choose = (m: Mode) => {
-    setPreferred(m);
-    onView(m);
-    try {
-      localStorage.setItem(MODE_KEY, m);
-    } catch {
-      // storage blocked: the choice lasts this visit
-    }
-  };
   const back = { label: tr({ fr: "Les bases", nl: "De basis", en: "The basics" }), onClick: onBack };
-  // What the stage starts from and ends on: beside its text when read, as its presentation when watched.
+  // What the stage starts from and ends on: its presentation.
   const beforeAfter = (
     <div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
@@ -147,84 +157,56 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
     </div>
   );
   const cases = new Set(CASES[stage]?.map((g) => g.title)).size;
-  // Under the card, always the two other ways to the stage: its presentation, its text read, its cases watched. Light
-  // links, so they never vie with the bar's buttons; on the presentation, the last choice reads brighter.
-  const ways = (here?: Mode) => (
-    <nav className="flex flex-col items-center gap-2.5 text-sm font-semibold">
-      {(
-        [
-          [
-            undefined,
-            // An "i" in a circle, as the case menu marks the presentation.
-            <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2" strokeLinecap="round">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 11v5.5M12 7.5v.5" />
-            </svg>,
-            tr({ fr: "Présentation", nl: "Kennismaking", en: "Introduction" }),
-          ],
-          ["read", "≡", tr({ fr: "Lire comment faire", nl: "Lezen hoe het moet", en: "Read how to do it" })],
-          [
-            "see",
-            "▶",
-            tr({
-              fr: cases > 1 ? `Voir les ${cases} situations en 3D` : "Voir la situation en 3D",
-              nl: cases > 1 ? `De ${cases} situaties in 3D bekijken` : "De situatie in 3D bekijken",
-              en: cases > 1 ? `Watch the ${cases} situations in 3D` : "Watch the situation in 3D",
-            }),
-          ],
-        ] as const
-      )
-        .filter(([m]) => m !== here)
-        .map(([m, icon, label]) => (
-          <button
-            key={m ?? "present"}
-            onClick={() => (m ? choose(m) : onView(undefined))}
-            className={`group flex items-center gap-1.5 ${!here && m === preferred ? "text-chalk" : "text-mist hover:text-chalk"}`}
-          >
-            <span aria-hidden>{icon}</span>
-            <span className="underline decoration-current/40 underline-offset-4 group-hover:decoration-current">{label}</span>
-          </button>
+  const chained = !!CASES[stage]?.slice(1).every((g) => !g.from);
+  const watchLabel = tr({
+    fr: cases > 1 ? `Voir les ${cases} ${chained ? "étapes" : "situations"} en 3D` : "Voir la situation en 3D",
+    nl: cases > 1 ? `De ${cases} ${chained ? "stappen" : "situaties"} in 3D bekijken` : "De situatie in 3D bekijken",
+    en: cases > 1 ? `Watch the ${cases} ${chained ? "steps" : "situations"} in 3D` : "Watch the situation in 3D",
+  });
+  // How to do it, in words: a light link under the card that opens a panel over the page, never a mode of its own.
+  const howLink = (
+    <button onClick={() => setHow(true)} className="group mx-auto flex items-center gap-1.5 text-sm font-semibold text-mist hover:text-chalk">
+      <span aria-hidden>≡</span>
+      <span className="underline decoration-current/40 underline-offset-4 group-hover:decoration-current">{tr({ fr: "Comment faire", nl: "Hoe je het doet", en: "How to do it" })}</span>
+    </button>
+  );
+  const next = stage > 0 && stage < LAST ? stage + 1 : undefined;
+  // Once the cases are seen, and only then, the way on: the next stage, or back to the basics after the last.
+  const onward = {
+    label:
+      next !== undefined
+        ? tr({ fr: `Étape suivante · ${STAGES[next].title}`, nl: `Volgende stap · ${STAGES[next].title}`, en: `Next stage · ${STAGES[next].title}` })
+        : tr({ fr: "Terminer · Les bases", nl: "Afronden · De basis", en: "Finish · The basics" }),
+    onClick: () => (next !== undefined ? onStage(next) : onBack()),
+  };
+  const howSheet = how && stage > 0 && (
+    <HowSheet title={STAGES[stage].title} onClose={() => setHow(false)} onWatch={watched ? undefined : () => (setHow(false), onView("see"))} watchLabel={watchLabel}>
+      <h3 className={LABEL}>{tr({ fr: "Ce que tu cherches", nl: "Wat je zoekt", en: "What you look for" })}</h3>
+      <p className="mt-1">
+        <Colored text={plan.look} />
+      </p>
+      <h3 className={`${LABEL} mt-4`}>{tr({ fr: "Comment faire", nl: "Hoe je het doet", en: "How to do it" })}</h3>
+      <ol className="mt-2 grid gap-2.5">
+        {plan.how.map((text, j) => (
+          <li key={j} className="grid grid-cols-[1.25rem_1fr_auto] gap-2.5">
+            <span className="mt-0.5 grid size-5 place-items-center rounded-full bg-raised text-[11px] font-bold text-mist">{j + 1}</span>
+            <span>
+              <Colored text={text} />
+            </span>
+            {TOPS[stage]?.[j] ? <MiniFace cells={TOPS[stage][j]!} /> : <span />}
+          </li>
         ))}
-    </nav>
+      </ol>
+      <p className="mt-4 text-sm text-mist">
+        <span className="text-chalk/80">{tr({ fr: "Pourquoi ça marche : ", nl: "Waarom het werkt: ", en: "Why it works: " })}</span>
+        <Colored text={plan.why} />
+      </p>
+      <p className="mt-4 rounded-xl bg-raised p-3 text-sm">
+        <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
+        <Colored text={plan.done} />
+      </p>
+    </HowSheet>
   );
-  // Fixed at the bottom in both modes, the guide's player floating over it when watched: the next stage is always
-  // under the same thumb.
-  const bar = (
-  <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur before:pointer-events-none before:absolute before:inset-x-0 before:-top-10 before:h-10 before:bg-linear-to-t before:from-plastic before:to-transparent">
-    {/* The page fades out above the bar (the before: layer), so the text plainly runs on under it. */}
-    <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3 md:px-8">
-      <button className="btn border border-edge bg-shell hover:bg-raised" disabled={!page} onClick={() => onStage(PAGES[page - 1])}>
-        <Chevron to="left" />
-        {tr({ fr: "Précédent", nl: "Vorige", en: "Previous" })}
-      </button>
-      {/* Short words on a phone, never cut: "Suivant"; the next page's name on a wide screen. */}
-      {next !== undefined ? (
-        <button className="btn btn-main" onClick={() => onStage(next)}>
-          <span className="sm:hidden">{tr({ fr: "Suivant", nl: "Volgende", en: "Next" })}</span>
-          <span className="max-sm:hidden">
-            {next === WHERE ? (
-              WHERE_TITLE
-            ) : (
-              <>
-                {where ? tr({ fr: "Étape 1", nl: "Stap 1", en: "Stage 1" }) : tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next stage" })}
-                <span className="font-normal opacity-70"> · {STAGES[next].title}</span>
-              </>
-            )}
-          </span>
-          <Chevron />
-        </button>
-      ) : (
-        // The plan's end leads one level up, back to the basics.
-        <button className="btn btn-main" onClick={onBack}>
-          {tr({ fr: "Terminer", nl: "Afronden", en: "Finish" })}
-          <span className="font-normal opacity-70 max-sm:hidden"> · {tr({ fr: "Les bases", nl: "De basis", en: "The basics" })}</span>
-          <Chevron />
-        </button>
-      )}
-    </div>
-  </div>
-  );
-
 
   // The pages in one menu, in the top bar.
   const header = (
@@ -271,10 +253,11 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
           back,
           header,
           onPresent: () => onView(undefined),
-          footer: ways("see"),
+          footer: howLink,
+          next: onward,
         }}
       />
-      {bar}
+      {howSheet}
       </>
     );
 
@@ -285,7 +268,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
       </TopBar>
       {lexicon && <Lexicon tab="moves" onClose={() => setLexicon(false)} />}
       {/* One column a comfortable line long: the drawings, then the text under them. */}
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4 pb-28 md:px-8">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4 pb-10 md:px-8">
 
         <div className="grid gap-4 md:gap-6">
           {/* Where you are is a list of drawings already: it takes the whole width. */}
@@ -359,37 +342,29 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
                   <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
                   <Colored text={plan.done} />
                 </p>
-                {reading && (
-                <>
-                <h2 className={`${LABEL} mt-4 border-t border-edge pt-3`}>{tr({ fr: "Ce que tu cherches", nl: "Wat je zoekt", en: "What you look for" })}</h2>
-                <p className="mt-1">
-                  <Colored text={plan.look} />
-                </p>
-                <h2 className={`${LABEL} mt-4`}>{tr({ fr: "Comment faire", nl: "Hoe je het doet", en: "How to do it" })}</h2>
-                <ol className="mt-2 grid gap-2.5">
-                  {plan.how.map((text, j) => (
-                    <li key={j} className="grid grid-cols-[1.25rem_1fr_auto] gap-2.5">
-                      <span className="mt-0.5 grid size-5 place-items-center rounded-full bg-raised text-[11px] font-bold text-mist">{j + 1}</span>
-                      <span>
-                        <Colored text={text} />
-                      </span>
-                      {TOPS[stage]?.[j] ? <MiniFace cells={TOPS[stage][j]!} /> : <span />}
-                    </li>
-                  ))}
-                </ol>
-                <p className="mt-4 text-sm text-mist">
-                  <span className="text-chalk/80">{tr({ fr: "Pourquoi ça marche : ", nl: "Waarom het werkt: ", en: "Why it works: " })}</span>
-                  <Colored text={plan.why} />
-                </p>
-                </>
-                )}
               </>
             )}
           </section>
-          {stage > 0 && ways(reading ? "read" : undefined)}
+          {/* The principle leads to where you are; a stage, to its cases watched, its how in a panel. */}
+          {intro && (
+            <button onClick={() => onStage(WHERE)} className="btn btn-main w-full">
+              {WHERE_TITLE}
+              <Chevron />
+            </button>
+          )}
+          {stage > 0 && (
+            <>
+              <button onClick={() => onView("see")} className="btn btn-main w-full">
+                <svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden>
+                  <path d="M7 5v14l11-7z" />
+                </svg>
+                {watchLabel}
+              </button>
+              {howLink}
+            </>
+          )}
         </div>
-
-        {bar}
+        {howSheet}
 
       </main>
     </>

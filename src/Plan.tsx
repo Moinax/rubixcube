@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import CubeView, { BLANK } from "./CubeView";
-import { Chevron, MiniFace, TopBar } from "./Home";
+import { Chevron, MiniFace, TopBar, usePopover } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
 import { CASES, MILESTONES, PLAN, PRINCIPLES, SCRAMBLED, SEEN, SEEN_FROM_BELOW, TOPS } from "./plan";
@@ -61,6 +61,16 @@ export const WHERE = -1;
 const PAGES = [0, WHERE, ...PLAN.slice(1).map((_, i) => i + 1)];
 const WHERE_TITLE = tr({ fr: "Où j'en suis ?", nl: "Waar ben ik?", en: "Where am I?" });
 
+const pageTitle = (page: number) =>
+  page > 0 ? STAGES[page].title : page === WHERE ? WHERE_TITLE : tr({ fr: "Le principe", nl: "Het idee", en: "The idea" });
+
+/** A page's mark in the phone menu: the stage's number, "?" for where you are, "i" for the idea. */
+const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
+  <span className={`grid size-8 flex-none place-items-center rounded-full text-sm font-black ${current ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>
+    {page > 0 ? page : page === WHERE ? "?" : "i"}
+  </span>
+);
+
 /** The beginner method as a map: the idea of it, where you stand, then each stage on its own, for any cube. */
 export default function Plan({ stage, onStage, onBack, onCases, onMyCube, children }: Props) {
   const plan = PLAN[stage];
@@ -68,12 +78,14 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
   const cases = CASES[stage]?.length;
   const page = PAGES.indexOf(stage);
   const next = PAGES[page + 1];
+  const { ref: menu } = usePopover(stage);
   return (
     <>
       <TopBar back={{ label: tr({ fr: "Les bases", nl: "De basis", en: "The basics" }), onClick: onBack }} />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 p-4 pb-28 md:p-8 md:pb-28">
 
-        <nav className="-mx-4 flex gap-1.5 overflow-x-auto px-4 md:mx-0 md:px-0" aria-label={tr({ fr: "Les étapes", nl: "De stappen", en: "The stages" })}>
+        {/* Every page at a glance on a wide screen; a menu on a phone, where the row would scroll sideways. */}
+        <nav className="flex gap-1.5 max-md:hidden" aria-label={tr({ fr: "Les étapes", nl: "De stappen", en: "The stages" })}>
           {PAGES.map((i) => (
             <button
               key={i}
@@ -82,10 +94,32 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
               title={i > 0 ? STAGES[i].title : undefined}
               className={`h-9 flex-none rounded-full px-3 text-sm font-semibold ${i === stage ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"} ${i > 0 ? "min-w-9" : ""}`}
             >
-              {i > 0 ? i : i === WHERE ? WHERE_TITLE : tr({ fr: "Le principe", nl: "Het idee", en: "The idea" })}
+              {i > 0 ? i : pageTitle(i)}
             </button>
           ))}
         </nav>
+        <details ref={menu} className="group relative md:hidden">
+          <summary className="flex h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2 [&::-webkit-details-marker]:hidden">
+            <PageMark page={stage} current />
+            <span className="min-w-0 flex-1 truncate font-semibold">{pageTitle(stage)}</span>
+            {stage > 0 && <span className="text-sm whitespace-nowrap text-mist">{tr({ fr: `${stage} sur ${LAST}`, nl: `${stage} van ${LAST}`, en: `${stage} of ${LAST}` })}</span>}
+            <Chevron to="down" className="text-mist transition group-open:rotate-180" />
+          </summary>
+          <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
+            {PAGES.map((i) => (
+              <li key={i}>
+                <button
+                  onClick={() => onStage(i)}
+                  aria-current={i === stage ? "step" : undefined}
+                  className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${i === stage ? "bg-edge font-semibold" : ""}`}
+                >
+                  <PageMark page={i} current={i === stage} />
+                  {pageTitle(i)}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </details>
 
         <div className="grid gap-6 md:grid-cols-2 md:items-start md:gap-10">
           {/* Where you are is a list of drawings already: it takes the whole width. */}
@@ -114,10 +148,11 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
           )}
 
           <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0 md:col-span-2 md:mx-auto md:w-full md:max-w-2xl" : ""}`}>
-            <p className={LABEL}>
+            {/* The phone menu above already says which page this is. */}
+            <p className={`${LABEL} max-md:hidden`}>
               {intro || where ? tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }) : tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}
             </p>
-            <h1 className="wide mt-1 text-2xl leading-tight">
+            <h1 className="wide text-2xl leading-tight md:mt-1">
               {intro ? tr({ fr: "Comment on résout un cube", nl: "Hoe je een kubus oplost", en: "How a cube gets solved" }) : where ? WHERE_TITLE : STAGES[stage].title}
             </h1>
             {intro ? (

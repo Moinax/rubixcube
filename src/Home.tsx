@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import CubeView from "./CubeView";
 import { applyMove, FACE_COLORS, SOLVED, type Face } from "./cube";
 import { lang, LANGS, setLang, tr, type Lang } from "./i18n";
@@ -77,6 +77,24 @@ export const Chevron = ({ to = "right", className = "" }: { to?: keyof typeof CH
     <path d={CHEVRONS[to]} />
   </svg>
 );
+
+/** A <details> used as a popover menu: it closes when `on` changes (a choice was made), on a tap outside it, or Escape. */
+export function usePopover(on: unknown) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  const close = () => ref.current?.removeAttribute("open");
+  useEffect(close, [on]);
+  useEffect(() => {
+    const outside = (e: PointerEvent) => ref.current?.contains(e.target as Node) || close();
+    const escape = (e: KeyboardEvent) => e.key === "Escape" && close();
+    addEventListener("pointerdown", outside);
+    addEventListener("keydown", escape);
+    return () => {
+      removeEventListener("pointerdown", outside);
+      removeEventListener("keydown", escape);
+    };
+  }, []);
+  return { ref, close };
+}
 
 /** The way back, named after where it leads: the same button in the same place on every screen. */
 const Back = ({ label, onClick }: { label: string; onClick: () => void }) => (

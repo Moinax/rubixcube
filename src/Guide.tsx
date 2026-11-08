@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { type Tab } from "./Lexicon";
-import { Chevron, HOME, modeTitle, TopBar } from "./Home";
+import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
 import { applyMove, describeMove, invert, upright, type Face } from "./cube";
@@ -229,14 +229,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const reached = done ? segments.length : learn ? current : flat[step].group;
   const stage = learn ? stages[current] : undefined;
   // The stage list is a popover: it closes on any step change, a tap outside it, or Escape.
-  const picker = useRef<HTMLDetailsElement>(null);
-  const closePicker = () => picker.current?.removeAttribute("open");
-  useEffect(closePicker, [step]);
-  useEffect(() => {
-    const outside = (e: PointerEvent) => picker.current?.contains(e.target as Node) || closePicker();
-    addEventListener("pointerdown", outside);
-    return () => removeEventListener("pointerdown", outside);
-  }, []);
+  const { ref: picker, close: closePicker } = usePopover(step);
 
   const piece = group?.piece;
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
@@ -351,7 +344,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             </p>
           )}
           {cases.length > 1 && (
-            <ol className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
+            <ol className="flex flex-wrap gap-1.5">
               {cases.map(({ g, first }) => (
                 <li key={first} className="shrink-0">
                   <button

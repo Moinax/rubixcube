@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
-import Lexicon, { type Tab } from "./Lexicon";
+import Lexicon, { LexiconButton, type Tab } from "./Lexicon";
 import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
@@ -41,7 +41,8 @@ type GuideProps = {
   onStep: (step: number) => void;
   onHome: () => void;
   /** The cases of one stage, inside the plan's page for that stage: no progress bar or stage list; `header` (the
-   * page's own) takes their place, `back` the way back, `next` the way on at the end; `intro` presents the stage. */
+   * page's own) takes their place, `back` the way back (the page's bar under the player goes on); `intro`
+   * presents the stage. */
   focus?: {
     title: string;
     back: { label: string; onClick: () => void };
@@ -51,7 +52,6 @@ type GuideProps = {
     /** Whether the presentation shows (it and the first case both start at move 0); `onIntro` hears it change. */
     atIntro?: boolean;
     onIntro?: (on: boolean) => void;
-    next: { label: string; onClick: () => void };
   };
   onScan: () => void;
   onEdit: (state: string) => void;
@@ -80,6 +80,16 @@ const Icon = ({ name, className = "size-5" }: { name: keyof typeof ICONS; classN
   <svg viewBox="0 0 24 24" className={`${className} flex-none`} fill="currentColor" aria-hidden>
     {ICONS[name]}
   </svg>
+);
+/** What a player button does and its key, over it on hover: the bar carries no legend. */
+const Tip = ({ label, keys }: { label: string; keys?: string }) => (
+  <span
+    role="tooltip"
+    className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2.5 -translate-x-1/2 rounded-lg border border-edge bg-raised px-2 py-1 text-xs font-medium whitespace-nowrap text-chalk opacity-0 shadow-lg transition-opacity delay-300 group-hover:opacity-100"
+  >
+    {label}
+    {keys && <kbd className="ml-1.5 rounded bg-plastic px-1.5 py-px font-sans text-[11px] text-mist">{keys}</kbd>}
+  </span>
 );
 const DONE = tr({ fr: "Terminé", nl: "Klaar", en: "Done" });
 const INTRO_LABEL = tr({ fr: "Présentation", nl: "Kennismaking", en: "Introduction" });
@@ -295,21 +305,10 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   return (
     <>
       <TopBar back={focus?.back ?? { label: HOME, onClick: onHome }}>
-        <button
-          onClick={() => setLexicon({ tab: "moves" })}
-          onMouseDown={keepFocus}
-          title={tr({ fr: "Lexique (?)", nl: "Woordenlijst (?)", en: "Glossary (?)" })}
-          aria-label={tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}
-          className="flex h-8 items-center gap-1.5 rounded-full border border-edge px-2.5 text-sm text-chalk hover:border-mist/60"
-        >
-          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
-            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z" />
-          </svg>
-          <span className="max-sm:hidden">{tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}</span>
-        </button>
+        <LexiconButton onClick={() => setLexicon({ tab: "moves" })} />
       </TopBar>
       {/* In the plan's page, one column a comfortable line long, like the rest of the plan. */}
-      <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 pb-24 md:px-8 md:pb-28 md:phone:gap-2 md:phone:pt-2 ${focus ? "max-w-2xl" : "max-w-5xl"}`}>
+      <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:px-8 md:phone:gap-2 md:phone:pt-2 ${focus ? "max-w-2xl pb-44" : "max-w-5xl pb-24"}`}>
         {focus ? (
           focus.header
         ) : (
@@ -477,12 +476,6 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       ? `${moves(total)}${tr({ fr: ", bravo.", nl: ", goed gedaan.", en: ", well done." })}`
                       : tr({ fr: "Ton cube était déjà résolu.", nl: "Je kubus was al opgelost.", en: "Your cube was already solved." })}
                 </p>
-                {focus && (
-                  <button onClick={focus.next.onClick} className="btn btn-main mt-5">
-                    {focus.next.label}
-                    <Chevron />
-                  </button>
-                )}
               </div>
             ) : (
               group && (
@@ -610,109 +603,101 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           </div>
         )}
 
-        {/* The player, pinned to the bottom: its buttons never move or resize, so a pointer can rest on ▶. */}
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-          <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 py-3 md:grid md:h-18 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-6 md:px-8 md:py-0">
-            {/* The bar is only the player: the card says what to do, ▶ what comes next, the glossary what a letter means.
-                An empty first column keeps the player centered on a wide screen. */}
-            <span className="max-md:hidden" />
-
-            <div className="flex items-center justify-center gap-2">
-              {/* Arrows only: a move, or a whole instruction (a case, a piece, a phase); what the move is, the card says. */}
-              <div className="flex gap-1 rounded-full bg-white/8 p-1 ring-1 ring-white/15">
-                <button
-                  onClick={prevSeries}
-                  onMouseDown={keepFocus}
-                  disabled={atIntro || (seriesBack === undefined && !intro)}
-                  title={tr({ fr: "Début de la série précédente (Maj ←)", nl: "Begin van de vorige reeks (Shift ←)", en: "Start of the previous series (Shift ←)" })}
-                  aria-label={tr({ fr: "Série précédente", nl: "Vorige reeks", en: "Previous series" })}
-                  className="grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
-                >
-                  <Icon name="back" />
-                </button>
-                <button
-                  onClick={back}
-                  onMouseDown={keepFocus}
-                  disabled={atIntro || (!step && !intro)}
-                  title={tr({ fr: "Coup précédent (←)", nl: "Vorige zet (←)", en: "Previous move (←)" })}
-                  aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
-                  className="grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
-                >
-                  <Icon name="prev" />
-                </button>
-                <button
-                  onClick={() => forward()}
-                  onMouseDown={keepFocus}
-                  disabled={done}
-                  title={`${nextTitle} (→)`}
-                  aria-label={nextTitle}
-                  className="grid h-10 w-16 place-items-center rounded-full bg-chalk text-plastic enabled:hover:bg-white disabled:opacity-40"
-                >
-                  <Icon name="play" />
-                </button>
-                <button
-                  onClick={nextSeries}
-                  onMouseDown={keepFocus}
-                  disabled={seriesNext === undefined && !atIntro}
-                  title={tr({ fr: "Série suivante (Maj →)", nl: "Volgende reeks (Shift →)", en: "Next series (Shift →)" })}
-                  aria-label={tr({ fr: "Série suivante", nl: "Volgende reeks", en: "Next series" })}
-                  className="grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
-                >
-                  <Icon name="next" />
-                </button>
-              </div>
-              {/* How the moves play on their own: autoplay and its pace, together. */}
-              <div className="flex items-center gap-1 rounded-full p-1 ring-1 ring-edge">
-                <button
-                  onClick={toggleAuto}
-                  onMouseDown={keepFocus}
-                  disabled={done}
-                  aria-pressed={auto}
-                  title={tr({ fr: "Lecture automatique (espace)", nl: "Automatisch afspelen (spatie)", en: "Autoplay (space)" })}
-                  aria-label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })}
-                  className={`relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 disabled:opacity-30 ${auto ? "bg-white/12" : "enabled:hover:bg-white/15"}`}
-                >
-                  {auto && (
-                    <svg viewBox="0 0 40 40" className="absolute inset-0" aria-hidden>
-                      <rect key={`${step}|${atResult}|${wait}`} x="1.5" y="1.5" width="37" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
-                    </svg>
-                  )}
-                  <Icon name={auto ? "pause" : "auto"} className="size-4.5" />
-                </button>
-                <button
-                  popoverTarget={settings}
-                  onMouseDown={keepFocus}
-                  title={tr({ fr: "Durée par coup en lecture automatique", nl: "Duur per zet bij automatisch afspelen", en: "Time per move in autoplay" })}
-                  className={`h-10 w-11 rounded-full text-xs font-semibold ${auto ? "text-chalk" : "text-mist hover:text-chalk"}`}
-                >
-                  {delay} s
-                </button>
-              </div>
-              <div
-                id={settings}
-                popover="auto"
-                className="inset-auto bottom-40 left-1/2 m-0 w-64 -translate-x-1/2 rounded-2xl border border-edge bg-shell p-3 text-chalk shadow-2xl shadow-black/60 md:bottom-20"
+        {/* The player floats at the bottom, over the plan's own bar when it sits in a stage's page: its buttons never
+            move or resize, so a pointer can rest on ▶. What each does and its key show on hover. */}
+        <div className={`pointer-events-none fixed inset-x-0 z-20 flex justify-center px-4 ${focus ? "bottom-[calc(5.25rem+env(safe-area-inset-bottom))]" : "bottom-[calc(1rem+env(safe-area-inset-bottom))]"}`}>
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-edge bg-plastic/90 p-1.5 shadow-2xl shadow-black/60 backdrop-blur">
+            {/* Arrows only: a move, or a whole instruction (a case, a piece, a phase); what the move is, the card says. */}
+            <div className="flex gap-1 rounded-full bg-white/8 p-1 ring-1 ring-white/15">
+              <button
+                onClick={prevSeries}
+                onMouseDown={keepFocus}
+                disabled={atIntro || (seriesBack === undefined && !intro)}
+                aria-label={tr({ fr: "Série précédente", nl: "Vorige reeks", en: "Previous series" })}
+                className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
               >
-                <p className="mb-2 text-xs text-mist">{tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })}</p>
-                <div className="flex gap-1 rounded-xl bg-plastic p-1">
-                  {DELAYS.map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => chooseDelay(d)}
-                      onMouseDown={keepFocus}
-                      aria-pressed={d === delay}
-                      className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${d === delay ? "bg-chalk text-plastic" : "text-mist hover:text-chalk"}`}
-                    >
-                      {d} s
-                    </button>
-                  ))}
-                </div>
+                <Icon name="back" />
+                <Tip label={tr({ fr: "Début de la série précédente", nl: "Begin van de vorige reeks", en: "Start of the previous series" })} keys={tr({ fr: "Maj ←", nl: "Shift ←", en: "Shift ←" })} />
+              </button>
+              <button
+                onClick={back}
+                onMouseDown={keepFocus}
+                disabled={atIntro || (!step && !intro)}
+                aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
+                className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
+              >
+                <Icon name="prev" />
+                <Tip label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })} keys="←" />
+              </button>
+              <button
+                onClick={() => forward()}
+                onMouseDown={keepFocus}
+                disabled={done}
+                aria-label={nextTitle}
+                className="group relative grid h-10 w-16 place-items-center rounded-full bg-chalk text-plastic enabled:hover:bg-white disabled:opacity-40"
+              >
+                <Icon name="play" />
+                <Tip label={nextTitle} keys="→" />
+              </button>
+              <button
+                onClick={nextSeries}
+                onMouseDown={keepFocus}
+                disabled={seriesNext === undefined && !atIntro}
+                aria-label={tr({ fr: "Série suivante", nl: "Volgende reeks", en: "Next series" })}
+                className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
+              >
+                <Icon name="next" />
+                <Tip label={tr({ fr: "Série suivante", nl: "Volgende reeks", en: "Next series" })} keys={tr({ fr: "Maj →", nl: "Shift →", en: "Shift →" })} />
+              </button>
+            </div>
+            {/* How the moves play on their own: autoplay and its pace, together. */}
+            <div className="flex items-center gap-1 rounded-full p-1 ring-1 ring-edge">
+              <button
+                onClick={toggleAuto}
+                onMouseDown={keepFocus}
+                disabled={done}
+                aria-pressed={auto}
+                aria-label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })}
+                className={`group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 disabled:opacity-30 ${auto ? "bg-white/12" : "enabled:hover:bg-white/15"}`}
+              >
+                {auto && (
+                  <svg viewBox="0 0 40 40" className="absolute inset-0" aria-hidden>
+                    <rect key={`${step}|${atResult}|${wait}`} x="1.5" y="1.5" width="37" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
+                  </svg>
+                )}
+                <Icon name={auto ? "pause" : "auto"} className="size-4.5" />
+                <Tip label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })} keys={tr({ fr: "espace", nl: "spatie", en: "space" })} />
+              </button>
+              <button
+                popoverTarget={settings}
+                onMouseDown={keepFocus}
+                aria-label={tr({ fr: "Durée par coup en lecture automatique", nl: "Duur per zet bij automatisch afspelen", en: "Time per move in autoplay" })}
+                className={`group relative h-10 w-11 rounded-full text-xs font-semibold ${auto ? "text-chalk" : "text-mist hover:text-chalk"}`}
+              >
+                {delay} s
+                <Tip label={tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })} />
+              </button>
+            </div>
+            <div
+              id={settings}
+              popover="auto"
+              className={`inset-auto left-1/2 m-0 w-64 -translate-x-1/2 rounded-2xl border border-edge bg-shell p-3 text-chalk shadow-2xl shadow-black/60 ${focus ? "bottom-40" : "bottom-24"}`}
+            >
+              <p className="mb-2 text-xs text-mist">{tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })}</p>
+              <div className="flex gap-1 rounded-xl bg-plastic p-1">
+                {DELAYS.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => chooseDelay(d)}
+                    onMouseDown={keepFocus}
+                    aria-pressed={d === delay}
+                    className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${d === delay ? "bg-chalk text-plastic" : "text-mist hover:text-chalk"}`}
+                  >
+                    {d} s
+                  </button>
+                ))}
               </div>
             </div>
-
-            <p className="hidden text-right text-xs text-mist pointer-fine:md:block">
-              {tr({ fr: "← → coup · Maj ← → série · espace : auto · ? : lexique", nl: "← → zet · Shift ← → reeks · spatie: auto · ?: woordenlijst", en: "← → move · Shift ← → series · space: auto · ?: glossary" })}
-            </p>
           </div>
         </div>
         {lexicon && <Lexicon tab={lexicon.tab} focus={lexicon.focus} onClose={() => setLexicon(null)} />}

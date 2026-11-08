@@ -54,6 +54,22 @@ const CARD = "rounded-xl border border-edge bg-raised p-2.5 text-left hover:bord
  * The notation, the named sequences and the words of the method, in a dialog: a sheet from the bottom on a
  * phone. A card's moves play on the small cube; `focus`, a move, plays first.
  */
+/** The glossary's button, in the top bar of every screen that offers it. */
+export const LexiconButton = ({ onClick }: { onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    onMouseDown={(e) => e.preventDefault()} // the guide's keys keep working
+    title={tr({ fr: "Lexique (?)", nl: "Woordenlijst (?)", en: "Glossary (?)" })}
+    aria-label={tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}
+    className="flex h-8 items-center gap-1.5 rounded-full border border-edge px-2.5 text-sm text-chalk hover:border-mist/60"
+  >
+    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
+      <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z" />
+    </svg>
+    <span className="max-sm:hidden">{tr({ fr: "Lexique", nl: "Woordenlijst", en: "Glossary" })}</span>
+  </button>
+);
+
 export default function Lexicon({ tab, focus, onClose }: { tab: Tab; focus?: string; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [shown, setShown] = useState(tab);

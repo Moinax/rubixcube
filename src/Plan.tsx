@@ -1,6 +1,7 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import CubeView, { BLANK } from "./CubeView";
 import Guide from "./Guide";
+import Lexicon, { LexiconButton } from "./Lexicon";
 import { Chevron, MiniFace, TopBar, usePopover } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
@@ -92,6 +93,14 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
   const next = PAGES[page + 1];
   const { ref: menu } = usePopover(stage);
   const [mode, setMode] = useState(savedMode);
+  const [lexicon, setLexicon] = useState(false);
+  // "?" opens the glossary here too; the guide listens for itself when it shows.
+  useEffect(() => {
+    if (mode === "see" && stage > 0) return;
+    const open = (e: KeyboardEvent) => e.key === "?" && !(e.target as Element).closest("input, textarea") && setLexicon(true);
+    addEventListener("keydown", open);
+    return () => removeEventListener("keydown", open);
+  }, [mode, stage]);
   const choose = (m: Mode) => {
     setMode(m);
     try {
@@ -126,6 +135,42 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
     </div>
   );
   const watched = mode === "see" && stage > 0;
+  // Fixed at the bottom in both modes, the guide's player floating over it when watched: the next stage is always
+  // under the same thumb.
+  const bar = (
+  <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+    <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3 md:px-8">
+      <button className="btn border border-edge bg-shell hover:bg-raised" disabled={!page} onClick={() => onStage(PAGES[page - 1])}>
+        <Chevron to="left" />
+        {tr({ fr: "Précédent", nl: "Vorige", en: "Previous" })}
+      </button>
+      {/* Short words on a phone, never cut: "Suivant"; the next page's name on a wide screen. */}
+      {next !== undefined ? (
+        <button className="btn btn-main" onClick={() => onStage(next)}>
+          <span className="sm:hidden">{tr({ fr: "Suivant", nl: "Volgende", en: "Next" })}</span>
+          <span className="max-sm:hidden">
+            {next === WHERE ? (
+              WHERE_TITLE
+            ) : (
+              <>
+                {where ? tr({ fr: "Étape 1", nl: "Stap 1", en: "Stage 1" }) : tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next stage" })}
+                <span className="font-normal opacity-70"> · {STAGES[next].title}</span>
+              </>
+            )}
+          </span>
+          <Chevron />
+        </button>
+      ) : (
+        <button className="btn btn-main" onClick={onMyCube}>
+          <span className="sm:hidden">{tr({ fr: "Sur mon cube", nl: "Op mijn kubus", en: "On my cube" })}</span>
+          <span className="max-sm:hidden">{tr({ fr: "Le faire sur mon cube", nl: "Doen op mijn kubus", en: "Do it on my cube" })}</span>
+          <Chevron />
+        </button>
+      )}
+    </div>
+  </div>
+  );
+
 
   // The pages in one menu at every size; a stage's page also switches between watching and reading it.
   const header = (
@@ -182,6 +227,7 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
   // Watched: the stage's cases, played in the guide's own player, in this page.
   if (watched)
     return (
+      <>
       <Guide
         key={stage}
         start={CASES[stage][0].from!}
@@ -215,19 +261,20 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
             if (on && step !== undefined) onCases(undefined);
             else if (!on && step === undefined) onCases(0);
           },
-          next:
-            stage < LAST
-              ? { label: tr({ fr: `Étape suivante · ${STAGES[stage + 1].title}`, nl: `Volgende stap · ${STAGES[stage + 1].title}`, en: `Next stage · ${STAGES[stage + 1].title}` }), onClick: () => onStage(stage + 1) }
-              : { label: tr({ fr: "Le faire sur mon cube", nl: "Doen op mijn kubus", en: "Do it on my cube" }), onClick: onMyCube },
         }}
       />
+      {bar}
+      </>
     );
 
   return (
     <>
-      <TopBar back={back} />
+      <TopBar back={back}>
+        <LexiconButton onClick={() => setLexicon(true)} />
+      </TopBar>
+      {lexicon && <Lexicon tab="moves" onClose={() => setLexicon(false)} />}
       {/* One column a comfortable line long: the drawings, then the text under them. */}
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4 pb-28 md:p-8 md:pb-28">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4 pb-28 md:px-8">
         {header}
 
         <div className="grid gap-6">
@@ -333,38 +380,7 @@ export default function Plan({ stage, cases: step, onStage, onCases, onBack, onM
           </section>
         </div>
 
-        {/* Fixed, like the guide's player: the next stage is always under the same thumb. */}
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-          <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3 md:px-8">
-            <button className="btn border border-edge bg-shell hover:bg-raised" disabled={!page} onClick={() => onStage(PAGES[page - 1])}>
-              <Chevron to="left" />
-              {tr({ fr: "Précédent", nl: "Vorige", en: "Previous" })}
-            </button>
-            {/* Short words on a phone, never cut: "Suivant"; the next page's name on a wide screen. */}
-            {next !== undefined ? (
-              <button className="btn btn-main" onClick={() => onStage(next)}>
-                <span className="sm:hidden">{tr({ fr: "Suivant", nl: "Volgende", en: "Next" })}</span>
-                <span className="max-sm:hidden">
-                  {next === WHERE ? (
-                    WHERE_TITLE
-                  ) : (
-                    <>
-                      {where ? tr({ fr: "Étape 1", nl: "Stap 1", en: "Stage 1" }) : tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next stage" })}
-                      <span className="font-normal opacity-70"> · {STAGES[next].title}</span>
-                    </>
-                  )}
-                </span>
-                <Chevron />
-              </button>
-            ) : (
-              <button className="btn btn-main" onClick={onMyCube}>
-                <span className="sm:hidden">{tr({ fr: "Sur mon cube", nl: "Op mijn kubus", en: "On my cube" })}</span>
-                <span className="max-sm:hidden">{tr({ fr: "Le faire sur mon cube", nl: "Doen op mijn kubus", en: "Do it on my cube" })}</span>
-                <Chevron />
-              </button>
-            )}
-          </div>
-        </div>
+        {bar}
 
       </main>
     </>

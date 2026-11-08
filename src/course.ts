@@ -1,5 +1,5 @@
 import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group, type Stage } from "./beginner.ts";
-import { invert as undo, SOLVED } from "./cube.ts";
+import { colorsOf, invert as undo, PIECES, SOLVED } from "./cube.ts";
 import { tr, type Lang } from "./i18n.ts";
 
 // The beginner method as a course, for a cube the app has not seen: each case
@@ -19,17 +19,39 @@ function group(stage: number, texts: Texts, moves: string[], from: string, piece
   return { stage, title, text, moves, steps: steps.map((text, i) => ({ text, count: counts[i] })), from, piece, alg };
 }
 
-/** A case: `goal` is where its moves lead, its start is `goal` with the moves undone. */
+/** The pieces each stage works with, by their colors (and a sticker's own): the others don't count yet, so
+ * a demo shows them grey, like the plan's milestones, never as a finished cube with one piece to move. */
+const COUNTS: ((colors: string, sticker: string) => boolean)[] = [
+  () => true,
+  (c) => c.length === 2 && c.includes("U"), // the daisy: the white edges
+  (c) => c.length === 2 && c.includes("U"), // the white cross
+  (c) => c.includes("U"), // the white layer
+  (c) => !c.includes("D"), // the two bottom layers
+  (c, sticker) => !c.includes("D") || (c.length === 2 && sticker === "D"), // and the yellow of the top edges
+  (c) => !c.includes("D") || c.length === 2, // and the top edges
+  () => true,
+  () => true,
+];
+/** `s` with the stickers stage `stage` doesn't work with blanked ("."): moves carry the blanks along. */
+const focusOn = (stage: number, s: string) => {
+  const out = [...s];
+  for (const piece of PIECES) for (const i of piece) if (!COUNTS[stage](colorsOf(s, piece), s[i])) out[i] = ".";
+  return out.join("");
+};
+
+/** A case: `goal` is where its moves lead, its start is `goal` with the moves undone, focused on its stage. */
 const demo = (stage: number, texts: Texts, moves: string[], goal = YELLOW_UP, piece?: string, split?: number[]) =>
-  group(stage, texts, moves, play(goal, undo(moves)), piece, split);
+  group(stage, texts, moves, focusOn(stage, play(goal, undo(moves))), piece, split);
 const lesson = (texts: Texts, moves: string[]) => group(0, texts, moves, SOLVED);
 
 // Pieces by color letters (white U, yellow D, green F, blue B, red R, orange L).
 const WHITE_GREEN = "FU";
+const WHITE_ORANGE = "LU";
 const WHITE_GREEN_ORANGE = "FLU";
 const GREEN_ORANGE = "FL";
 const GREEN_RED = "FR";
-const PETAL_RIGHT = play(YELLOW_UP, ["F2", "U'"]); // white-green edge on top at the right, white up
+const DAISY = play(YELLOW_UP, ["F2", "R2", "B2", "L2"]); // the 4 white edges on top, each above its center
+const THREE_PETALS = play(YELLOW_UP, ["R2", "B2", "L2"]); // the daisy with its white-green petal dropped into the cross
 const ONE_CORNER_PLACED = play(YELLOW_UP, ["y", ...undo(CYCLE), "y'"]);
 const EDGE_FLIPPED_IN_SLOT = play(YELLOW_UP, [...RIGHT, "U2", ...RIGHT]); // green-orange in its slot, upside down
 const OPPOSITE_DONE = play(YELLOW_UP, ["y", ...undo(SUNE), "y'", "U'"]);
@@ -84,7 +106,7 @@ export const COURSE: Group[] = [
       en: ["Bottom, white facing down", "A white edge is at the bottom, its white facing down.", "Give its face a half turn: it goes up, white facing up. If the spot right above is already a petal, turn the top first to free it."],
     },
     ["F2"],
-    play(YELLOW_UP, ["F2"]),
+    DAISY,
     WHITE_GREEN,
   ),
   demo(
@@ -95,32 +117,32 @@ export const COURSE: Group[] = [
       en: ["In the middle", "A white edge is in the middle layer.", "Give the face of its other color (here the front) a quarter turn, the way that brings the white up. First free the top spot it lands in."],
     },
     ["F'"],
-    play(YELLOW_UP, ["F2"]),
+    DAISY,
     WHITE_GREEN,
   ),
   demo(
     1,
     {
-      fr: ["En haut, blanc sur le côté", "Une arête blanche est en haut, mais son blanc regarde sur le côté.", "Descends-la au milieu.", "Tourne le haut pour mettre les pétales à l'abri.", "Remonte-la par le côté, blanc vers le haut."],
-      nl: ["Boven, wit opzij", "Een wit randstuk zit boven, maar zijn wit kijkt opzij.", "Breng het naar het midden.", "Draai de bovenkant zodat de blaadjes veilig zijn.", "Breng het langs de zijkant weer naar boven, met wit naar boven."],
-      en: ["Top, white on the side", "A white edge is on top, but its white faces the side.", "Bring it down to the middle.", "Turn the top to keep the petals safe.", "Bring it back up from the side, white facing up."],
+      fr: ["En haut, blanc sur le côté", "Une arête blanche est en haut, mais son blanc regarde sur le côté.", "Descends-la au milieu.", "Tourne le haut pour amener une place vide juste au-dessus d'elle, à droite : les pétales sont à l'abri.", "Remonte-la par le côté, blanc vers le haut : la marguerite est complète."],
+      nl: ["Boven, wit opzij", "Een wit randstuk zit boven, maar zijn wit kijkt opzij.", "Breng het naar het midden.", "Draai de bovenkant zodat er een lege plek recht boven het stuk komt, rechts: de blaadjes zijn veilig.", "Breng het langs de zijkant weer naar boven, met wit naar boven: het madeliefje is klaar."],
+      en: ["Top, white on the side", "A white edge is on top, but its white faces the side.", "Bring it down to the middle.", "Turn the top to bring an empty spot right above it, on the right: the petals are safe.", "Bring it back up from the side, white facing up: the daisy is complete."],
     },
     ["F", "U'", "R"],
-    PETAL_RIGHT,
-    WHITE_GREEN,
+    DAISY,
+    WHITE_ORANGE,
     [1, 1, 1],
   ),
   demo(
     1,
     {
-      fr: ["En bas, blanc sur le côté", "Une arête blanche est en bas, son blanc sur le côté.", "Un quart de tour de sa face la met au milieu.", "La face d'à côté la monte, blanc vers le haut."],
-      nl: ["Onderaan, wit opzij", "Een wit randstuk zit onderaan, met zijn wit opzij.", "Een kwartslag van zijn kant brengt het naar het midden.", "De kant ernaast brengt het naar boven, met wit naar boven."],
-      en: ["Bottom, white on the side", "A white edge is at the bottom, its white on the side.", "A quarter turn of its face puts it in the middle.", "The face next to it brings it up, white facing up."],
+      fr: ["En bas, blanc sur le côté", "Une arête blanche est en bas, son blanc sur le côté.", "Tourne le haut pour mettre une place vide au-dessus d'elle : sa face peut tourner sans faire tomber de pétale.", "Un quart de tour de sa face la met au milieu.", "Tourne le haut pour amener la place vide juste au-dessus d'elle, à droite.", "La face d'à côté la monte, blanc vers le haut : la marguerite est complète."],
+      nl: ["Onderaan, wit opzij", "Een wit randstuk zit onderaan, met zijn wit opzij.", "Draai de bovenkant zodat er een lege plek boven het stuk komt: zijn kant kan draaien zonder een blaadje te laten vallen.", "Een kwartslag van zijn kant brengt het naar het midden.", "Draai de bovenkant zodat de lege plek recht boven het stuk komt, rechts.", "De kant ernaast brengt het naar boven, met wit naar boven: het madeliefje is klaar."],
+      en: ["Bottom, white on the side", "A white edge is at the bottom, its white on the side.", "Turn the top to put an empty spot above it: its face can turn without knocking a petal off.", "A quarter turn of its face puts it in the middle.", "Turn the top to bring the empty spot right above it, on the right.", "The face next to it brings it up, white facing up: the daisy is complete."],
     },
-    ["F'", "R"],
-    PETAL_RIGHT,
-    WHITE_GREEN,
-    [1, 1],
+    ["U", "F'", "U'", "R"],
+    DAISY,
+    WHITE_ORANGE,
+    [1, 1, 1, 1],
   ),
 
   demo(
@@ -131,7 +153,7 @@ export const COURSE: Group[] = [
       en: ["Bringing a petal down", "A petal waits on top: it has to drop under the center of its other color (here green).", "Turn the top until the petal's green sits right above the green center.", "Give that face a half turn: the petal drops, white at the bottom. Do it again for all 4 petals."],
     },
     ["U'", "F2"],
-    YELLOW_UP,
+    THREE_PETALS,
     WHITE_GREEN,
     [1, 1],
   ),

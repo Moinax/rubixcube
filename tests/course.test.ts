@@ -103,3 +103,15 @@ test("each move of the hands lessons names its finger, on the cube held yellow u
   };
   for (const g of HANDS) g.moves.forEach((m, i) => assert.deepEqual(riders(m), named[g.fingers![i]], `${g.title} ${m}`));
 });
+
+test("a demo shows only what its stage works with, and the daisy's demos end on the whole daisy", () => {
+  const petals = (s: string) => [[-1, 1, 0], [1, 1, 0], [0, 1, -1], [0, 1, 1]].filter((p) => at(s, p as Vec, [0, 1, 0]) === "U").length;
+  const colored = (s: string) => [...s].filter((c) => c !== ".").length;
+  for (const g of COURSE.filter((g) => g.stage === 1)) {
+    assert.equal(colored(g.from!), 6 + 8, g.title); // the centers and the 4 white edges, nothing else
+    assert.equal(petals(g.moves.reduce(applyMove, g.from!)), 4, g.title);
+  }
+  const drop = COURSE.find((g) => g.stage === 2)!;
+  assert.equal(petals(drop.from!), 4); // the cross starts from the daisy
+  for (const stage of [3, 4, 5, 6]) assert.ok(COURSE.filter((g) => g.stage === stage).every((g) => g.from!.includes(".")), `stage ${stage}`);
+});

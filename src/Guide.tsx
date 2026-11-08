@@ -499,19 +499,25 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           )}
           {/* The cases: one menu, at every size, so they read as the parts of one stage. */}
           {/* Shown even for a single case, so the cube and the player keep their height from one stage to the next. It reads
-              like the stage's menu above it: the case's number in a smaller circle, "Cas 1 sur 4" over its title, at a fixed
+              like the stage's menu above it: the case's number in a smaller circle, "Cas 1 sur 4" ("Étape 1 sur 4" for the steps of one demo) over its title, at a fixed
               height (a title too long for a line is cut, its menu line shows it whole); a menu
               only when there is something else to pick. */}
           {(cases.length > 0 || present) &&
             (() => {
               const k = cases.findIndex(({ g }) => g === group);
+              // Cases that go on one from the other on the same cube are the steps of one demo, not situations to pick.
+              const chained = cases.length > 1 && cases.slice(1).every(({ g }) => !g.from);
               const chapter = (i: number) => `${i + 1}`;
               const line = (
                 <>
                   <span className="ml-1 grid size-6 flex-none place-items-center rounded-full bg-chalk text-[11px] font-black text-plastic">{done ? "✓" : chapter(k)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs text-mist">
-                      {done ? DONE : tr({ fr: `Cas ${k + 1} sur ${cases.length}`, nl: `Geval ${k + 1} van ${cases.length}`, en: `Case ${k + 1} of ${cases.length}` })}
+                      {done
+                        ? DONE
+                        : chained
+                          ? tr({ fr: `Étape ${k + 1} sur ${cases.length}`, nl: `Stap ${k + 1} van ${cases.length}`, en: `Step ${k + 1} of ${cases.length}` })
+                          : tr({ fr: `Cas ${k + 1} sur ${cases.length}`, nl: `Geval ${k + 1} van ${cases.length}`, en: `Case ${k + 1} of ${cases.length}` })}
                     </span>
                     <span className="line-clamp-1 leading-tight font-semibold">{done ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" }) : group?.title}</span>
                   </span>

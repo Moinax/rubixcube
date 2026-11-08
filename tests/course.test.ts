@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { beginnerSolve, planStates, STAGES } from "../src/beginner.ts";
+import { beginnerSolve, planStates, STAGES, type Group } from "../src/beginner.ts";
 import { cfopSolve } from "../src/cfop.ts";
 import { COURSE, HAND_STAGES, HANDS, riders } from "../src/course.ts";
 import { applyMove, colorsOf, PIECES, SOLVED, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
@@ -19,7 +19,7 @@ const demo = (title: string) => COURSE.find((g) => g.title === title)!.from!;
 
 test("the course covers every stage in order, each demo held yellow up and green in front", () => {
   assert.deepEqual([...new Set(COURSE.map((g) => g.stage))], STAGES.map((_, i) => i));
-  for (const g of COURSE.filter((g) => g.stage > 0)) {
+  for (const g of COURSE.filter((g) => g.stage > 0 && g.from)) {
     assert.equal(center(g.from!, [0, 1, 0]), "D", g.title);
     assert.equal(center(g.from!, [0, 0, 1]), "F", g.title);
   }
@@ -62,7 +62,7 @@ test("planStates starts each course demo from its own cube and ends a beginner p
   const states = planStates(COURSE[0].from!, COURSE);
   let i = 0;
   for (const g of COURSE) {
-    assert.equal(states[i], g.from, g.title);
+    if (g.from) assert.equal(states[i], g.from, g.title); // a case that goes on from the last one keeps its cube
     i += g.moves.length;
   }
   assert.equal(states.length, i + 1);
@@ -111,9 +111,10 @@ test("a demo shows only what its stage works with, and the daisy's demos end on 
     assert.equal(colored(g.from!), 6 + 8, g.title); // the centers and the 4 white edges, nothing else
     assert.equal(petals(g.moves.reduce(applyMove, g.from!)), 4, g.title);
   }
-  const drop = COURSE.find((g) => g.stage === 2)!;
-  assert.equal(petals(drop.from!), 4); // the cross starts from the daisy…
-  const cross = drop.moves.reduce(applyMove, drop.from!);
+  const drop = COURSE.filter((g) => g.stage === 2);
+  assert.equal(drop.length, 4); // one case a petal, on one cube
+  assert.equal(petals(drop[0].from!), 4); // the cross starts from the daisy…
+  const cross = drop.flatMap((g) => g.moves).reduce(applyMove, drop[0].from!);
   const down: Vec = [0, -1, 0];
   assert.ok(SIDES.every((n) => at(cross, [n[0], -1, n[2]] as Vec, down) === "U" && at(cross, [n[0], -1, n[2]] as Vec, n) === center(cross, n))); // …and ends on it
   for (const stage of [3, 4, 5, 6]) assert.ok(COURSE.filter((g) => g.stage === stage).every((g) => g.from!.includes(".")), `stage ${stage}`);
@@ -133,7 +134,9 @@ test("every case ends on its stage done, through the states its steps name", () 
     7: (s) => right(s, (p) => p[1] <= 0 || kind(p) === 2) && placed(s) === 4,
     8: (s) => right(s, () => true),
   };
-  for (const g of COURSE.filter((g) => g.stage > 0)) assert.ok(done[g.stage](g.moves.reduce(applyMove, g.from!)), g.title);
+  // A demo: a case with its own cube, and the cases that go on from it on the same cube (the cross, petal by petal).
+  const demos = COURSE.reduce<Group[][]>((all, g) => (g.from ? [...all, [g]] : (all.at(-1)!.push(g), all)), []);
+  for (const d of demos.filter(([g]) => g.stage > 0)) assert.ok(done[d[0].stage](d.flatMap((g) => g.moves).reduce(applyMove, d[0].from!)), d.at(-1)!.title);
   const after = (title: string, n: number) => {
     const g = COURSE.find((g) => g.title === title)!;
     return g.moves.slice(0, n).reduce(applyMove, g.from!);

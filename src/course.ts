@@ -43,10 +43,14 @@ const focusOn = (stage: number, s: string) => {
 const demo = (stage: number, texts: Texts, moves: string[], goal = YELLOW_UP, piece?: string, split?: number[]) =>
   group(stage, texts, moves, focusOn(stage, play(goal, undo(moves))), piece, split);
 const lesson = (texts: Texts, moves: string[]) => group(0, texts, moves, SOLVED);
+/** A case that goes on from where the case before it stopped, on the same cube. */
+const then = (stage: number, texts: Texts, moves: string[], piece?: string, split?: number[]): Group => ({ ...group(stage, texts, moves, "", piece, split), from: undefined });
 
 // Pieces by color letters (white U, yellow D, green F, blue B, red R, orange L).
 const WHITE_GREEN = "FU";
 const WHITE_ORANGE = "LU";
+const WHITE_BLUE = "BU";
+const WHITE_RED = "RU";
 const WHITE_GREEN_ORANGE = "FLU";
 const GREEN_ORANGE = "FL";
 const GREEN_RED = "FR";
@@ -54,7 +58,6 @@ const DAISY = play(YELLOW_UP, ["F2", "R2", "B2", "L2"]); // the 4 white edges on
 // A daisy whose petals each need their own turn of the top to sit above their center; built forward, never undone
 // from a solved cube (undone, a later turn of the top would carry a dropped petal back up).
 const SHUFFLED_DAISY = play(DAISY, "U F U F' U' F".split(" "));
-const CROSS = "U' F2 y U F2 y U2 F2 y U F2".split(" ");
 const ONE_CORNER_PLACED = play(YELLOW_UP, ["y", ...undo(CYCLE), "y'"]);
 const EDGE_FLIPPED_IN_SLOT = play(YELLOW_UP, [...RIGHT, "U2", ...RIGHT]); // green-orange in its slot, upside down
 const OPPOSITE_DONE = play(YELLOW_UP, ["y", ...undo(SUNE), "y'", "U'"]);
@@ -148,40 +151,12 @@ export const COURSE: Group[] = [
     [1, 1, 1, 1],
   ),
 
-  // The whole cross, petal after petal: each time the cube turns so the next center faces you (no blind back turn).
-  demo(
-    2,
-    {
-      fr: [
-        "Descendre les 4 pétales",
-        "Les 4 pétales attendent sur le dessus. Chacun doit descendre sous le centre de son autre couleur.",
-        "Le pétale blanc-vert : tourne le haut pour l'amener juste au-dessus du centre vert, puis fais un demi-tour de la face avant. Il descend, sa case blanche dessous.",
-        "Tourne tout le cube : le centre orange vient devant toi. Amène le pétale blanc-orange au-dessus de lui, puis demi-tour de la face avant.",
-        "Pareil avec le centre bleu et le pétale blanc-bleu.",
-        "Et le dernier, au-dessus du centre rouge : la croix blanche est faite.",
-      ],
-      nl: [
-        "De 4 blaadjes laten zakken",
-        "De 4 blaadjes wachten bovenaan. Elk moet zakken onder het middenstuk van zijn andere kleur.",
-        "Het wit-groene blaadje: draai de bovenkant tot het recht boven het groene middenstuk staat, en draai dan de voorkant een halve slag. Het zakt, met het witte vakje onderaan.",
-        "Draai de hele kubus: het oranje middenstuk komt voor je. Breng het wit-oranje blaadje erboven, en draai de voorkant een halve slag.",
-        "Hetzelfde met het blauwe middenstuk en het wit-blauwe blaadje.",
-        "En het laatste, boven het rode middenstuk: het witte kruis is klaar.",
-      ],
-      en: [
-        "Bringing the 4 petals down",
-        "The 4 petals wait on top. Each must drop under the center of its other color.",
-        "The white-green petal: turn the top to bring it right above the green center, then give the front face a half turn. It drops, its white square underneath.",
-        "Turn the whole cube: the orange center comes in front of you. Bring the white-orange petal above it, then a half turn of the front face.",
-        "The same with the blue center and the white-blue petal.",
-        "And the last one, above the red center: the white cross is done.",
-      ],
-    },
-    CROSS,
-    play(SHUFFLED_DAISY, CROSS),
-    undefined,
-    [2, 3, 3, 3],
-  ),
+  // The whole cross, one petal a case, all on one cube: each case goes on where the last one stopped, the cube turning
+  // so the next center faces you (no blind back turn).
+  demo(2, { fr: ["Le pétale blanc-vert", "Les 4 pétales attendent sur le dessus. Le premier, blanc-vert, doit descendre sous le centre vert.", "Tourne le haut pour l'amener juste au-dessus du centre vert.", "Fais un demi-tour de la face avant : il descend, sa case blanche dessous."], nl: ["Het wit-groene blaadje", "De 4 blaadjes wachten bovenaan. Het eerste, wit-groen, moet zakken onder het groene middenstuk.", "Draai de bovenkant tot het recht boven het groene middenstuk staat.", "Draai de voorkant een halve slag: het zakt, met het witte vakje onderaan."], en: ["The white-green petal", "The 4 petals wait on top. The first, white-green, must drop under the green center.", "Turn the top to bring it right above the green center.", "Give the front face a half turn: it drops, its white square underneath."] }, ["U'", "F2"], play(SHUFFLED_DAISY, ["U'", "F2"]), WHITE_GREEN, [1, 1]),
+  then(2, { fr: ["Le pétale blanc-orange", "Le suivant, blanc-orange, va sous le centre orange.", "Tourne tout le cube : le centre orange vient devant toi.", "Tourne le haut pour amener le pétale blanc-orange juste au-dessus de lui.", "Demi-tour de la face avant : il descend."], nl: ["Het wit-oranje blaadje", "Het volgende, wit-oranje, hoort onder het oranje middenstuk.", "Draai de hele kubus: het oranje middenstuk komt voor je.", "Draai de bovenkant tot het wit-oranje blaadje er recht boven staat.", "Draai de voorkant een halve slag: het zakt."], en: ["The white-orange petal", "The next one, white-orange, goes under the orange center.", "Turn the whole cube: the orange center comes in front of you.", "Turn the top to bring the white-orange petal right above it.", "Half turn of the front face: it drops."] }, ["y", "U", "F2"], WHITE_ORANGE, [1, 1, 1]),
+  then(2, { fr: ["Le pétale blanc-bleu", "Le pétale blanc-bleu va sous le centre bleu.", "Tourne tout le cube : le centre bleu vient devant toi.", "Tourne le haut pour amener le pétale blanc-bleu juste au-dessus de lui.", "Demi-tour de la face avant : il descend."], nl: ["Het wit-blauwe blaadje", "Het wit-blauwe blaadje hoort onder het blauwe middenstuk.", "Draai de hele kubus: het blauwe middenstuk komt voor je.", "Draai de bovenkant tot het wit-blauwe blaadje er recht boven staat.", "Draai de voorkant een halve slag: het zakt."], en: ["The white-blue petal", "The white-blue petal goes under the blue center.", "Turn the whole cube: the blue center comes in front of you.", "Turn the top to bring the white-blue petal right above it.", "Half turn of the front face: it drops."] }, ["y", "U2", "F2"], WHITE_BLUE, [1, 1, 1]),
+  then(2, { fr: ["Le pétale blanc-rouge", "Le dernier, blanc-rouge, va sous le centre rouge.", "Tourne tout le cube : le centre rouge vient devant toi.", "Tourne le haut pour amener le pétale blanc-rouge juste au-dessus de lui.", "Demi-tour de la face avant : il descend, la croix blanche est faite."], nl: ["Het wit-rode blaadje", "Het laatste, wit-rood, hoort onder het rode middenstuk.", "Draai de hele kubus: het rode middenstuk komt voor je.", "Draai de bovenkant tot het wit-rode blaadje er recht boven staat.", "Draai de voorkant een halve slag: het zakt, het witte kruis is klaar."], en: ["The white-red petal", "The last one, white-red, goes under the red center.", "Turn the whole cube: the red center comes in front of you.", "Turn the top to bring the white-red petal right above it.", "Half turn of the front face: it drops, the white cross is done."] }, ["y", "U", "F2"], WHITE_RED, [1, 1, 1]),
 
   demo(
     3,

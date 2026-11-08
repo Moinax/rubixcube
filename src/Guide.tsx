@@ -349,7 +349,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                     {focus && `${focus.title} · `}
                     {atIntro ? INTRO_LABEL.toLowerCase() : `${tr({ fr: "cas", nl: "geval", en: "case" })} ${nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}`}
                   </span>
-                  <span className="block truncate font-semibold">{atIntro ? tr({ fr: "L'étape en entier", nl: "De hele stap", en: "The whole stage" }) : group?.title}</span>
+                  <span className="block leading-tight font-semibold">{atIntro ? tr({ fr: "L'étape en entier", nl: "De hele stap", en: "The whole stage" }) : group?.title}</span>
                 </span>
                 <Chevron to="down" className="text-mist transition group-open:rotate-180" />
               </summary>

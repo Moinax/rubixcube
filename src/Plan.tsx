@@ -99,9 +99,9 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
           ))}
         </nav>
         <details ref={menu} className="group relative md:hidden">
-          <summary className="flex h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2 [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell py-1.5 pr-3 pl-2 [&::-webkit-details-marker]:hidden">
             <PageMark page={stage} current />
-            <span className="min-w-0 flex-1 truncate font-semibold">{pageTitle(stage)}</span>
+            <span className="min-w-0 flex-1 leading-tight font-semibold">{pageTitle(stage)}</span>
             {stage > 0 && <span className="text-sm whitespace-nowrap text-mist">{tr({ fr: `${stage} sur ${LAST}`, nl: `${stage} van ${LAST}`, en: `${stage} of ${LAST}` })}</span>}
             <Chevron to="down" className="text-mist transition group-open:rotate-180" />
           </summary>
@@ -274,15 +274,17 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
               <Chevron to="left" />
               {tr({ fr: "Précédent", nl: "Vorige", en: "Previous" })}
             </button>
+            {/* Short words on a phone, never cut: "Suivant"; the next page's name on a wide screen. */}
             {next !== undefined ? (
-              <button className="btn btn-main min-w-0" onClick={() => onStage(next)}>
-                <span className="truncate">
+              <button className="btn btn-main" onClick={() => onStage(next)}>
+                <span className="sm:hidden">{tr({ fr: "Suivant", nl: "Volgende", en: "Next" })}</span>
+                <span className="max-sm:hidden">
                   {next === WHERE ? (
                     WHERE_TITLE
                   ) : (
                     <>
                       {where ? tr({ fr: "Étape 1", nl: "Stap 1", en: "Stage 1" }) : tr({ fr: "Étape suivante", nl: "Volgende stap", en: "Next stage" })}
-                      <span className="font-normal opacity-70 max-sm:hidden"> · {STAGES[next].title}</span>
+                      <span className="font-normal opacity-70"> · {STAGES[next].title}</span>
                     </>
                   )}
                 </span>
@@ -290,7 +292,8 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
               </button>
             ) : (
               <button className="btn btn-main" onClick={onMyCube}>
-                {tr({ fr: "Le faire sur mon cube", nl: "Doen op mijn kubus", en: "Do it on my cube" })}
+                <span className="sm:hidden">{tr({ fr: "Sur mon cube", nl: "Op mijn kubus", en: "On my cube" })}</span>
+                <span className="max-sm:hidden">{tr({ fr: "Le faire sur mon cube", nl: "Doen op mijn kubus", en: "Do it on my cube" })}</span>
                 <Chevron />
               </button>
             )}

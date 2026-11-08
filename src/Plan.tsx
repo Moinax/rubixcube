@@ -2,11 +2,10 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import CubeView, { BLANK } from "./CubeView";
 import Guide from "./Guide";
 import Lexicon, { LexiconButton } from "./Lexicon";
-import { BAR_MENU, Chevron, MiniFace, TopBar, usePopover } from "./Home";
+import { BAR_MENU, Chevron, IsoCube, MiniFace, TopBar, usePopover } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
 import { CASES, MILESTONES, PLAN, PRINCIPLES, SCRAMBLED, SEEN, SEEN_FROM_BELOW, TOPS } from "./plan";
-import { FACE_COLORS, STICKERS, type Face } from "./cube";
 import { tr } from "./i18n";
 
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
@@ -24,34 +23,6 @@ type Props = {
   onCases: (step?: number) => void;
   onBack: () => void;
 };
-
-/** A small flat drawing of the cube `state` (its top, front and right faces, or its bottom, front and right ones
- * `below`), for a list where a 3D view each would be too many. */
-function IsoCube({ state, below = false, className = "size-14" }: { state: string; below?: boolean; className?: string }) {
-  const [sx, sy] = [Math.sqrt(3) / 2, 0.5];
-  const at = ([x, y, z]: number[]) => `${((x - z) * sx).toFixed(3)},${((below ? -sy : sy) * (x + z) - y).toFixed(3)}`;
-  const shown = [below ? [0, -1, 0] : [0, 1, 0], [0, 0, 1], [1, 0, 0]].map(String);
-  return (
-    <svg viewBox="-2.8 -3.2 5.6 6.4" className={`flex-none ${className}`} aria-hidden>
-      {STICKERS.map(({ pos, normal }, i) => {
-        if (!shown.includes(String(normal))) return null;
-        const center = pos.map((p, k) => p + normal[k] * 0.5);
-        const [u, v] = [0, 1, 2].filter((k) => !normal[k]);
-        const corner = (a: number, b: number) => at(center.map((c, k) => c + (k === u ? a : k === v ? b : 0) * 0.44));
-        return (
-          <polygon
-            key={i}
-            points={[corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)].join(" ")}
-            fill={FACE_COLORS[state[i] as Face] ?? BLANK}
-            stroke="#16171b"
-            strokeWidth="0.08"
-            strokeLinejoin="round"
-          />
-        );
-      })}
-    </svg>
-  );
-}
 
 /** The cube at a milestone, with what it shows; greyed stickers can be anything. */
 function Milestone({ at, label }: { at: number; label: string }) {

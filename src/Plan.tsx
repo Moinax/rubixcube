@@ -75,9 +75,7 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
 export default function Plan({ stage, onStage, onBack, onCases, onMyCube, children }: Props) {
   const plan = PLAN[stage];
   const [intro, where] = [stage === 0, stage === WHERE];
-  // A whole stage shown first runs over several groups of one title, without a cube of their own after the first.
-  const whole = !!CASES[stage]?.[1] && !CASES[stage][1].from;
-  const cases = new Set(CASES[stage]?.map((g) => g.title)).size - (whole ? 1 : 0);
+  const cases = CASES[stage]?.length;
   const page = PAGES.indexOf(stage);
   const next = PAGES[page + 1];
   const { ref: menu } = usePopover(stage);
@@ -256,17 +254,11 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
                       {STAGES[stage].title[0].toLowerCase() + STAGES[stage].title.slice(1)}
                     </span>
                     <span className="block text-sm text-mist">
-                      {whole
-                        ? tr({
-                            fr: `L'étape en entier, puis ses ${cases} situations une par une, coup par coup sur un cube en 3D`,
-                            nl: `De hele stap, dan zijn ${cases} situaties één voor één, zet voor zet op een 3D-kubus`,
-                            en: `The whole stage, then its ${cases} situations one by one, move by move on a 3D cube`,
-                          })
-                        : tr({
-                            fr: `${cases} situation${cases > 1 ? "s jouées" : " jouée"} coup par coup sur un cube en 3D`,
-                            nl: `${cases} ${cases > 1 ? "situaties" : "situatie"}, zet voor zet gespeeld op een 3D-kubus`,
-                            en: `${cases} situation${cases > 1 ? "s" : ""}, played move by move on a 3D cube`,
-                          })}
+                      {tr({
+                        fr: `${cases} situation${cases > 1 ? "s jouées" : " jouée"} coup par coup sur un cube en 3D`,
+                        nl: `${cases} ${cases > 1 ? "situaties" : "situatie"}, zet voor zet gespeeld op een 3D-kubus`,
+                        en: `${cases} situation${cases > 1 ? "s" : ""}, played move by move on a 3D cube`,
+                      })}
                     </span>
                   </span>
                 </button>

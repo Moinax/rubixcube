@@ -4,6 +4,7 @@ import Lexicon, { type Tab } from "./Lexicon";
 import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
+import type { Intro } from "./course";
 import { applyMove, describeMove, invert, upright, type Face } from "./cube";
 import { nOf, tr } from "./i18n";
 
@@ -58,7 +59,7 @@ type GuideProps = {
   onHome: () => void;
   /** The cases of one stage, shown on their own over another screen: no progress bar, stage list or glossary
    * button, only the cases and a way back. */
-  focus?: { title: string; onClose: () => void };
+  focus?: { title: string; onClose: () => void; intro?: Intro };
   onScan: () => void;
   onEdit: (state: string) => void;
 };
@@ -88,6 +89,7 @@ const Icon = ({ name, className = "size-5" }: { name: keyof typeof ICONS; classN
   </svg>
 );
 const DONE = tr({ fr: "Terminé", nl: "Klaar", en: "Done" });
+const INTRO_LABEL = tr({ fr: "Présentation", nl: "Kennismaking", en: "Introduction" });
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 // A click leaves the focus where it was, so Space keeps toggling the auto mode.
 const keepFocus = (e: React.MouseEvent) => e.preventDefault();
@@ -119,10 +121,14 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
 
   // On the result of a course demo, before the next demo's cube fades in.
   const [atResult, setAtResult] = useState(false);
+  // The stage's presentation, before its first case: the whole stage played once, then ▶ goes on to the cases.
+  const intro = focus?.intro;
+  const [atIntro, setAtIntro] = useState(!!intro && step === 0);
+  const [introRun, setIntroRun] = useState(0);
   const done = step === total;
   const gi = atResult ? flat[step - 1].group : flat[step]?.group;
   const group = gi === undefined ? undefined : groups[gi];
-  const move = atResult ? undefined : flat[step]?.move;
+  const move = atResult || atIntro ? undefined : flat[step]?.move;
   const state = atResult ? ends[gi!] : states[step];
 
   // The cube rests on `state`; a step forward or back plays its move, while the texts already show where it lands.
@@ -148,12 +154,19 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     }, 200);
   };
   const jump = (to: number) => {
+    setAtIntro(false);
     clearTimeout(fade.current);
     setFading(false);
     setAnim(null);
     land(to);
   };
+  const showIntro = () => {
+    jump(0);
+    setAtIntro(true);
+    setIntroRun((n) => n + 1);
+  };
   const forward = () => {
+    if (atIntro) return swap(() => setAtIntro(false));
     if (done || fading) return;
     if (atResult) return swap(() => land(step));
     setAnim({ from: state, move: flat[step].move, group: group! });
@@ -162,6 +175,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     if (step + 1 === total || stageStartAt(step + 1)) setAuto(false);
   };
   const back = () => {
+    if (intro && !step && !atIntro && !fading) return swap(() => setAtIntro(true));
     if (fading || !step) return;
     if (!atResult && resultAt(step)) {
       setAnim(null);
@@ -230,18 +244,12 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const stage = learn ? stages[current] : undefined;
   // The stage list is a popover: it closes on any step change, a tap outside it, or Escape.
   const { ref: picker, close: closePicker } = usePopover(step);
-  const { ref: casePicker } = usePopover(step);
+  const { ref: casePicker } = usePopover(`${step}|${atIntro}`);
 
   const piece = group?.piece;
   /** What one case of a stage does toward it; lessons (stage 0) and the fast mode's phases have none. */
   const aim = learn && group && group.stage > 0 ? (stages[group.stage].aim ?? stages[group.stage].goal) : undefined;
-  // A case may run over several groups (a whole stage, piece by piece): one entry, from its first group.
-  const cases = course
-    ? groups
-        .map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) }))
-        .filter(({ g }, i, all) => g.stage === current && g.title !== all[i - 1]?.g.title)
-    : [];
-  const isCase = (g: Group) => g.title === group?.title;
+  const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
   // While a move plays, the outlines follow the piece it works on, from where it starts.
   const worked = anim?.group ?? group;
   const settings = useId();
@@ -254,7 +262,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     demo: { label: tr({ fr: "Résultat", nl: "Resultaat", en: "Result" }), next: tr({ fr: "Exemple suivant", nl: "Volgend voorbeeld", en: "Next example" }) },
   };
   // What ▶ does from here: go on past a result, or play the move; its size never changes.
-  const next: { icon: keyof typeof ICONS; label?: string; title: string } = done
+  const next: { icon: keyof typeof ICONS; label?: string; title: string } = atIntro
+    ? { icon: "next", label: tr({ fr: "Suite", nl: "Verder", en: "Next" }), title: tr({ fr: "Les situations une par une", nl: "De situaties één voor één", en: "The situations one by one" }) }
+    : done
     ? { icon: "done", title: DONE }
     : atResult
           ? { icon: "next", label: tr({ fr: "Suite", nl: "Verder", en: "Next" }), title: ENDINGS[ending!].next }
@@ -359,20 +369,31 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-mist">
                     {focus && `${focus.title} · `}
-                    {tr({ fr: "cas", nl: "geval", en: "case" })} {nOf(cases.findIndex(({ g }) => isCase(g)) + 1, cases.length)}
+                    {atIntro ? INTRO_LABEL.toLowerCase() : `${tr({ fr: "cas", nl: "geval", en: "case" })} ${nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}`}
                   </span>
-                  <span className="block truncate font-semibold">{group?.title}</span>
+                  <span className="block truncate font-semibold">{atIntro ? tr({ fr: "L'étape en entier", nl: "De hele stap", en: "The whole stage" }) : group?.title}</span>
                 </span>
                 <Chevron to="down" className="text-mist transition group-open:rotate-180" />
               </summary>
               <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
+                {intro && (
+                  <li>
+                    <button
+                      onClick={showIntro}
+                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${atIntro ? "bg-edge font-semibold" : ""}`}
+                    >
+                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${atIntro ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>▷</span>
+                      {INTRO_LABEL}
+                    </button>
+                  </li>
+                )}
                 {cases.map(({ g, first }, k) => (
                   <li key={first}>
                     <button
                       onClick={() => jump(first)}
-                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${isCase(g) ? "bg-edge font-semibold" : ""}`}
+                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${g === group && !atIntro ? "bg-edge font-semibold" : ""}`}
                     >
-                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${isCase(g) ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{k + 1}</span>
+                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${g === group && !atIntro ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{k + 1}</span>
                       {g.title}
                     </button>
                   </li>
@@ -382,12 +403,23 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           )}
           {cases.length > 1 && (
             <ol className="flex flex-wrap gap-1.5 max-md:hidden">
+              {intro && (
+                <li className="shrink-0">
+                  <button
+                    onClick={showIntro}
+                    onMouseDown={keepFocus}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${atIntro ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
+                  >
+                    ▷ {INTRO_LABEL}
+                  </button>
+                </li>
+              )}
               {cases.map(({ g, first }) => (
                 <li key={first} className="shrink-0">
                   <button
                     onClick={() => jump(first)}
                     onMouseDown={keepFocus}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${isCase(g) ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${g === group && !atIntro ? "bg-chalk text-plastic" : "bg-shell text-mist hover:text-chalk"}`}
                   >
                     {g.title}
                   </button>
@@ -401,6 +433,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           <div
             className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 md:max-h-[60dvh] md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
           >
+            {atIntro && intro ? (
+              <CubeView state={intro.from} moves={intro.moves} replay={introRun} />
+            ) : (
             <CubeView
               state={anim?.from ?? state}
               moves={anim ? [anim.move] : undefined}
@@ -412,10 +447,24 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               grip={!!worked?.fingers}
               next={worked?.fingers && move}
             />
+            )}
           </div>
 
           <div className="flex flex-col gap-4">
-            {done ? (
+            {atIntro && intro ? (
+              <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
+                <p className={LABEL}>{INTRO_LABEL}</p>
+                <p className="mt-1">
+                  <Colored text={intro.text} />
+                </p>
+                <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                  <button onClick={() => setIntroRun((n) => n + 1)} onMouseDown={keepFocus} className="font-semibold underline underline-offset-2 hover:text-white">
+                    {tr({ fr: "↻ Revoir", nl: "↻ Opnieuw", en: "↻ Watch again" })}
+                  </button>
+                  <span className="text-mist">{tr({ fr: "Puis ▶ Suite : chaque situation, une par une.", nl: "Dan ▶ Verder: elke situatie, één voor één.", en: "Then ▶ Next: each situation, one by one." })}</span>
+                </p>
+              </section>
+            ) : done ? (
               <div>
                 <p className="wide text-4xl">
                   {focus
@@ -579,17 +628,20 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 title={move && tr({ fr: "Ce coup dans le lexique", nl: "Deze zet in de woordenlijst", en: "This move in the glossary" })}
                 className="wide min-w-12 flex-none text-left text-4xl leading-none enabled:hover:text-white enabled:hover:underline enabled:hover:decoration-2 enabled:hover:underline-offset-4"
               >
-                {move ?? "✓"}
+                {move ?? (atIntro ? "▷" : "✓")}
               </button>
               <div className="min-w-0 text-sm leading-snug">
                 <p className="text-xs text-mist">
-                  {ending
+                  {atIntro
+                    ? INTRO_LABEL
+                    : ending
                       ? ENDINGS[ending].label
                       : done
                         ? DONE
                         : `${tr({ fr: "Coup", nl: "Zet", en: "Move" })} ${position}`}
                   {move && part && ` · ${part}`}
                 </p>
+                {atIntro && <p className="font-semibold">{focus?.title}</p>}
                 {ending && (
                   <p className="font-semibold">{ending === "demo" || !learn ? group?.title : stages[group!.stage].title}</p>
                 )}
@@ -606,7 +658,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 <button
                   onClick={back}
                   onMouseDown={keepFocus}
-                  disabled={!step}
+                  disabled={atIntro || (!step && !intro)}
                   title={tr({ fr: "Coup précédent (←)", nl: "Vorige zet (←)", en: "Previous move (←)" })}
                   aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
                   className="grid h-10 w-12 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"

@@ -44,15 +44,24 @@ const demo = (stage: number, texts: Texts, moves: string[], goal = YELLOW_UP, pi
   group(stage, texts, moves, focusOn(stage, play(goal, undo(moves))), piece, split);
 const lesson = (texts: Texts, moves: string[]) => group(0, texts, moves, SOLVED);
 
-/** A whole stage first, before its cases: on a scrambled cube, from the moment it is held yellow up, the moves the beginner guide plays
- * for that stage, one group per piece, each saying where its piece stands. One case, `title`, in the case menu. */
-function whole(stage: number, title: Record<Lang, string>, scramble: string): Group[] {
+/** A stage's presentation, played once before its cases: a scrambled cube, focused on the stage, through the moves the
+ * beginner guide plays for it, to the stage done. `text` says what the stage is and what it is for. */
+export type Intro = { from: string; moves: string[]; text: string };
+function intro(stage: number, scramble: string, text: Record<Lang, string>): Intro {
   const start = play(SOLVED, scramble.split(" ")); // the guide takes a cube as scanned, white up, and turns it over
   const plan = beginnerSolve(start);
   const first = plan.findIndex((g) => g.stage === stage);
   const from = planStates(start, plan)[plan.slice(0, first).reduce((n, g) => n + g.moves.length, 0)];
-  return plan.filter((g) => g.stage === stage).map((g, i) => ({ ...g, title: tr(title), ...(!i && { from: focusOn(stage, from) }) }));
+  return { from: focusOn(stage, from), moves: plan.filter((g) => g.stage === stage).flatMap((g) => g.moves), text: tr(text) };
 }
+export const INTROS: Partial<Record<number, Intro>> = {
+  // Its 4 white edges each start in another of the daisy's 4 cases.
+  1: intro(1, "F R2 F2 U' R' U R2 F' R' U' F' R", {
+    fr: "La marguerite, ce sont les 4 arêtes blanches rangées autour du centre jaune, blanc vers le haut, comme les pétales d'une fleur. On les gare en haut, où il n'y a encore rien à casser : à l'étape suivante, chacune descendra à sa place pour faire la croix blanche.",
+    nl: "Het madeliefje: de 4 witte randstukken rond het gele middenstuk, met wit naar boven, zoals de blaadjes van een bloem. Je parkeert ze bovenaan, waar nog niets stuk kan: in de volgende stap zakt elk naar zijn plek om het witte kruis te maken.",
+    en: "The daisy is the 4 white edges around the yellow center, white facing up, like the petals of a flower. You park them on top, where nothing can break yet: in the next stage, each drops to its place to make the white cross.",
+  }),
+};
 
 // Pieces by color letters (white U, yellow D, green F, blue B, red R, orange L).
 const WHITE_GREEN = "FU";
@@ -108,8 +117,6 @@ export const COURSE: Group[] = [
     ["z2"],
   ),
 
-  // The daisy's 4 white edges are each in another of its 4 cases.
-  ...whole(1, { fr: "Toute la marguerite", nl: "Het hele madeliefje", en: "The whole daisy" }, "F R2 F2 U' R' U R2 F' R' U' F' R"),
   demo(
     1,
     {

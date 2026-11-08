@@ -8,7 +8,7 @@ import NetEditor from "./NetEditor";
 import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
 import { CFOP_STAGES, cfopSolve } from "./cfop";
-import { COURSE, HAND_STAGES, HANDS } from "./course";
+import { COURSE, HAND_STAGES, HANDS, INTROS } from "./course";
 import { phaseTwo, randomCube, SOLVED, solve, suspects, upright, validate } from "./cube";
 import { nOf, tr } from "./i18n";
 
@@ -240,6 +240,7 @@ export default function App() {
               onStep={(cases) => setScreen({ ...screen, cases })}
               focus={{
                 title: STAGES[screen.stage].title,
+                intro: INTROS[screen.stage],
                 onClose: () => (casesPushed.current ? history.back() : setScreen({ name: "plan", stage: screen.stage })),
               }}
               onHome={() => setScreen({ name: "home" })}

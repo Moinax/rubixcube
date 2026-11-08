@@ -14,9 +14,8 @@ one by one on an animated 3D cube:
   (`src/course.ts`): reading the
   moves, the notation then the beginner method case by case, each case a demo
   cube built backwards from its algorithm, what its stage doesn't use yet greyed
-  out (the daisy comes whole first, edge by edge on a scrambled cube as the guide
-  plays it, then its cases, each ending on the whole daisy), to recognise on your
-  own cube; or
+  out (the daisy's cases end on the whole daisy, after a presentation that plays
+  the whole stage once on a scrambled cube), to recognise on your own cube; or
   holding the cube, the home grip marked on the 3D cube and the finger or wrist
   that makes R, L, U and the sexy move, the fingers riding with the face they
   turn.

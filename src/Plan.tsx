@@ -3,7 +3,7 @@ import CubeView from "./CubeView";
 import { Back, Chevron, MiniFace } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
-import { MILESTONES, PLAN, PRINCIPLES, SEEN_FROM_BELOW, TOPS } from "./plan";
+import { CASES, MILESTONES, PLAN, PRINCIPLES, SEEN_FROM_BELOW, TOPS } from "./plan";
 import { tr } from "./i18n";
 
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
@@ -30,6 +30,7 @@ function Milestone({ at, label }: { at: number; label: string }) {
 export default function Plan({ stage, onStage, onBack, onCases, onMyCube, children }: Props) {
   const plan = PLAN[stage];
   const intro = stage === 0;
+  const cases = CASES[stage].length;
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 p-5 pb-28 md:p-10 md:pb-28">
       <div>
@@ -150,8 +151,26 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
                 <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
                 <Colored text={plan.done} />
               </p>
-              <button onClick={onCases} className="btn mt-4 w-full border border-edge bg-raised hover:border-mist/60">
-                {tr({ fr: "Voir chaque cas en 3D, coup par coup", nl: "Elk geval in 3D bekijken, zet voor zet", en: "See each case in 3D, move by move" })}
+              {/* Named after the stage: what opens is that stage played out, not a list to browse. */}
+              <button onClick={onCases} className="mt-4 flex w-full items-center gap-3 rounded-[0.875rem] border border-edge bg-raised p-3 text-left hover:border-mist/60">
+                <span className="grid size-10 flex-none place-items-center rounded-full bg-chalk text-plastic">
+                  <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden>
+                    <path d="M7 5v14l12-7z" />
+                  </svg>
+                </span>
+                <span>
+                  <span className="block font-semibold">
+                    {tr({ fr: "Montre-moi : ", nl: "Laat zien: ", en: "Show me: " })}
+                    {STAGES[stage].title[0].toLowerCase() + STAGES[stage].title.slice(1)}
+                  </span>
+                  <span className="block text-sm text-mist">
+                    {tr({
+                      fr: `${cases} situation${cases > 1 ? "s jouées" : " jouée"} coup par coup sur un cube en 3D`,
+                      nl: `${cases} ${cases > 1 ? "situaties" : "situatie"}, zet voor zet gespeeld op een 3D-kubus`,
+                      en: `${cases} situation${cases > 1 ? "s" : ""}, played move by move on a 3D cube`,
+                    })}
+                  </span>
+                </span>
               </button>
             </>
           )}

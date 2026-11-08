@@ -123,4 +123,5 @@ test("the daisy's presentation plays the whole stage, from a scrambled cube to t
   assert.equal([...from].filter((c) => c !== ".").length, 6 + 8); // the centers and the white edges only
   assert.equal(petals(from), 0);
   assert.equal(petals(moves.reduce(applyMove, from)), 4);
+  assert.ok(moves.every((m, i) => !i || m[0] !== moves[i - 1][0]), moves.join(" ")); // no move undone right after it
 });

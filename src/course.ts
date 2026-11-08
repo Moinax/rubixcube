@@ -1,5 +1,5 @@
 import { algOf, beginnerSolve, CYCLE, FLIP, LEFT, planStates, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group, type Stage } from "./beginner.ts";
-import { colorsOf, invert as undo, PIECES, SOLVED } from "./cube.ts";
+import { colorsOf, invert as undo, PIECES, simplify, SOLVED } from "./cube.ts";
 import { tr, type Lang } from "./i18n.ts";
 
 // The beginner method as a course, for a cube the app has not seen: each case
@@ -52,7 +52,9 @@ function intro(stage: number, scramble: string, text: Record<Lang, string>): Int
   const plan = beginnerSolve(start);
   const first = plan.findIndex((g) => g.stage === stage);
   const from = planStates(start, plan)[plan.slice(0, first).reduce((n, g) => n + g.moves.length, 0)];
-  return { from: focusOn(stage, from), moves: plan.filter((g) => g.stage === stage).flatMap((g) => g.moves), text: tr(text) };
+  // Each piece is solved on its own, so one may start by undoing the move the last one ended on: played in one go,
+  // those cancel out.
+  return { from: focusOn(stage, from), moves: simplify(plan.filter((g) => g.stage === stage).flatMap((g) => g.moves)), text: tr(text) };
 }
 export const INTROS: Partial<Record<number, Intro>> = {
   // Its 4 white edges each start in another of the daisy's 4 cases.

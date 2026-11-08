@@ -86,7 +86,7 @@ type Props = {
  * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face. A ↻ in the
  * corner puts back a view turned by hand, shown once it was; with `onReplay`, it is always there and plays again too.
  * A new `peek` tilts the cube the way a hand would to look at its side `from` (a face the camera doesn't see), holds
- * it there a moment, then brings it back as it is held to play.
+ * it there a moment, then brings it back as it is held to play; a hand on the cube stops it.
  */
 export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, onReplay, peek }: Props) {
   const host = useRef<HTMLDivElement>(null);
@@ -167,11 +167,12 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     const look = new THREE.Vector3(...CAMERA.map((c, k) => (peek.from[k] < 0 ? -c : c)));
     const [go, hold] = [900, 1100];
     let start: number | undefined;
-    ctx.controls.enabled = false;
+    // A hand on the cube stops the tilt where it is: the hand turns it from there.
     const done = () => {
       ctx.onCamera = undefined;
-      ctx.controls.enabled = true;
+      ctx.controls.removeEventListener("start", done);
     };
+    ctx.controls.addEventListener("start", done);
     ctx.onCamera = (t) => {
       start ??= t;
       const k = t - start;

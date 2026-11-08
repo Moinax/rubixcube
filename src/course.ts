@@ -101,9 +101,9 @@ export const COURSE: Group[] = [
   demo(
     1,
     {
-      fr: ["Arête en bas, blanc vers le sol", "Une arête blanche est en bas, son blanc vers le bas.", "Fais un demi-tour de sa face : elle monte, blanc vers le haut. Si la place juste au-dessus est déjà un pétale, tourne d'abord le haut pour la libérer."],
-      nl: ["Randstuk onderaan, wit naar de grond", "Een wit randstuk zit onderaan, met zijn wit naar beneden.", "Draai zijn kant een halve slag: het gaat naar boven, met wit naar boven. Is de plek er recht boven al een blaadje, draai dan eerst de bovenkant om die vrij te maken."],
-      en: ["Edge at the bottom, white facing the floor", "A white edge is at the bottom, its white facing down.", "Give its face a half turn: it goes up, white facing up. If the spot right above is already a petal, turn the top first to free it."],
+      fr: ["Arête en bas, blanc vers le sol", "Une arête blanche est en bas, sa case blanche tournée vers le sol.", "Fais un demi-tour de sa face : elle monte, sa case blanche sur le dessus. Si la place juste au-dessus est déjà un pétale, tourne d'abord le haut pour la libérer."],
+      nl: ["Randstuk onderaan, wit naar de grond", "Een wit randstuk zit onderaan, met het witte vakje naar de grond.", "Draai zijn kant een halve slag: het gaat naar boven, met het witte vakje bovenop. Is de plek er recht boven al een blaadje, draai dan eerst de bovenkant om die vrij te maken."],
+      en: ["Edge at the bottom, white facing the floor", "A white edge is at the bottom, its white square facing the floor.", "Give its face a half turn: it goes up, its white square on top. If the spot right above is already a petal, turn the top first to free it."],
     },
     ["F2"],
     DAISY,
@@ -123,9 +123,9 @@ export const COURSE: Group[] = [
   demo(
     1,
     {
-      fr: ["Arête en haut, blanc sur le côté", "Une arête blanche est en haut, mais son blanc regarde sur le côté.", "Descends-la au milieu.", "Tourne le haut pour amener une place vide juste au-dessus d'elle, à droite : les pétales sont à l'abri.", "Remonte-la par le côté, blanc vers le haut : la marguerite est complète."],
-      nl: ["Randstuk boven, wit opzij", "Een wit randstuk zit boven, maar zijn wit kijkt opzij.", "Breng het naar het midden.", "Draai de bovenkant zodat er een lege plek recht boven het stuk komt, rechts: de blaadjes zijn veilig.", "Breng het langs de zijkant weer naar boven, met wit naar boven: het madeliefje is klaar."],
-      en: ["Edge on top, white on the side", "A white edge is on top, but its white faces the side.", "Bring it down to the middle.", "Turn the top to bring an empty spot right above it, on the right: the petals are safe.", "Bring it back up from the side, white facing up: the daisy is complete."],
+      fr: ["Arête en haut, blanc sur le côté", "Une arête blanche est en haut, mais son blanc regarde sur le côté.", "Descends-la au milieu.", "Tourne le haut pour amener une place vide juste au-dessus d'elle, à droite : les pétales sont à l'abri.", "Remonte-la par le côté, sa case blanche sur le dessus : la marguerite est complète."],
+      nl: ["Randstuk boven, wit opzij", "Een wit randstuk zit boven, maar zijn wit kijkt opzij.", "Breng het naar het midden.", "Draai de bovenkant zodat er een lege plek recht boven het stuk komt, rechts: de blaadjes zijn veilig.", "Breng het langs de zijkant weer naar boven, met het witte vakje bovenop: het madeliefje is klaar."],
+      en: ["Edge on top, white on the side", "A white edge is on top, but its white faces the side.", "Bring it down to the middle.", "Turn the top to bring an empty spot right above it, on the right: the petals are safe.", "Bring it back up from the side, its white square on top: the daisy is complete."],
     },
     ["F", "U'", "R"],
     DAISY,
@@ -135,9 +135,9 @@ export const COURSE: Group[] = [
   demo(
     1,
     {
-      fr: ["Arête en bas, blanc sur le côté", "Une arête blanche est en bas, son blanc sur le côté.", "Tourne le haut pour mettre une place vide au-dessus d'elle : sa face peut tourner sans faire tomber de pétale.", "Un quart de tour de sa face la met au milieu.", "Tourne le haut pour amener la place vide juste au-dessus d'elle, à droite.", "La face d'à côté la monte, blanc vers le haut : la marguerite est complète."],
-      nl: ["Randstuk onderaan, wit opzij", "Een wit randstuk zit onderaan, met zijn wit opzij.", "Draai de bovenkant zodat er een lege plek boven het stuk komt: zijn kant kan draaien zonder een blaadje te laten vallen.", "Een kwartslag van zijn kant brengt het naar het midden.", "Draai de bovenkant zodat de lege plek recht boven het stuk komt, rechts.", "De kant ernaast brengt het naar boven, met wit naar boven: het madeliefje is klaar."],
-      en: ["Edge at the bottom, white on the side", "A white edge is at the bottom, its white on the side.", "Turn the top to put an empty spot above it: its face can turn without knocking a petal off.", "A quarter turn of its face puts it in the middle.", "Turn the top to bring the empty spot right above it, on the right.", "The face next to it brings it up, white facing up: the daisy is complete."],
+      fr: ["Arête en bas, blanc sur le côté", "Une arête blanche est en bas, son blanc sur le côté.", "Tourne le haut pour mettre une place vide au-dessus d'elle : sa face peut tourner sans faire tomber de pétale.", "Un quart de tour de sa face la met au milieu.", "Tourne le haut pour amener la place vide juste au-dessus d'elle, à droite.", "La face d'à côté la monte, sa case blanche sur le dessus : la marguerite est complète."],
+      nl: ["Randstuk onderaan, wit opzij", "Een wit randstuk zit onderaan, met zijn wit opzij.", "Draai de bovenkant zodat er een lege plek boven het stuk komt: zijn kant kan draaien zonder een blaadje te laten vallen.", "Een kwartslag van zijn kant brengt het naar het midden.", "Draai de bovenkant zodat de lege plek recht boven het stuk komt, rechts.", "De kant ernaast brengt het naar boven, met het witte vakje bovenop: het madeliefje is klaar."],
+      en: ["Edge at the bottom, white on the side", "A white edge is at the bottom, its white on the side.", "Turn the top to put an empty spot above it: its face can turn without knocking a petal off.", "A quarter turn of its face puts it in the middle.", "Turn the top to bring the empty spot right above it, on the right.", "The face next to it brings it up, its white square on top: the daisy is complete."],
     },
     ["U", "F'", "U'", "R"],
     DAISY,

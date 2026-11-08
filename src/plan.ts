@@ -142,11 +142,11 @@ export const PLAN: PlanStage[] = tr<PlanStage[]>({
       how: [
         "Repère une arête blanche qui n'est pas encore un pétale, où qu'elle soit.",
         "Avant de la monter, tourne le haut pour mettre une place vide juste au-dessus d'elle : sinon tu ferais tomber un pétale déjà posé.",
-        "Monte-la en tournant sa face, blanc vers le haut. Si son blanc regarde sur le côté, fais un détour : descends-la au milieu, puis remonte-la par la face d'à côté.",
+        "Monte-la en tournant sa face, sa case blanche sur le dessus. Si son blanc regarde sur le côté, fais un détour : descends-la au milieu, puis remonte-la par la face d'à côté.",
         "Recommence jusqu'à avoir 4 pétales blancs autour du centre jaune.",
       ],
       why: "Pourquoi en haut, alors que la croix blanche ira en bas ? Parce qu'en haut il n'y a encore rien à protéger : tu peux tourner les faces comme tu veux pour y amener les pétales. C'est un parking : à l'étape suivante, tu les descends une par une à leur vraie place.",
-      done: "les 4 arêtes blanches sont autour du centre jaune, blanc vers le haut.",
+      done: "le dessus montre une fleur : le centre jaune entouré de 4 cases blanches.",
     },
     {
       look: "Chaque pétale, et le centre de son autre couleur : le centre vert pour le pétale blanc-vert.",
@@ -231,11 +231,11 @@ export const PLAN: PlanStage[] = tr<PlanStage[]>({
       how: [
         "Zoek een wit randstuk dat nog geen blaadje is, waar het ook zit.",
         "Draai eerst de bovenkant zodat er een lege plek recht boven het stuk komt: anders laat je een blaadje vallen dat er al ligt.",
-        "Breng het naar boven door zijn kant te draaien, met wit naar boven. Kijkt zijn wit opzij, maak dan een omweg: breng het naar het midden, en dan via de kant ernaast weer naar boven.",
+        "Breng het naar boven door zijn kant te draaien, met het witte vakje bovenop. Kijkt zijn wit opzij, maak dan een omweg: breng het naar het midden, en dan via de kant ernaast weer naar boven.",
         "Herhaal tot er 4 witte blaadjes rond het gele middenstuk liggen.",
       ],
       why: "Waarom bovenaan, als het witte kruis onderaan hoort? Omdat er bovenaan nog niets te beschermen is: je kunt de kanten draaien zoals je wilt om de blaadjes daar te brengen. Het is een parkeerplaats: in de volgende stap laat je ze één voor één naar hun echte plek zakken.",
-      done: "de 4 witte randstukken rond het gele middenstuk liggen, met wit naar boven.",
+      done: "de bovenkant een bloem toont: het gele middenstuk omringd door 4 witte vakjes.",
     },
     {
       look: "Elk blaadje, en het middenstuk van zijn andere kleur: het groene middenstuk voor het wit-groene blaadje.",
@@ -320,11 +320,11 @@ export const PLAN: PlanStage[] = tr<PlanStage[]>({
       how: [
         "Find a white edge that isn't a petal yet, wherever it is.",
         "Before bringing it up, turn the top to put an empty spot right above it: otherwise you'd knock off a petal already in place.",
-        "Bring it up by turning its face, white facing up. If its white faces the side, take a detour: bring it down to the middle, then up again through the face next to it.",
+        "Bring it up by turning its face, its white square on top. If its white faces the side, take a detour: bring it down to the middle, then up again through the face next to it.",
         "Do it again until 4 white petals surround the yellow center.",
       ],
       why: "Why on top, when the white cross goes at the bottom? Because there's nothing to protect on top yet: you can turn the faces however you like to bring the petals there. It's a parking lot: in the next stage, you bring them down one by one to their real place.",
-      done: "the 4 white edges are around the yellow center, white facing up.",
+      done: "the top shows a flower: the yellow center ringed by 4 white squares.",
     },
     {
       look: "Each petal, and the center of its other color: the green center for the white-green petal.",

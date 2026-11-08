@@ -26,7 +26,7 @@ const WORDS: [word: string, text: string, piece?: string][] = tr({
     ["Arête", "Une pièce à 2 couleurs, entre deux centres. Il y en a 12.", "DF"],
     ["Coin", "Une pièce à 3 couleurs, à l'angle de trois faces. Il y en a 8.", "DFR"],
     ["Couronne", "Un étage du cube : celle du bas, celle du milieu, celle du haut. La méthode les fait une par une."],
-    ["Pétale, marguerite", "Un pétale est une arête blanche posée autour du centre jaune, blanc vers le haut. Les 4 pétales forment la marguerite."],
+    ["Pétale, marguerite", "Un pétale est une arête blanche posée autour du centre jaune, sa case blanche sur le dessus. Les 4 pétales forment la marguerite."],
     ["Place", "L'endroit où va une pièce : entre les centres de ses couleurs. Le guide l'encadre en vert."],
   ],
   nl: [
@@ -34,7 +34,7 @@ const WORDS: [word: string, text: string, piece?: string][] = tr({
     ["Randstuk", "Een stuk met 2 kleuren, tussen twee middenstukken. Er zijn er 12.", "DF"],
     ["Hoekstuk", "Een stuk met 3 kleuren, op de hoek van drie kanten. Er zijn er 8.", "DFR"],
     ["Laag", "Een verdieping van de kubus: de onderste, de middelste, de bovenste. De methode maakt ze een voor een."],
-    ["Blaadje, madeliefje", "Een blaadje is een wit randstuk rond het gele middenstuk, met wit naar boven. De 4 blaadjes vormen het madeliefje."],
+    ["Blaadje, madeliefje", "Een blaadje is een wit randstuk rond het gele middenstuk, met het witte vakje bovenop. De 4 blaadjes vormen het madeliefje."],
     ["Plek", "Waar een stuk hoort: tussen de middenstukken van zijn kleuren. De gids omlijnt die in het groen."],
   ],
   en: [
@@ -42,7 +42,7 @@ const WORDS: [word: string, text: string, piece?: string][] = tr({
     ["Edge", "A piece with 2 colors, between two centers. There are 12.", "DF"],
     ["Corner", "A piece with 3 colors, where three faces meet. There are 8.", "DFR"],
     ["Layer", "One level of the cube: the bottom, the middle, the top. The method does them one by one."],
-    ["Petal, daisy", "A petal is a white edge around the yellow center, white facing up. The 4 petals make the daisy."],
+    ["Petal, daisy", "A petal is a white edge around the yellow center, its white square on top. The 4 petals make the daisy."],
     ["Place", "Where a piece belongs: between the centers of its colors. The guide outlines it in green."],
   ],
 });

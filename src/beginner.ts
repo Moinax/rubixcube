@@ -37,8 +37,8 @@ export const STAGES: Stage[] = tr<Stage[]>({
     },
     {
       title: "La marguerite",
-      goal: "Les 4 arêtes blanches autour du centre jaune, blanc vers le haut.",
-      aim: "Faire de cette arête un pétale\u00a0: en haut, autour du centre jaune, blanc vers le haut.",
+      goal: "Une fleur sur le dessus : le centre jaune entouré de 4 cases blanches.",
+      aim: "Faire de cette arête un pétale\u00a0: sa case blanche sur le dessus, à côté du centre jaune.",
       why: "Le dessus ne contient encore rien d'important : on peut y ranger les arêtes blanches sans rien casser.",
     },
     {
@@ -92,8 +92,8 @@ export const STAGES: Stage[] = tr<Stage[]>({
     },
     {
       title: "Het madeliefje",
-      goal: "De 4 witte randstukken rond het gele middenstuk, met wit naar boven.",
-      aim: "Van dit randstuk een blaadje maken: bovenaan, rond het gele middenstuk, met wit naar boven.",
+      goal: "Een bloem bovenop: het gele middenstuk omringd door 4 witte vakjes.",
+      aim: "Van dit randstuk een blaadje maken: het witte vakje bovenop, naast het gele middenstuk.",
       why: "Bovenaan zit nog niets belangrijks: je kunt de witte randstukken daar kwijt zonder iets stuk te maken.",
     },
     {
@@ -147,8 +147,8 @@ export const STAGES: Stage[] = tr<Stage[]>({
     },
     {
       title: "The daisy",
-      goal: "The 4 white edges around the yellow center, white facing up.",
-      aim: "Turn this edge into a petal: on top, around the yellow center, white facing up.",
+      goal: "A flower on top: the yellow center ringed by 4 white squares.",
+      aim: "Turn this edge into a petal: its white square on top, next to the yellow center.",
       why: "The top holds nothing important yet: the white edges can wait there without breaking anything.",
     },
     {
@@ -585,9 +585,9 @@ export function beginnerSolve(start: string): Group[] {
     emit(
       1,
       tr({
-        fr: `Elle est ${{ down: "en bas, blanc dessous", bottom: "en bas, blanc sur le côté", middle: "dans la couronne du milieu", top: "en haut, mais blanc sur le côté" }[where]}. Elle doit rejoindre le dessus, blanc vers le haut, comme un pétale autour du centre jaune.`,
-        nl: `Het zit ${{ down: "onderaan, met wit naar beneden", bottom: "onderaan, met wit opzij", middle: "in de middelste laag", top: "boven, maar met wit opzij" }[where]}. Het moet naar de bovenkant, met wit naar boven, als een blaadje rond het gele middenstuk.`,
-        en: `It is ${{ down: "at the bottom, white facing down", bottom: "at the bottom, white on the side", middle: "in the middle layer", top: "on top, but white on the side" }[where]}. It has to reach the top, white facing up, as a petal around the yellow center.`,
+        fr: `Elle est ${{ down: "en bas, blanc dessous", bottom: "en bas, blanc sur le côté", middle: "dans la couronne du milieu", top: "en haut, mais blanc sur le côté" }[where]}. Elle doit rejoindre le dessus, sa case blanche sur le dessus, comme un pétale autour du centre jaune.`,
+        nl: `Het zit ${{ down: "onderaan, met wit naar beneden", bottom: "onderaan, met wit opzij", middle: "in de middelste laag", top: "boven, maar met wit opzij" }[where]}. Het moet naar de bovenkant, met het witte vakje bovenop, als een blaadje rond het gele middenstuk.`,
+        en: `It is ${{ down: "at the bottom, white facing down", bottom: "at the bottom, white on the side", middle: "in the middle layer", top: "on top, but white on the side" }[where]}. It has to reach the top, its white square on top, as a petal around the yellow center.`,
       }),
       [
         [TURN_TO_FACE, hold],
@@ -602,14 +602,14 @@ export function beginnerSolve(start: string): Group[] {
         [
           {
             down: tr({
-              fr: "Fais un demi-tour de sa face : elle monte, blanc vers le haut.",
-              nl: "Draai zijn kant een halve slag: het gaat naar boven, met wit naar boven.",
-              en: "Give its face a half turn: it goes up, white facing up.",
+              fr: "Fais un demi-tour de sa face : elle monte, sa case blanche sur le dessus.",
+              nl: "Draai zijn kant een halve slag: het gaat naar boven, met het witte vakje bovenop.",
+              en: "Give its face a half turn: it goes up, its white square on top.",
             }),
             bottom: tr({
-              fr: "Un quart de tour de sa face la met au milieu, puis la face d'à côté la monte, blanc vers le haut.",
-              nl: "Een kwartslag van zijn kant brengt het naar het midden, daarna brengt de kant ernaast het naar boven, met wit naar boven.",
-              en: "A quarter turn of its face puts it in the middle, then the face next to it brings it up, white facing up.",
+              fr: "Un quart de tour de sa face la met au milieu, puis la face d'à côté la monte, sa case blanche sur le dessus.",
+              nl: "Een kwartslag van zijn kant brengt het naar het midden, daarna brengt de kant ernaast het naar boven, met het witte vakje bovenop.",
+              en: "A quarter turn of its face puts it in the middle, then the face next to it brings it up, its white square on top.",
             }),
             middle: tr({
               fr: "Tourne d'un quart la face de son autre couleur, dans le sens qui amène le blanc en haut.",
@@ -617,9 +617,9 @@ export function beginnerSolve(start: string): Group[] {
               en: "Give the face of its other color a quarter turn, the way that brings the white up.",
             }),
             top: tr({
-              fr: "Descends-la au milieu, puis remonte-la par le côté, blanc vers le haut ; un tour du haut entre les deux met les pétales à l'abri.",
-              nl: "Breng het naar het midden en dan langs de zijkant weer naar boven, met wit naar boven; een draai van de bovenkant ertussen houdt de blaadjes veilig.",
-              en: "Bring it down to the middle, then back up from the side, white facing up; a turn of the top in between keeps the petals safe.",
+              fr: "Descends-la au milieu, puis remonte-la par le côté, sa case blanche sur le dessus ; un tour du haut entre les deux met les pétales à l'abri.",
+              nl: "Breng het naar het midden en dan langs de zijkant weer naar boven, met het witte vakje bovenop; een draai van de bovenkant ertussen houdt de blaadjes veilig.",
+              en: "Bring it down to the middle, then back up from the side, its white square on top; a turn of the top in between keeps the petals safe.",
             }),
           }[where],
           moves.slice(free),

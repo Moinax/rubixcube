@@ -59,6 +59,9 @@ const CAMERA: Vec = [4.6, 4, 6.2];
 export const BLANK = "#3a3d46";
 
 const ease = (k: number) => k * k * (3 - 2 * k);
+// Nothing turns before a view has been shown this long, so the eye has arrived on the page first: a presentation
+// or a glance a new screen starts on waits for it, a move or a glance within the same screen doesn't.
+const ARRIVAL = 700;
 
 type Props = {
   state: string;
@@ -93,6 +96,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; onCamera?: (t: number) => void }>(null);
   const ended = useRef(onEnd);
   ended.current = onEnd;
+  const born = useRef(performance.now());
   const [turned, setTurned] = useState(false);
   const home = () => {
     const { controls } = scene.current!;
@@ -176,7 +180,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     };
     ctx.controls.addEventListener("start", done);
     ctx.onCamera = (t) => {
-      if (start === undefined && ctx.onFrame) return; // a move still turning goes first: one motion at a time
+      if (start === undefined && (ctx.onFrame || t < born.current + ARRIVAL)) return; // a move still turning goes first
       start ??= t;
       const k = Math.min(1, (t - start) / glance);
       const d = k - 0.5;
@@ -256,6 +260,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
       const vector = new THREE.Vector3(...moveAxis(move));
       let start: number | undefined;
       ctx.onFrame = (t) => {
+        if (start === undefined && t < born.current + ARRIVAL) return;
         start ??= t;
         const k = Math.min(1, (t - start) / duration);
         layer.quaternion.setFromAxisAngle(vector, angle * ease(k));

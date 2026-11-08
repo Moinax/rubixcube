@@ -41,7 +41,7 @@ test("each demo starts on the case its text describes", () => {
   assert.deepEqual([at(stuck, [1, 0, 1], [0, 0, 1]), at(stuck, [1, 0, 1], [1, 0, 0])], ["L", "F"]); // green-orange, flipped
   assert.deepEqual(yellowEdgesUp(demo("Le point")), [false, false, false, false]);
   const dot = COURSE.find((g) => g.title === "Le point")!;
-  assert.equal(yellowEdgesUp(dot.moves.reduce(applyMove, dot.from!)).filter(Boolean).length, 2); // an L
+  assert.equal(yellowEdgesUp(dot.moves.slice(0, 6).reduce(applyMove, dot.from!)).filter(Boolean).length, 2); // an L
 
   assert.deepEqual(yellowEdgesUp(demo("Le L")), [true, false, true, false]); // left and back
   assert.deepEqual(yellowEdgesUp(demo("La ligne")), [true, true, false, false]); // left and right
@@ -119,3 +119,28 @@ test("a demo shows only what its stage works with, and the daisy's demos end on 
   for (const stage of [3, 4, 5, 6]) assert.ok(COURSE.filter((g) => g.stage === stage).every((g) => g.from!.includes(".")), `stage ${stage}`);
 });
 
+
+test("every case ends on its stage done, through the states its steps name", () => {
+  const kind = (p: Vec) => p.filter(Boolean).length;
+  const right = (s: string, keep: (p: Vec, n: Vec) => boolean) => STICKERS.every(({ pos, normal }, i) => !keep(pos, normal) || s[i] === center(s, normal));
+  const done: Record<number, (s: string) => boolean> = {
+    1: (s) => yellowEdgesUp(s).every((up, i) => up || at(s, [[-1, 1, 0], [1, 1, 0], [0, 1, -1], [0, 1, 1]][i] as Vec, [0, 1, 0]) === "U"),
+    2: (s) => right(s, (p) => p[1] === -1 && kind(p) === 2),
+    3: (s) => right(s, (p) => p[1] === -1),
+    4: (s) => right(s, (p) => p[1] <= 0),
+    5: (s) => right(s, (p) => p[1] <= 0) && yellowEdgesUp(s).every(Boolean),
+    6: (s) => right(s, (p) => p[1] <= 0 || kind(p) === 2),
+    7: (s) => right(s, (p) => p[1] <= 0 || kind(p) === 2) && placed(s) === 4,
+    8: (s) => right(s, () => true),
+  };
+  for (const g of COURSE.filter((g) => g.stage > 0)) assert.ok(done[g.stage](g.moves.reduce(applyMove, g.from!)), g.title);
+  const after = (title: string, n: number) => {
+    const g = COURSE.find((g) => g.title === title)!;
+    return g.moves.slice(0, n).reduce(applyMove, g.from!);
+  };
+  assert.deepEqual(yellowEdgesUp(after("Le point", 13)), [true, true, false, false]); // a line, held horizontal
+  assert.deepEqual(edgesAligned(after("Deux en face", 10)), [false, true, true, false]); // two neighbors, right and back
+  assert.ok(placed(after("Aucun coin bien placé", 9)) >= 1);
+  const stuck = after("Arête coincée au milieu", 9);
+  assert.deepEqual([at(stuck, [0, 1, 1], [0, 0, 1]), at(stuck, [0, 1, 1], [0, 1, 0])], ["F", "L"]); // green over green, orange on top
+});

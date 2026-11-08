@@ -253,34 +253,39 @@ export const COURSE: Group[] = [
   demo(
     4,
     {
-      fr: ["Arête coincée au milieu", "Une arête du milieu est coincée : à sa place mais à l'envers, ou à la place d'une autre.", "Mets-la à droite devant toi et fais une fois l'insertion à droite : elle remonte en haut, et c'est un des deux cas précédents."],
-      nl: ["Randstuk vast in het midden", "Een randstuk in het midden zit vast: op zijn plek maar omgekeerd, of op de plek van een ander.", "Zet het rechts vooraan en doe één keer het invoegen naar rechts: het komt weer boven, en dan is het een van de twee vorige gevallen."],
-      en: ["Edge stuck in the middle", "A middle edge is stuck: in its place but flipped, or in another edge's place.", "Put it at the front right and do the right insert once: it comes back up, and it is one of the two previous cases."],
+      fr: ["Arête coincée au milieu", "Une arête du milieu est coincée : à sa place mais à l'envers, ou à la place d'une autre.", "Mets-la à droite devant toi et fais une fois l'insertion à droite : elle remonte en haut.", "Tourne le haut jusqu'à ce que sa couleur de côté soit au-dessus du centre de même couleur.", "Sa couleur du dessus est celle du centre de droite : insertion à droite, elle glisse à sa place."],
+      nl: ["Randstuk vast in het midden", "Een randstuk in het midden zit vast: op zijn plek maar omgekeerd, of op de plek van een ander.", "Zet het rechts vooraan en doe één keer het invoegen naar rechts: het komt weer boven.", "Draai de bovenkant tot zijn kleur aan de zijkant boven het middenstuk van dezelfde kleur staat.", "Zijn kleur bovenop is die van het middenstuk rechts: invoegen naar rechts, het schuift op zijn plek."],
+      en: ["Edge stuck in the middle", "A middle edge is stuck: in its place but flipped, or in another edge's place.", "Put it at the front right and do the right insert once: it comes back up.", "Turn the top until its side color sits above the center of the same color.", "Its top color is the right center's: right insert, it slides into its place."],
     },
-    RIGHT,
-    play(EDGE_FLIPPED_IN_SLOT, RIGHT),
+    [...RIGHT, "U2", ...RIGHT],
+    play(EDGE_FLIPPED_IN_SLOT, [...RIGHT, "U2", ...RIGHT]),
     GREEN_ORANGE,
+    [8, 1, 8],
   ),
 
   demo(
     5,
     {
-      fr: ["Le point", "Aucune arête jaune sur le dessus, seulement le centre.", "Fais F, le sexy move, puis F', de n'importe quel côté : tu obtiens un L."],
-      nl: ["De stip", "Geen enkel geel randstuk bovenop, alleen het middenstuk.", "Doe F, de sexy move, en dan F', vanaf eender welke kant: je krijgt een L."],
-      en: ["The dot", "No yellow edge on top, only the center.", "Do F, the sexy move, then F', from any side: you get an L."],
+      fr: ["Le point", "Aucune arête jaune sur le dessus, seulement le centre.", "Fais F, le sexy move, puis F', de n'importe quel côté : tu obtiens un L.", "Tourne le haut pour tenir le L derrière et à gauche, puis refais F R U R' U' F' : tu obtiens une ligne.", "La ligne est à l'horizontale : refais-le une dernière fois, la croix jaune est faite."],
+      nl: ["De stip", "Geen enkel geel randstuk bovenop, alleen het middenstuk.", "Doe F, de sexy move, en dan F', vanaf eender welke kant: je krijgt een L.", "Draai de bovenkant zodat de L achteraan links ligt, en doe opnieuw F R U R' U' F': je krijgt een lijn.", "De lijn ligt horizontaal: doe het nog een laatste keer, het gele kruis is klaar."],
+      en: ["The dot", "No yellow edge on top, only the center.", "Do F, the sexy move, then F', from any side: you get an L.", "Turn the top to hold the L at the back left, then do F R U R' U' F' again: you get a line.", "The line is horizontal: do it one last time, the yellow cross is done."],
     },
-    FLIP,
-    play(YELLOW_UP, [...undo(FLIP), "U", ...undo(FLIP)]),
+    [...FLIP, "U2", ...FLIP, ...FLIP],
+    play(YELLOW_UP, [...undo(FLIP), "U", ...undo(FLIP), "U2", ...FLIP, ...FLIP]),
+    undefined,
+    [6, 7, 6],
   ),
   demo(
     5,
     {
-      fr: ["Le L", "Deux arêtes jaunes voisines forment un L, tenu derrière et à gauche.", "Fais F, le sexy move, puis F' : tu obtiens une ligne."],
-      nl: ["De L", "Twee naburige gele randstukken vormen een L, achteraan links.", "Doe F, de sexy move, en dan F': je krijgt een lijn."],
-      en: ["The L", "Two neighboring yellow edges form an L, held at the back left.", "Do F, the sexy move, then F': you get a line."],
+      fr: ["Le L", "Deux arêtes jaunes voisines forment un L, tenu derrière et à gauche.", "Fais F, le sexy move, puis F' : tu obtiens une ligne.", "La ligne est à l'horizontale : refais-le, la croix jaune est faite."],
+      nl: ["De L", "Twee naburige gele randstukken vormen een L, achteraan links.", "Doe F, de sexy move, en dan F': je krijgt een lijn.", "De lijn ligt horizontaal: doe het opnieuw, het gele kruis is klaar."],
+      en: ["The L", "Two neighboring yellow edges form an L, held at the back left.", "Do F, the sexy move, then F': you get a line.", "The line is horizontal: do it again, the yellow cross is done."],
     },
-    FLIP,
-    play(YELLOW_UP, undo(FLIP)),
+    [...FLIP, ...FLIP],
+    YELLOW_UP,
+    undefined,
+    [6, 6],
   ),
   demo(
     5,
@@ -304,12 +309,14 @@ export const COURSE: Group[] = [
   demo(
     6,
     {
-      fr: ["Deux en face", "Les deux arêtes bonnes sont face à face.", "Fais le Sune une fois, de n'importe quel côté, puis tourne le haut : tu retombes sur deux voisines."],
-      nl: ["Twee tegenover elkaar", "De twee goede randstukken staan tegenover elkaar.", "Doe één keer de Sune, vanaf eender welke kant, en draai dan de bovenkant: je komt uit bij twee buren."],
-      en: ["Two opposite", "The two right edges are opposite each other.", "Do the Sune once, from any side, then turn the top: you are back to two neighbors."],
+      fr: ["Deux en face", "Les deux arêtes bonnes sont face à face.", "Fais le Sune une fois, de n'importe quel côté.", "Tourne le haut : deux voisines sont bonnes. Tourne le cube pour les tenir derrière et à droite.", "Refais le Sune : les quatre arêtes sont en place."],
+      nl: ["Twee tegenover elkaar", "De twee goede randstukken staan tegenover elkaar.", "Doe één keer de Sune, vanaf eender welke kant.", "Draai de bovenkant: twee buren staan goed. Draai de kubus zodat ze achteraan en rechts zitten.", "Doe de Sune opnieuw: de vier randstukken staan goed."],
+      en: ["Two opposite", "The two right edges are opposite each other.", "Do the Sune once, from any side.", "Turn the top: two neighbors are right. Turn the cube to hold them at the back and on the right.", "Do the Sune again: the four edges are in place."],
     },
-    SUNE,
-    OPPOSITE_DONE,
+    [...SUNE, "U", "y", ...SUNE],
+    play(OPPOSITE_DONE, ["U", "y", ...SUNE]),
+    undefined,
+    [8, 2, 8],
   ),
 
   demo(
@@ -324,12 +331,14 @@ export const COURSE: Group[] = [
   demo(
     7,
     {
-      fr: ["Aucun coin bien placé", "Aucun coin du haut n'est à sa place.", "Fais le Niklas une fois, de n'importe où : un coin se place, et c'est le cas précédent."],
-      nl: ["Geen hoekstuk goed", "Geen enkel hoekstuk bovenaan staat op zijn plek.", "Doe één keer de Niklas, vanaf eender waar: één hoekstuk valt op zijn plek, en dan is het het vorige geval."],
-      en: ["No corner placed", "No top corner is in its place.", "Do the Niklas once, from anywhere: one corner falls into place, and it is the previous case."],
+      fr: ["Aucun coin bien placé", "Aucun coin du haut n'est à sa place.", "Fais le Niklas une fois, de n'importe où : un coin se place.", "Tourne le cube pour tenir ce coin en haut à droite devant toi.", "Refais le Niklas : les quatre coins sont placés."],
+      nl: ["Geen hoekstuk goed", "Geen enkel hoekstuk bovenaan staat op zijn plek.", "Doe één keer de Niklas, vanaf eender waar: één hoekstuk valt op zijn plek.", "Draai de kubus zodat dat hoekstuk rechtsboven vooraan zit.", "Doe de Niklas opnieuw: de vier hoekstukken staan goed."],
+      en: ["No corner placed", "No top corner is in its place.", "Do the Niklas once, from anywhere: one corner falls into place.", "Turn the cube to hold that corner at the top right in front of you.", "Do the Niklas again: the four corners are placed."],
     },
-    CYCLE,
-    ONE_CORNER_PLACED,
+    [...CYCLE, "y", ...CYCLE],
+    play(ONE_CORNER_PLACED, ["y", ...CYCLE]),
+    undefined,
+    [8, 1, 8],
   ),
 
   demo(

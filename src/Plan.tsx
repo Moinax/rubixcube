@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import CubeView, { BLANK } from "./CubeView";
 import { Chevron, MiniFace, TopBar } from "./Home";
 import { Colored } from "./Scanner";
@@ -113,7 +113,7 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
           </div>
           )}
 
-          <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 ${where ? "md:col-span-2 md:mx-auto md:w-full md:max-w-2xl" : ""}`}>
+          <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0 md:col-span-2 md:mx-auto md:w-full md:max-w-2xl" : ""}`}>
             <p className={LABEL}>
               {intro || where ? tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }) : tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}
             </p>
@@ -135,31 +135,42 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
               <>
                 <p className="mt-1 text-mist">
                   {tr({
-                    fr: "Tiens ton cube jaune en haut et trouve la ligne dont le premier dessin lui ressemble (le gris, c'est n'importe quelle couleur) : le second montre ce que l'étape va en faire. Si plusieurs vont, prends la plus basse.",
-                    nl: "Houd je kubus met geel boven en zoek de rij waarvan de eerste tekening erop lijkt (grijs is eender welke kleur): de tweede toont wat de stap ervan maakt. Passen er meerdere, neem dan de onderste.",
-                    en: "Hold your cube yellow on top and find the row whose first drawing looks like it (grey is any color): the second shows what the stage makes of it. If several fit, take the lowest.",
+                    fr: "Cube jaune en haut, trouve la ligne où le premier dessin ressemble à ton cube. Le gris, c'est n'importe quelle couleur ; si plusieurs vont, prends la plus basse.",
+                    nl: "Geel boven, zoek de rij waar de eerste tekening op je kubus lijkt. Grijs is eender welke kleur; passen er meerdere, neem dan de onderste.",
+                    en: "Yellow on top, find the row whose first drawing looks like your cube. Grey is any color; if several fit, take the lowest.",
                   })}
                 </p>
-                <ol className="mt-3 grid gap-1.5">
+                <ol className="mt-4 grid gap-2">
                   {SEEN.map((seen, m) => (
                     <li key={m}>
-                      {/* The stage to do is what the row says first, what your cube looks like under it; the drawings
-                          go from your cube to what the stage makes of it (under the text on a phone). */}
-                      <button onClick={() => onStage(m + 1)} className="flex w-full items-center gap-3 rounded-xl bg-raised p-2 pl-3 text-left hover:ring-1 hover:ring-edge">
-                        <span className="grid size-9 flex-none place-items-center rounded-full bg-chalk text-base font-black text-plastic">{m + 1}</span>
-                        <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-                          <span className="min-w-0 flex-1">
-                            <span className="block font-semibold">{STAGES[m + 1].title}</span>
-                            <span className="block text-sm text-mist">
-                              {tr({ fr: "Ton cube : ", nl: "Je kubus: ", en: "Your cube: " })}
-                              <Colored text={seen} />
-                            </span>
+                      {/* The stage to do comes first, what your cube looks like under it; the drawings go from your cube
+                          to what the stage makes of it: on the right on a wide screen, in a captioned tray on a phone. */}
+                      <button
+                        onClick={() => onStage(m + 1)}
+                        className="grid w-full grid-cols-[auto_1fr_auto] gap-x-3 gap-y-2.5 rounded-2xl bg-raised p-3 text-left hover:ring-1 hover:ring-edge sm:items-center sm:py-2"
+                      >
+                        <span className="grid size-8 place-items-center rounded-full bg-chalk text-sm font-black text-plastic">{m + 1}</span>
+                        <span className="min-w-0 self-center">
+                          <span className="block leading-tight font-semibold">{STAGES[m + 1].title}</span>
+                          <span className="mt-0.5 block text-sm leading-snug text-mist">
+                            {tr({ fr: "Ton cube : ", nl: "Je kubus: ", en: "Your cube: " })}
+                            <Colored text={seen} />
                           </span>
-                          <span className="flex items-center gap-1">
-                            <IsoCube state={m ? MILESTONES[m] : SCRAMBLED} below={SEEN_FROM_BELOW.includes(m)} className="size-12" />
-                            <Chevron className="text-mist" />
-                            <IsoCube state={MILESTONES[m + 1]} below={SEEN_FROM_BELOW.includes(m + 1)} className="size-12" />
-                          </span>
+                        </span>
+                        <Chevron className="mt-2 self-start text-mist sm:hidden" />
+                        <span className="col-span-2 col-start-2 flex items-center justify-center gap-6 rounded-xl bg-plastic/60 px-2 py-1.5 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:gap-1 sm:bg-transparent sm:p-0">
+                          {[
+                            [m ? MILESTONES[m] : SCRAMBLED, m, tr({ fr: "ton cube", nl: "je kubus", en: "your cube" })] as const,
+                            [MILESTONES[m + 1], m + 1, tr({ fr: "après", nl: "erna", en: "after" })] as const,
+                          ].map(([state, at, caption], i) => (
+                            <Fragment key={at}>
+                              {i > 0 && <Chevron className="text-mist" />}
+                              <span className="flex items-center gap-2 sm:flex-col sm:gap-0.5">
+                                <IsoCube state={state} below={SEEN_FROM_BELOW.includes(at)} className="size-12" />
+                                <span className="text-xs text-mist sm:hidden">{caption}</span>
+                              </span>
+                            </Fragment>
+                          ))}
                         </span>
                       </button>
                     </li>

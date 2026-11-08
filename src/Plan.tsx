@@ -264,9 +264,9 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
               <>
                 <p className="mt-1 text-mist">
                   {tr({
-                    fr: "Cube jaune en haut, trouve la ligne où le premier dessin ressemble à ton cube. Le gris, c'est n'importe quelle couleur ; si plusieurs vont, prends la plus basse.",
-                    nl: "Geel boven, zoek de rij waar de eerste tekening op je kubus lijkt. Grijs is eender welke kleur; passen er meerdere, neem dan de onderste.",
-                    en: "Yellow on top, find the row whose first drawing looks like your cube. Grey is any color; if several fit, take the lowest.",
+                    fr: "Tiens ton cube jaune en haut et trouve la ligne dont le dessin « ton cube » lui ressemble. Le gris, c'est n'importe quelle couleur. Si plusieurs lignes vont, prends celle qui est le plus bas dans la liste : c'est l'étape la plus avancée.",
+                    nl: "Houd je kubus met geel boven en zoek de rij waarvan de tekening „je kubus” erop lijkt. Grijs is eender welke kleur. Passen er meerdere rijen, neem dan de onderste in de lijst: dat is de verste stap.",
+                    en: "Hold your cube yellow on top and find the row whose \"your cube\" drawing looks like it. Grey is any color. If several rows fit, take the lowest one in the list: it's the furthest stage.",
                   })}
                 </p>
                 <ol className="mt-4 grid gap-2">

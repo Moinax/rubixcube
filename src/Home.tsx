@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
-import CubeView, { BLANK, GRIP, INDEX_COLOR, THUMB_COLOR } from "./CubeView";
-import { YELLOW_UP } from "./beginner";
+import CubeView, { GRIP, INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import { applyMove, FACE_COLORS, SOLVED, STICKERS, type Face } from "./cube";
 import { MILESTONES, SCRAMBLED, SEEN_FROM_BELOW } from "./plan";
 import { lang, LANGS, setLang, tr, type Lang } from "./i18n";
@@ -314,7 +313,7 @@ export function IsoCube({ state, below = false, grip = false, className = "size-
           <polygon
             key={i}
             points={[corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)].join(" ")}
-            fill={FACE_COLORS[state[i] as Face] ?? BLANK}
+            fill={FACE_COLORS[state[i] as Face] ?? "#8b8f98"}
             stroke="#16171b"
             strokeWidth="0.08"
             strokeLinejoin="round"
@@ -338,7 +337,7 @@ function PartPicture({ id }: { id: Part }) {
       <span className="flex items-center gap-1">
         {[0, 1, 2].map((at) => (
           <Fragment key={at}>
-            {at > 0 && <Chevron className="size-3 opacity-50" />}
+            {at > 0 && <Chevron className="size-3 text-mist" />}
             <IsoCube state={at ? MILESTONES[at] : SCRAMBLED} below={SEEN_FROM_BELOW.includes(at)} className="size-11" />
           </Fragment>
         ))}
@@ -354,7 +353,7 @@ function PartPicture({ id }: { id: Part }) {
         ))}
       </span>
     );
-  return <IsoCube state={YELLOW_UP} grip className="size-12" />;
+  return <IsoCube state={".".repeat(54)} grip className="size-12" />;
 }
 
 export function BasicsChoice({ onPick, onBack }: BasicsProps) {
@@ -397,13 +396,13 @@ export function BasicsChoice({ onPick, onBack }: BasicsProps) {
             <button
               key={id}
               onClick={() => onPick(id)}
-              className={`grid gap-1.5 rounded-2xl p-5 text-left ${id === "plan" ? "bg-chalk text-plastic hover:bg-white md:col-span-2" : "border border-edge bg-shell hover:bg-raised"}`}
+              className={`grid gap-1.5 rounded-2xl border bg-shell p-5 text-left hover:bg-raised ${id === "plan" ? "border-chalk/50 md:col-span-2" : "border-edge"}`}
             >
               <span className="mb-1 flex h-12 items-center">
                 <PartPicture id={id} />
               </span>
               <span className="text-lg font-bold">{title}</span>
-              <span className={`text-sm ${id === "plan" ? "text-[#4b4f58]" : "text-mist"}`}>{text}</span>
+              <span className="text-sm text-mist">{text}</span>
             </button>
           ))}
         </div>

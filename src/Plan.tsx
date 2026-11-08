@@ -148,21 +148,37 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
     </div>
   );
   const cases = new Set(CASES[stage]?.map((g) => g.title)).size;
-  // Under the text read, the way to its cases watched, and back: the same link in both places.
-  const switchTo = (m: Mode) => (
-    <button
-      onClick={() => choose(m)}
-      className="mx-auto flex items-center gap-1.5 text-sm font-semibold text-chalk underline decoration-mist underline-offset-4 hover:decoration-chalk"
-    >
-      <span aria-hidden>{m === "see" ? "▶" : "≡"}</span>
-      {m === "read"
-        ? tr({ fr: "Lire la méthode en entier", nl: "De hele methode lezen", en: "Read the whole method" })
-        : tr({
-            fr: cases > 1 ? `Voir les ${cases} situations en 3D` : "Voir la situation en 3D",
-            nl: cases > 1 ? `De ${cases} situaties in 3D bekijken` : "De situatie in 3D bekijken",
-            en: cases > 1 ? `Watch the ${cases} situations in 3D` : "Watch the situation in 3D",
-          })}
-    </button>
+  // Under the card, always the two other ways to the stage: its presentation, its text read, its cases watched. Light
+  // links, so they never vie with the bar's buttons; on the presentation, the last choice reads brighter.
+  const ways = (here?: Mode) => (
+    <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm font-semibold">
+      {(
+        [
+          [undefined, "‹", tr({ fr: "Présentation", nl: "Kennismaking", en: "Introduction" })],
+          ["read", "≡", tr({ fr: "Lire comment faire", nl: "Lezen hoe het moet", en: "Read how to do it" })],
+          [
+            "see",
+            "▶",
+            tr({
+              fr: cases > 1 ? `Voir les ${cases} situations en 3D` : "Voir la situation en 3D",
+              nl: cases > 1 ? `De ${cases} situaties in 3D bekijken` : "De situatie in 3D bekijken",
+              en: cases > 1 ? `Watch the ${cases} situations in 3D` : "Watch the situation in 3D",
+            }),
+          ],
+        ] as const
+      )
+        .filter(([m]) => m !== here)
+        .map(([m, icon, label]) => (
+          <button
+            key={m ?? "present"}
+            onClick={() => (m ? choose(m) : onView(undefined))}
+            className={`group flex items-center gap-1.5 ${!here && m === preferred ? "text-chalk" : "text-mist hover:text-chalk"}`}
+          >
+            <span aria-hidden>{icon}</span>
+            <span className="underline decoration-current/40 underline-offset-4 group-hover:decoration-current">{label}</span>
+          </button>
+        ))}
+    </nav>
   );
   // Fixed at the bottom in both modes, the guide's player floating over it when watched: the next stage is always
   // under the same thumb.
@@ -253,7 +269,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
           back,
           header,
           onPresent: () => onView(undefined),
-          footer: switchTo("read"),
+          footer: ways("see"),
         }}
       />
       {bar}
@@ -342,32 +358,17 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
               </>
             ) : (
               <>
-                <p className="mt-1 font-semibold">
-                  <Colored text={STAGES[stage].goal} />
-                </p>
-                {/* What to look for, set apart like "C'est fini quand…", in the outline's pink: the pieces you hunt. */}
+                {/* Where the stage leads, set apart: what you aim at says more than the pieces you hunt. */}
                 <p className="mt-3 rounded-xl bg-raised p-3 text-sm">
-                  <span className="text-piece">{tr({ fr: "Tu cherches… ", nl: "Je zoekt… ", en: "You look for… " })}</span>
-                  <Colored text={plan.look} />
+                  <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
+                  <Colored text={plan.done} />
                 </p>
-                {/* The presentation ends on the choice: read the whole method, or watch its cases. */}
-                {!reading && (
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    {(
-                      [
-                        ["read", "≡", tr({ fr: "Lire", nl: "Lezen", en: "Read" })],
-                        ["see", "▶", tr({ fr: "Voir en 3D", nl: "Bekijken in 3D", en: "Watch in 3D" })],
-                      ] as const
-                    ).map(([m, icon, label]) => (
-                      <button key={m} onClick={() => choose(m)} className={`btn ${m === preferred ? "btn-main" : "border border-edge bg-shell hover:bg-raised"}`}>
-                        <span aria-hidden>{icon}</span>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )}
                 {reading && (
                 <>
+                <h2 className={`${LABEL} mt-4 border-t border-edge pt-3`}>{tr({ fr: "Ce que tu cherches", nl: "Wat je zoekt", en: "What you look for" })}</h2>
+                <p className="mt-1">
+                  <Colored text={plan.look} />
+                </p>
                 <h2 className={`${LABEL} mt-4`}>{tr({ fr: "Comment faire", nl: "Hoe je het doet", en: "How to do it" })}</h2>
                 <ol className="mt-2 grid gap-2.5">
                   {plan.how.map((text, j) => (
@@ -384,16 +385,12 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
                   <span className="text-chalk/80">{tr({ fr: "Pourquoi ça marche : ", nl: "Waarom het werkt: ", en: "Why it works: " })}</span>
                   <Colored text={plan.why} />
                 </p>
-                <p className="mt-4 rounded-xl bg-raised p-3 text-sm">
-                  <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
-                  <Colored text={plan.done} />
-                </p>
                 </>
                 )}
               </>
             )}
           </section>
-          {reading && switchTo("see")}
+          {stage > 0 && ways(reading ? "read" : undefined)}
         </div>
 
         {bar}

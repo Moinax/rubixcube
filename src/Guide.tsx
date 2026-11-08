@@ -245,6 +245,10 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const { ref: casePicker } = usePopover(step);
 
   const piece = group?.piece;
+  // At the end of a case, or of the whole guide, what the stage built is glanced at when it sits out of view: the
+  // beginner method's white cross and white corners, at the bottom. Its key never meets an instruction's.
+  const endPeek =
+    learn && stages === STAGES && (done || atResult) && [2, 3].includes(current) ? { from: [0, -1, 0] as Vec, key: -1 - step } : undefined;
   // At the start of an instruction, a piece the view doesn't show is glanced at first, the way a hand tilts the cube:
   // a piece hidden whole (down, left or back), or its white or yellow (which tells how it is turned) facing away.
   const hidden = (() => {
@@ -526,7 +530,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pair={worked?.pair}
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
-              peek={hidden && { from: hidden, key: step }}
+              peek={hidden ? { from: hidden, key: step } : endPeek}
               next={worked?.fingers && move}
             />
           </div>

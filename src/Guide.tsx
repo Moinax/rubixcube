@@ -620,16 +620,6 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-edge bg-plastic/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto flex max-w-5xl flex-col gap-2.5 px-4 py-3 md:grid md:h-18 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-6 md:px-8 md:py-0">
             <div className="flex min-w-0 items-center gap-3">
-              {/* The move's letter opens the glossary on it. */}
-              <button
-                onClick={() => move && setLexicon({ tab: "moves", focus: move })}
-                onMouseDown={keepFocus}
-                disabled={!move}
-                title={move && tr({ fr: "Ce coup dans le lexique", nl: "Deze zet in de woordenlijst", en: "This move in the glossary" })}
-                className="wide min-w-12 flex-none text-left text-4xl leading-none enabled:hover:text-white enabled:hover:underline enabled:hover:decoration-2 enabled:hover:underline-offset-4"
-              >
-                {move ?? (atIntro ? "" : "✓")}
-              </button>
               <div className="min-w-0 text-sm leading-snug">
                 <p className="text-xs text-mist">
                   {atIntro

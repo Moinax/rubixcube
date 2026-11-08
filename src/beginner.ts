@@ -6,8 +6,9 @@ import { applyMove, center, colorsOf as key, FACE_NAMES, INFLECTED, NORMALS, PIE
 // handful of algorithms the method teaches. Each step is simulated, never searched,
 // except the daisy, which is intuitive anyway.
 
-/** `goal`: what the stage builds; `why`: in one line, why its moves work. `toHome`: the stage puts each piece in its final place. */
-export type Stage = { title: string; goal: string; why: string; toHome?: boolean };
+/** `goal`: what the stage builds; `aim`: what one case, one group of its moves, does toward it; `why`: in one line, why its
+ * moves work. `toHome`: the stage puts each piece in its final place. */
+export type Stage = { title: string; goal: string; why: string; aim?: string; toHome?: boolean };
 /** One part of a group's moves, with what to do: the setup, then the sequence. */
 export type Step = { text: string; count: number };
 /** Moves to play: `text` says where the piece stands and where it goes, `steps` how to get it there, and the
@@ -37,41 +38,49 @@ export const STAGES: Stage[] = tr<Stage[]>({
     {
       title: "La marguerite",
       goal: "Les 4 arêtes blanches autour du centre jaune, blanc vers le haut.",
+      aim: "Faire de cette arête un pétale\u00a0: en haut, autour du centre jaune, blanc vers le haut.",
       why: "Le dessus ne contient encore rien d'important : on peut y ranger les arêtes blanches sans rien casser.",
     },
     {
       title: "La croix blanche",
       goal: "Les 4 arêtes blanches en bas, chacune sous le centre de sa couleur.",
+      aim: "Descendre ce pétale en bas, sous le centre de son autre couleur.",
       why: "Un demi-tour ne touche qu'une face : le pétale descend, les autres restent en haut.",
     },
     {
       title: "Les coins blancs",
       goal: "Les 4 coins blancs en bas, pour finir la première couronne.",
+      aim: "Mettre ce coin à sa place en bas, blanc dessous.",
       why: "6 sexy moves ramènent le cube à l'identique : en route, rien d'autre ne casse en bas.",
     },
     {
       title: "La deuxième couronne",
       goal: "Les 4 arêtes de la couronne du milieu à leur place.",
+      aim: "Glisser cette arête à sa place, dans la couronne du milieu.",
       why: "L'insertion écarte la place, y glisse l'arête, puis remet le coin blanc comme avant ; à gauche, c'est le miroir.",
     },
     {
       title: "La croix jaune",
       goal: "Une croix jaune sur le dessus.",
+      aim: "Passer au dessin jaune suivant\u00a0: du point au L, du L à la ligne, de la ligne à la croix.",
       why: "Le F … F' autour du sexy move retourne des arêtes du haut sans toucher aux deux premières couronnes.",
     },
     {
       title: "Les arêtes jaunes",
       goal: "Chaque arête jaune au-dessus du centre de sa couleur.",
+      aim: "Amener chaque arête de la croix au-dessus du centre de sa couleur.",
       why: "Le Sune fait tourner trois arêtes du haut et laisse le reste du cube intact.",
     },
     {
       title: "Placer les coins jaunes",
       goal: "Chaque coin du haut à sa place, même mal tourné.",
+      aim: "Mettre chaque coin du haut à sa place, même mal tourné.",
       why: "Le Niklas fait tourner trois coins et laisse immobile celui en haut à droite devant toi.",
     },
     {
       title: "Orienter les coins jaunes",
       goal: "Tourner les coins jaunes pour finir le cube.",
+      aim: "Tourner les coins du haut un par un, jusqu'à ce que leur jaune soit sur le dessus.",
       why: "Le bas se mélange en route puis se répare tout seul : les répétitions font un multiple de 6, et 6 R' D' R D ne changent rien.",
     },
   ],
@@ -84,41 +93,49 @@ export const STAGES: Stage[] = tr<Stage[]>({
     {
       title: "Het madeliefje",
       goal: "De 4 witte randstukken rond het gele middenstuk, met wit naar boven.",
+      aim: "Van dit randstuk een blaadje maken: bovenaan, rond het gele middenstuk, met wit naar boven.",
       why: "Bovenaan zit nog niets belangrijks: je kunt de witte randstukken daar kwijt zonder iets stuk te maken.",
     },
     {
       title: "Het witte kruis",
       goal: "De 4 witte randstukken onderaan, elk onder het middenstuk van zijn kleur.",
+      aim: "Dit blaadje naar onderen brengen, onder het middenstuk van zijn andere kleur.",
       why: "Een halve slag raakt maar één kant: het blaadje zakt, de andere blijven boven.",
     },
     {
       title: "De witte hoeken",
       goal: "De 4 witte hoekstukken onderaan, om de eerste laag af te maken.",
+      aim: "Dit hoekstuk op zijn plek onderaan zetten, met wit onderaan.",
       why: "6 sexy moves brengen de kubus terug zoals hij was: onderweg gaat onderaan niets anders stuk.",
     },
     {
       title: "De tweede laag",
       goal: "De 4 randstukken van de middelste laag op hun plek.",
+      aim: "Dit randstuk op zijn plek schuiven, in de middelste laag.",
       why: "Het invoegen schuift de plek opzij, schuift het randstuk erin en zet het witte hoekstuk terug; naar links is het spiegelbeeld.",
     },
     {
       title: "Het gele kruis",
       goal: "Een geel kruis op de bovenkant.",
+      aim: "Naar de volgende gele tekening: van stip naar L, van L naar lijn, van lijn naar kruis.",
       why: "De F … F' rond de sexy move draait randstukken bovenaan om zonder aan de eerste twee lagen te komen.",
     },
     {
       title: "De gele randstukken",
       goal: "Elk geel randstuk boven het middenstuk van zijn kleur.",
+      aim: "Elk randstuk van het kruis boven het middenstuk van zijn kleur brengen.",
       why: "De Sune wisselt drie randstukken bovenaan rond en laat de rest van de kubus heel.",
     },
     {
       title: "De gele hoeken plaatsen",
       goal: "Elk hoekstuk bovenaan op zijn plek, ook als het verkeerd gedraaid is.",
+      aim: "Elk hoekstuk bovenaan op zijn plek zetten, ook als het verkeerd gedraaid is.",
       why: "De Niklas wisselt drie hoekstukken rond en laat het hoekstuk rechtsboven vooraan stilstaan.",
     },
     {
       title: "De gele hoeken draaien",
       goal: "De gele hoekstukken draaien om de kubus af te maken.",
+      aim: "De hoekstukken bovenaan één voor één draaien, tot hun geel bovenop zit.",
       why: "De onderkant raakt onderweg door elkaar en herstelt zich vanzelf: de herhalingen tellen op tot een veelvoud van 6, en 6 keer R' D' R D verandert niets.",
     },
   ],
@@ -131,41 +148,49 @@ export const STAGES: Stage[] = tr<Stage[]>({
     {
       title: "The daisy",
       goal: "The 4 white edges around the yellow center, white facing up.",
+      aim: "Turn this edge into a petal: on top, around the yellow center, white facing up.",
       why: "The top holds nothing important yet: the white edges can wait there without breaking anything.",
     },
     {
       title: "The white cross",
       goal: "The 4 white edges at the bottom, each under the center of its color.",
+      aim: "Bring this petal down, under the center of its other color.",
       why: "A half turn moves only one face: the petal drops, the others stay on top.",
     },
     {
       title: "The white corners",
       goal: "The 4 white corners at the bottom, to finish the first layer.",
+      aim: "Put this corner in its place at the bottom, white underneath.",
       why: "6 sexy moves bring the cube back as it was: along the way, nothing else breaks at the bottom.",
     },
     {
       title: "The second layer",
       goal: "The 4 middle-layer edges in their places.",
+      aim: "Slide this edge into its place, in the middle layer.",
       why: "The insert moves the slot aside, slides the edge in, then puts the white corner back; to the left, it's the mirror.",
     },
     {
       title: "The yellow cross",
       goal: "A yellow cross on top.",
+      aim: "Move on to the next yellow shape: dot to L, L to line, line to cross.",
       why: "The F … F' around the sexy move flips top edges without touching the first two layers.",
     },
     {
       title: "The yellow edges",
       goal: "Each yellow edge above the center of its color.",
+      aim: "Get each edge of the cross above the center of its color.",
       why: "The Sune cycles three top edges and leaves the rest of the cube intact.",
     },
     {
       title: "Place the yellow corners",
       goal: "Every top corner in its place, even if twisted.",
+      aim: "Put each top corner in its place, even if twisted.",
       why: "The Niklas cycles three corners and leaves the top right front one still.",
     },
     {
       title: "Orient the yellow corners",
       goal: "Twist the yellow corners to finish the cube.",
+      aim: "Twist the top corners one by one, until their yellow is on top.",
       why: "The bottom gets scrambled along the way, then fixes itself: the repetitions add up to a multiple of 6, and 6 R' D' R D change nothing.",
     },
   ],

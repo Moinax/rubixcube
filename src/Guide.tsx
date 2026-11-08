@@ -439,9 +439,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
                   <p className={LABEL}>
                     {tr({ fr: "Le but", nl: "Het doel", en: "The goal" })}
-                    {learn && group.stage > 0 && group.title && <span className="font-normal tracking-normal normal-case"> · {group.title}</span>}
+                    {/* A course case is already named by the case menu or chips above. */}
+                    {learn && !course && group.stage > 0 && group.title && <span className="font-normal tracking-normal normal-case"> · {group.title}</span>}
                   </p>
-                  <p className="wide mt-1 text-lg leading-snug">{learn && group.stage > 0 ? stages[group.stage].goal : (group.title ?? stage?.goal)}</p>
+                  <p className="wide mt-1 text-lg leading-snug">{/* One case works on one piece, or one shape: its own aim, not the whole stage's goal. */}
+                    {learn && group.stage > 0 ? (stages[group.stage].aim ?? stages[group.stage].goal) : (group.title ?? stage?.goal)}</p>
                   {piece && (
                     <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                       <PieceChip piece={piece} />

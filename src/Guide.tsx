@@ -555,7 +555,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       <p className="wide mt-1 text-lg leading-snug">{group.title ?? stage?.goal}</p>
                     </>
                   )}
-                  {piece && (
+                  {/* In a plan's stage, the case menu already says where the piece stands and the cube outlines it:
+                      the card goes straight to how. */}
+                  {piece && !focus && (
                     <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                       <PieceChip piece={piece} />
                       {group.pair && <PieceChip piece={group.pair} />}
@@ -566,7 +568,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       </span>
                     </p>
                   )}
-                  {group.text && (
+                  {group.text && !focus && (
                     <p className="mt-2 text-mist">
                       <Colored text={group.text} />
                     </p>
@@ -584,7 +586,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                     </p>
                   )}
 
-                  <p className={`${LABEL} mt-4 border-t border-edge pt-3`}>
+                  <p className={`${LABEL} ${focus ? "" : "mt-4 border-t border-edge pt-3"}`}>
                     {tr({ fr: "Comment", nl: "Hoe", en: "How" })}
                     {parts.length > 1 && <span className="font-normal tracking-normal normal-case"> · {nOf(partNow + 1, parts.length)}</span>}
                   </p>

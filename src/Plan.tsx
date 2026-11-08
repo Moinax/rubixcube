@@ -151,7 +151,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
   // Under the card, always the two other ways to the stage: its presentation, its text read, its cases watched. Light
   // links, so they never vie with the bar's buttons; on the presentation, the last choice reads brighter.
   const ways = (here?: Mode) => (
-    <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm font-semibold">
+    <nav className="flex flex-col items-center gap-2.5 text-sm font-semibold">
       {(
         [
           [undefined, "‹", tr({ fr: "Présentation", nl: "Kennismaking", en: "Introduction" })],
@@ -359,7 +359,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
             ) : (
               <>
                 {/* Where the stage leads, set apart: what you aim at says more than the pieces you hunt. */}
-                <p className="mt-3 rounded-xl bg-raised p-3 text-sm">
+                <p className="mt-2">
                   <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
                   <Colored text={plan.done} />
                 </p>

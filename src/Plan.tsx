@@ -23,7 +23,6 @@ type Props = {
   onView: (view?: View) => void;
   onCases: (step?: number) => void;
   onBack: () => void;
-  onMyCube: () => void;
 };
 
 /** What a viewer chose last, put first among the choices of the next presentation. */
@@ -96,7 +95,7 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
 );
 
 /** The beginner method as a map: the idea of it, where you stand, then each stage on its own, for any cube. */
-export default function Plan({ stage, view, cases: step, onStage, onView, onCases, onBack, onMyCube }: Props) {
+export default function Plan({ stage, view, cases: step, onStage, onView, onCases, onBack }: Props) {
   const plan = PLAN[stage];
   const [intro, where] = [stage === 0, stage === WHERE];
   const page = PAGES.indexOf(stage);
@@ -215,9 +214,10 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
           <Chevron />
         </button>
       ) : (
-        <button className="btn btn-main" onClick={onMyCube}>
-          <span className="sm:hidden">{tr({ fr: "Sur mon cube", nl: "Op mijn kubus", en: "On my cube" })}</span>
-          <span className="max-sm:hidden">{tr({ fr: "Le faire sur mon cube", nl: "Doen op mijn kubus", en: "Do it on my cube" })}</span>
+        // The plan's end leads one level up, back to the basics.
+        <button className="btn btn-main" onClick={onBack}>
+          {tr({ fr: "Terminer", nl: "Afronden", en: "Finish" })}
+          <span className="font-normal opacity-70 max-sm:hidden"> · {tr({ fr: "Les bases", nl: "De basis", en: "The basics" })}</span>
           <Chevron />
         </button>
       )}

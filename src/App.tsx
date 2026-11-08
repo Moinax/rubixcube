@@ -223,7 +223,6 @@ export default function App() {
             scrollTo(0, 0);
           }}
           onBack={() => setScreen({ name: "basics" })}
-          onMyCube={() => setScreen({ name: "input", mode: "learn" })}
         />
       );
     case "input":

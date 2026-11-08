@@ -27,10 +27,10 @@ test("the course covers every stage in order, each demo held yellow up and green
 
 test("each demo starts on the case its text describes", () => {
   const whiteGreen = (s: string, pos: Vec, whiteSide: Vec) => at(s, pos, whiteSide) === "U";
-  assert.ok(whiteGreen(demo("En bas, blanc dessous"), [0, -1, 1], [0, -1, 0]));
-  assert.ok(whiteGreen(demo("Au milieu"), [1, 0, 1], [1, 0, 0]));
-  assert.ok(whiteGreen(demo("En haut, blanc sur le côté"), [0, 1, 1], [0, 0, 1]));
-  assert.ok(whiteGreen(demo("En bas, blanc sur le côté"), [0, -1, 1], [0, 0, 1]));
+  assert.ok(whiteGreen(demo("Arête en bas, blanc vers le sol"), [0, -1, 1], [0, -1, 0]));
+  assert.ok(whiteGreen(demo("Arête dans la couronne du milieu"), [1, 0, 1], [1, 0, 0]));
+  assert.ok(whiteGreen(demo("Arête en haut, blanc sur le côté"), [0, 1, 1], [0, 0, 1]));
+  assert.ok(whiteGreen(demo("Arête en bas, blanc sur le côté"), [0, -1, 1], [0, 0, 1]));
   assert.equal(at(demo("Blanc à droite"), [1, 1, 1], [1, 0, 0]), "U");
   assert.equal(at(demo("Blanc en haut"), [1, 1, 1], [0, 1, 0]), "U");
   assert.equal(at(demo("Blanc devant"), [1, 1, 1], [0, 0, 1]), "U");

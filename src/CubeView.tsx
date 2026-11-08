@@ -74,6 +74,7 @@ type Props = {
   autoRotate?: boolean;
   below?: boolean;
   onReplay?: () => void;
+  peek?: { from: Vec; key: number };
 };
 
 /**
@@ -84,10 +85,12 @@ type Props = {
  * play), its fingers stand out and the ones in its way fade; while a move plays, its fingers ride with the face
  * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face. A ↻ in the
  * corner puts back a view turned by hand, shown once it was; with `onReplay`, it is always there and plays again too.
+ * A new `peek` tilts the cube the way a hand would to look at its side `from` (a face the camera doesn't see), holds
+ * it there a moment, then brings it back as it is held to play.
  */
-export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, onReplay }: Props) {
+export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, onReplay, peek }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void }>(null);
+  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; onCamera?: (t: number) => void }>(null);
   const ended = useRef(onEnd);
   ended.current = onEnd;
   const [turned, setTurned] = useState(false);
@@ -128,6 +131,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     });
     resize.observe(el);
     renderer.setAnimationLoop((t) => {
+      scene.current?.onCamera?.(t);
       controls.update();
       scene.current?.onFrame?.(t);
       // The outlines are shared: each view sizes them to its own canvas before drawing them.
@@ -153,6 +157,31 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
   }, [autoRotate]);
 
   useEffect(home, [below]);
+
+  useEffect(() => {
+    if (!peek) return;
+    const ctx = scene.current!;
+    const camera = ctx.controls.object;
+    // From the holding angle to the same one mirrored across the hidden face's axis: the cube shows that face.
+    const held = new THREE.Vector3(...CAMERA);
+    const look = new THREE.Vector3(...CAMERA.map((c, k) => (peek.from[k] < 0 ? -c : c)));
+    const [go, hold] = [900, 1100];
+    let start: number | undefined;
+    ctx.controls.enabled = false;
+    const done = () => {
+      ctx.onCamera = undefined;
+      ctx.controls.enabled = true;
+    };
+    ctx.onCamera = (t) => {
+      start ??= t;
+      const k = t - start;
+      const w = k < go ? ease(k / go) : k < go + hold ? 1 : ease(Math.max(0, 1 - (k - go - hold) / go));
+      camera.position.copy(held).lerp(look, w).setLength(held.length());
+      if (k >= 2 * go + hold) done();
+    };
+    setTurned(false);
+    return done;
+  }, [peek?.key]);
 
   // The pieces to follow, each with the place it goes to.
   const tracked = ([[piece, place], [pair, pairPlace]] as [string | undefined, string | undefined][]).filter((t): t is [string, string | undefined] => !!t[0]);

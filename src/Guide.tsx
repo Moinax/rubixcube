@@ -5,7 +5,7 @@ import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
 import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
 import type { Intro } from "./course";
-import { applyMove, describeMove, invert, upright, type Face } from "./cube";
+import { applyMove, describeMove, invert, stickerAt, upright, type Face, type Vec } from "./cube";
 import { nOf, tr } from "./i18n";
 
 /** « L'arête blanc-vert », "the white-green edge", named as the instructions name it. */
@@ -225,6 +225,15 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const { ref: casePicker } = usePopover(`${step}|${atIntro}`);
 
   const piece = group?.piece;
+  // At the start of a course case, a white sticker of its piece facing away (down, left, back) is shown first: the
+  // cube tilts toward it, the way a hand would, then comes back as it is held.
+  const hidden = (() => {
+    if (!course || atResult || atIntro || step !== groupStart || !piece) return;
+    const pos = findPiece(state, piece);
+    return ([0, 1, 2] as const)
+      .map((k) => pos.map((_, j) => (j === k ? pos[k] : 0)) as Vec)
+      .find((normal) => normal.some((v) => v < 0) && state[stickerAt(pos, normal)!] === "U");
+  })();
   /** What one case of a stage does toward it; lessons (stage 0) and the fast mode's phases have none. */
   const aim = learn && group && group.stage > 0 ? (stages[group.stage].aim ?? stages[group.stage].goal) : undefined;
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
@@ -423,6 +432,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pair={worked?.pair}
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
+              peek={hidden && { from: hidden, key: step }}
               next={worked?.fingers && move}
             />
             )}

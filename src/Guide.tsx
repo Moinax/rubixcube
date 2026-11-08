@@ -233,6 +233,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const { ref: casePicker } = usePopover(step);
 
   const piece = group?.piece;
+  /** What one case of a stage does toward it; lessons (stage 0) and the fast mode's phases have none. */
+  const aim = learn && group && group.stage > 0 ? (stages[group.stage].aim ?? stages[group.stage].goal) : undefined;
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
   // While a move plays, the outlines follow the piece it works on, from where it starts.
   const worked = anim?.group ?? group;
@@ -436,14 +438,17 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               </div>
             ) : (
               group && (
-                <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
-                  <p className={LABEL}>
-                    {tr({ fr: "Le but", nl: "Het doel", en: "The goal" })}
-                    {/* A course case is already named by the case menu or chips above. */}
-                    {learn && !course && group.stage > 0 && group.title && <span className="font-normal tracking-normal normal-case"> · {group.title}</span>}
-                  </p>
-                  <p className="wide mt-1 text-lg leading-snug">{/* One case works on one piece, or one shape: its own aim, not the whole stage's goal. */}
-                    {learn && group.stage > 0 ? (stages[group.stage].aim ?? stages[group.stage].goal) : (group.title ?? stage?.goal)}</p>
+                <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed [&>:first-child]:mt-0">
+                  {/* A case of a stage puts what you work with first: the piece, where it stands, then how; its aim, the
+                      same for every case of the stage, goes to the foot. A lesson or a phase keeps its title on top. */}
+                  {aim ? (
+                    !course && group.title && <p className={LABEL}>{group.title}</p>
+                  ) : (
+                    <>
+                      <p className={LABEL}>{tr({ fr: "Le but", nl: "Het doel", en: "The goal" })}</p>
+                      <p className="wide mt-1 text-lg leading-snug">{group.title ?? stage?.goal}</p>
+                    </>
+                  )}
                   {piece && (
                     <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                       <PieceChip piece={piece} />
@@ -526,8 +531,14 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                       );
                     })}
                   </ol>
+                  {aim && (
+                    <p className="mt-4 border-t border-edge pt-3 text-sm text-mist">
+                      <span className="text-chalk/80">{tr({ fr: "Le but\u00a0: ", nl: "Het doel: ", en: "The goal: " })}</span>
+                      <Colored text={aim} />
+                    </p>
+                  )}
                   {stage && !(course && !group.stage) && (
-                    <p className="mt-4 text-sm text-mist">
+                    <p className={`${aim ? "mt-2" : "mt-4"} text-sm text-mist`}>
                       <span className="text-chalk/80">{tr({ fr: "Pourquoi ça marche : ", nl: "Waarom het werkt: ", en: "Why it works: " })}</span>
                       <Colored text={stage.why} />
                     </p>

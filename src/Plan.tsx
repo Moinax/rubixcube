@@ -280,7 +280,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
             <p className={`${LABEL} max-md:hidden`}>
               {intro || where ? tr({ fr: "Le plan", nl: "Het plan", en: "The plan" }) : tr({ fr: `Étape ${stage} sur ${LAST}`, nl: `Stap ${stage} van ${LAST}`, en: `Stage ${stage} of ${LAST}` })}
             </p>
-            <h1 className="wide text-2xl leading-tight md:mt-1">
+            <h1 className="wide text-xl leading-tight md:mt-1">
               {intro ? tr({ fr: "Comment on résout un cube", nl: "Hoe je een kubus oplost", en: "How a cube gets solved" }) : where ? WHERE_TITLE : STAGES[stage].title}
             </h1>
             {intro ? (
@@ -342,11 +342,12 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
               </>
             ) : (
               <>
-                <p className="wide mt-2 text-lg leading-snug">
+                <p className="mt-1 font-semibold">
                   <Colored text={STAGES[stage].goal} />
                 </p>
-                <h2 className={`${LABEL} mt-4 border-t border-edge pt-3`}>{tr({ fr: "Ce que tu cherches", nl: "Wat je zoekt", en: "What you look for" })}</h2>
-                <p className="mt-1">
+                {/* What to look for, set apart like "C'est fini quand…", in the outline's pink: the pieces you hunt. */}
+                <p className="mt-3 rounded-xl bg-raised p-3 text-sm">
+                  <span className="text-piece">{tr({ fr: "Tu cherches… ", nl: "Je zoekt… ", en: "You look for… " })}</span>
                   <Colored text={plan.look} />
                 </p>
                 {/* The presentation ends on the choice: read the whole method, or watch its cases. */}
@@ -354,19 +355,13 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     {(
                       [
-                        ["read", "≡", tr({ fr: "Lire", nl: "Lezen", en: "Read" }), tr({ fr: "comment faire", nl: "hoe je het doet", en: "how to do it" })],
-                        ["see", "▶", tr({ fr: "Voir", nl: "Bekijken", en: "Watch" }), tr({ fr: cases > 1 ? `${cases} situations en 3D` : "la situation en 3D", nl: cases > 1 ? `${cases} situaties in 3D` : "de situatie in 3D", en: cases > 1 ? `${cases} situations in 3D` : "the situation in 3D" })],
+                        ["read", "≡", tr({ fr: "Lire", nl: "Lezen", en: "Read" })],
+                        ["see", "▶", tr({ fr: "Voir en 3D", nl: "Bekijken in 3D", en: "Watch in 3D" })],
                       ] as const
-                    ).map(([m, icon, label, detail]) => (
-                      <button
-                        key={m}
-                        onClick={() => choose(m)}
-                        className={`rounded-[0.875rem] p-3 text-center ${m === preferred ? "bg-chalk text-plastic hover:bg-white" : "border border-edge bg-raised hover:border-mist/60"}`}
-                      >
-                        <span className="block font-bold">
-                          {icon} {label}
-                        </span>
-                        <span className={`block text-sm ${m === preferred ? "text-[#4b4f58]" : "text-mist"}`}>{detail}</span>
+                    ).map(([m, icon, label]) => (
+                      <button key={m} onClick={() => choose(m)} className={`btn ${m === preferred ? "btn-main" : "border border-edge bg-shell hover:bg-raised"}`}>
+                        <span aria-hidden>{icon}</span>
+                        {label}
                       </button>
                     ))}
                   </div>

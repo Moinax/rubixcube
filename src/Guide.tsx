@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { LexiconButton, type Tab } from "./Lexicon";
 import { Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
@@ -41,18 +41,9 @@ type GuideProps = {
   onStep: (step: number) => void;
   onHome: () => void;
   /** The cases of one stage, inside the plan's page for that stage: no progress bar or stage list; `header` (the
-   * page's own) takes their place, `back` the way back (the page's bar under the player goes on); `intro`
-   * presents the stage. */
-  focus?: {
-    title: string;
-    back: { label: string; onClick: () => void };
-    header: ReactNode;
-    /** The stage presented before its cases: what it starts from and ends on, and a text. */
-    intro?: { cubes: ReactNode; text: ReactNode };
-    /** Whether the presentation shows (it and the first case both start at move 0); `onIntro` hears it change. */
-    atIntro?: boolean;
-    onIntro?: (on: boolean) => void;
-  };
+   * page's own) takes their place, `back` is the way back, `onPresent` goes back to the stage's presentation (before
+   * the first case), `footer` goes under the card. */
+  focus?: { title: string; back: { label: string; onClick: () => void }; header: ReactNode; onPresent?: () => void; footer?: ReactNode };
   onScan: () => void;
   onEdit: (state: string) => void;
 };
@@ -124,16 +115,12 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
 
   // On the result of a course demo, before the next demo's cube fades in.
   const [atResult, setAtResult] = useState(false);
-  // The stage's presentation, before its first case: the whole stage played once, then ▶ goes on to the cases.
-  const intro = focus?.intro;
-  const [atIntro, setAtIntro] = useState(!!intro && (focus?.atIntro ?? step === 0));
-  useEffect(() => {
-    focus?.onIntro?.(atIntro);
-  }, [atIntro]);
+  // Before the first case, the plan's page presents the stage: going back past the first move leads there.
+  const present = focus?.onPresent;
   const done = step === total;
   const gi = atResult ? flat[step - 1].group : flat[step]?.group;
   const group = gi === undefined ? undefined : groups[gi];
-  const move = atResult || atIntro ? undefined : flat[step]?.move;
+  const move = atResult ? undefined : flat[step]?.move;
   const state = atResult ? ends[gi!] : states[step];
   /** The first move of the instruction being played (or just played, on a result stop). */
   const groupStart = flat.findIndex((f) => f.group === gi);
@@ -161,15 +148,10 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     }, 200);
   };
   const jump = (to: number) => {
-    setAtIntro(false);
     clearTimeout(fade.current);
     setFading(false);
     setAnim(null);
     land(to);
-  };
-  const showIntro = () => {
-    jump(0);
-    setAtIntro(true);
   };
   // ⏮ ⏭ jump between the starts of the instructions (a case, a piece, a phase): back to this one's start, or the
   // one before when already there (then the presentation); on to the next one's, or the end.
@@ -177,19 +159,18 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const seriesBack = done ? starts.at(-1) : atResult || step > groupStart ? groupStart : starts.findLast((s) => s < step);
   const seriesNext = done ? undefined : (starts.find((s) => s > step) ?? total);
   const prevSeries = () => {
-    if (atIntro || fading) return;
+    if (fading) return;
     setAuto(false);
     if (seriesBack !== undefined) jump(seriesBack);
-    else if (intro) showIntro();
+    else present?.();
   };
   const nextSeries = () => {
-    if (atIntro || atResult) return forward(); // the next instruction is the next press away already
+    if (atResult) return forward(); // the next instruction is the next press away already
     if (seriesNext === undefined || fading) return;
     setAuto(false);
     jump(seriesNext);
   };
   const forward = () => {
-    if (atIntro) return swap(() => setAtIntro(false));
     if (done || fading) return;
     if (atResult) return swap(() => land(step));
     setAnim({ from: state, move: flat[step].move, group: group! });
@@ -198,7 +179,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     if (step + 1 === total || stageStartAt(step + 1)) setAuto(false);
   };
   const back = () => {
-    if (intro && !step && !atIntro && !fading) return swap(() => setAtIntro(true));
+    if (present && !step && !fading) return present();
     if (fading || !step) return;
     if (!atResult && resultAt(step)) {
       setAnim(null);
@@ -261,13 +242,13 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const stage = learn ? stages[current] : undefined;
   // The stage list is a popover: it closes on any step change, a tap outside it, or Escape.
   const { ref: picker, close: closePicker } = usePopover(step);
-  const { ref: casePicker } = usePopover(`${step}|${atIntro}`);
+  const { ref: casePicker } = usePopover(step);
 
   const piece = group?.piece;
   // At the start of an instruction, a piece the view doesn't show is glanced at first, the way a hand tilts the cube:
   // a piece hidden whole (down, left or back), or its white or yellow (which tells how it is turned) facing away.
   const hidden = (() => {
-    if (!learn || atResult || atIntro || step !== groupStart) return;
+    if (!learn || atResult || step !== groupStart) return;
     for (const p of [piece, group?.pair]) {
       if (!p) continue;
       const pos = findPiece(state, p);
@@ -283,7 +264,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
   // While a move plays, the outlines follow the piece it works on, from where it starts.
   const worked = anim?.group ?? group;
-  const settings = useId();
+  const { ref: pace } = usePopover(delay);
   // What a result stop closes: the last demo of a stage, or one demo among its cases.
   const ending = !atResult ? undefined : stageEndAt(step) ? "stage" : "demo";
   const ENDINGS = {
@@ -294,13 +275,107 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   };
   // What ▶ does from here: go on past a result, or play the move; its size never changes.
   // What ▶ does from here, said only on hover: the arrow alone shows it.
-  const nextTitle = atIntro
-    ? tr({ fr: "Les situations une par une", nl: "De situaties één voor één", en: "The situations one by one" })
-    : done
+  const nextTitle = done
       ? DONE
       : atResult
         ? ENDINGS[ending!].next
         : `${tr({ fr: "Jouer", nl: "Speel", en: "Play" })} ${move}`;
+
+  // The player sits right under the cube, which keeps its size: its buttons never move or resize, so a pointer can
+  // rest on ▶. What each does and its key show on hover.
+  const player = (
+    <div className="flex items-center justify-center gap-2">
+        {/* Arrows only: a move, or a whole instruction (a case, a piece, a phase); what the move is, the card says. */}
+        <div className="flex gap-1 rounded-full bg-white/8 p-1 ring-1 ring-white/15">
+          <button
+            onClick={prevSeries}
+            onMouseDown={keepFocus}
+            disabled={seriesBack === undefined && !present}
+            aria-label={tr({ fr: "Série précédente", nl: "Vorige reeks", en: "Previous series" })}
+            className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
+          >
+            <Icon name="back" />
+            <Tip label={tr({ fr: "Début de la série précédente", nl: "Begin van de vorige reeks", en: "Start of the previous series" })} keys={tr({ fr: "Maj ←", nl: "Shift ←", en: "Shift ←" })} />
+          </button>
+          <button
+            onClick={back}
+            onMouseDown={keepFocus}
+            disabled={!step && !present}
+            aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
+            className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
+          >
+            <Icon name="prev" />
+            <Tip label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })} keys="←" />
+          </button>
+          <button
+            onClick={() => forward()}
+            onMouseDown={keepFocus}
+            disabled={done}
+            aria-label={nextTitle}
+            className="group relative grid h-10 w-16 place-items-center rounded-full bg-chalk text-plastic enabled:hover:bg-white disabled:opacity-40"
+          >
+            <Icon name="play" />
+            <Tip label={nextTitle} keys="→" />
+          </button>
+          <button
+            onClick={nextSeries}
+            onMouseDown={keepFocus}
+            disabled={seriesNext === undefined}
+            aria-label={tr({ fr: "Série suivante", nl: "Volgende reeks", en: "Next series" })}
+            className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
+          >
+            <Icon name="next" />
+            <Tip label={tr({ fr: "Série suivante", nl: "Volgende reeks", en: "Next series" })} keys={tr({ fr: "Maj →", nl: "Shift →", en: "Shift →" })} />
+          </button>
+        </div>
+        {/* How the moves play on their own: autoplay and its pace, together. */}
+        <div className="flex items-center gap-1 rounded-full p-1 ring-1 ring-edge">
+          <button
+            onClick={toggleAuto}
+            onMouseDown={keepFocus}
+            disabled={done}
+            aria-pressed={auto}
+            aria-label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })}
+            className={`group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 disabled:opacity-30 ${auto ? "bg-white/12" : "enabled:hover:bg-white/15"}`}
+          >
+            {auto && (
+              <svg viewBox="0 0 40 40" className="absolute inset-0" aria-hidden>
+                <rect key={`${step}|${atResult}|${wait}`} x="1.5" y="1.5" width="37" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
+              </svg>
+            )}
+            <Icon name={auto ? "pause" : "auto"} className="size-4.5" />
+            <Tip label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })} keys={tr({ fr: "espace", nl: "spatie", en: "space" })} />
+          </button>
+          {/* The pace of the autoplay: a small menu under its chip. */}
+          <details ref={pace} className="relative">
+            <summary
+              aria-label={tr({ fr: "Durée par coup en lecture automatique", nl: "Duur per zet bij automatisch afspelen", en: "Time per move in autoplay" })}
+              onMouseDown={keepFocus}
+              className={`group relative grid h-10 w-11 cursor-pointer list-none place-items-center rounded-full text-xs font-semibold [&::-webkit-details-marker]:hidden ${auto ? "text-chalk" : "text-mist hover:text-chalk"}`}
+            >
+              {delay} s
+              <Tip label={tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })} />
+            </summary>
+            <div className="absolute top-full right-0 z-30 mt-2 w-64 rounded-2xl border border-edge bg-shell p-3 text-chalk shadow-2xl shadow-black/60">
+              <p className="mb-2 text-xs text-mist">{tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })}</p>
+              <div className="flex gap-1 rounded-xl bg-plastic p-1">
+                {DELAYS.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => chooseDelay(d)}
+                    onMouseDown={keepFocus}
+                    aria-pressed={d === delay}
+                    className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${d === delay ? "bg-chalk text-plastic" : "text-mist hover:text-chalk"}`}
+                  >
+                    {d} s
+                  </button>
+                ))}
+              </div>
+            </div>
+          </details>
+        </div>
+    </div>
+  );
 
   return (
     <>
@@ -308,7 +383,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
         <LexiconButton onClick={() => setLexicon({ tab: "moves" })} />
       </TopBar>
       {/* In the plan's page, one column a comfortable line long, like the rest of the plan. */}
-      <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:px-8 md:phone:gap-2 md:phone:pt-2 ${focus ? "max-w-2xl pb-44" : "max-w-5xl pb-24"}`}>
+      <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:px-8 md:phone:gap-2 md:phone:pt-2 ${focus ? "max-w-2xl pb-28" : "max-w-5xl pb-8"}`}>
         {focus ? (
           focus.header
         ) : (
@@ -382,25 +457,22 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             </p>
           )}
           {/* The cases: one menu, at every size, so they read as the parts of one stage. */}
-          {(cases.length > 1 || intro) && (
+          {(cases.length > 1 || present) && (
             <details ref={casePicker} className="group relative md:max-w-md">
               <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-2xl border border-edge bg-shell px-3 py-1.5 [&::-webkit-details-marker]:hidden">
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-mist">
-                    {atIntro ? INTRO_LABEL.toLowerCase() : done ? DONE.toLowerCase() : `${tr({ fr: "cas", nl: "geval", en: "case" })} ${nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}`}
+                    {done ? DONE.toLowerCase() : `${tr({ fr: "cas", nl: "geval", en: "case" })} ${nOf(cases.findIndex(({ g }) => g === group) + 1, cases.length)}`}
                   </span>
-                  <span className="block leading-tight font-semibold">{atIntro ? tr({ fr: "L'étape en entier", nl: "De hele stap", en: "The whole stage" }) : done ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" }) : group?.title}</span>
+                  <span className="block leading-tight font-semibold">{done ? tr({ fr: "Tous les cas vus", nl: "Alle gevallen gezien", en: "All cases seen" }) : group?.title}</span>
                 </span>
                 <Chevron to="down" className="text-mist transition group-open:rotate-180" />
               </summary>
               <ol className="absolute inset-x-0 top-full z-20 mt-2 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60">
-                {intro && (
+                {present && (
                   <li>
-                    <button
-                      onClick={showIntro}
-                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${atIntro ? "bg-edge font-semibold" : ""}`}
-                    >
-                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${atIntro ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>i</span>
+                    <button onClick={present} className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge">
+                      <span className="grid size-7 flex-none place-items-center rounded-full bg-raised text-xs font-black text-chalk">i</span>
                       {INTRO_LABEL}
                     </button>
                   </li>
@@ -409,9 +481,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                   <li key={first}>
                     <button
                       onClick={() => jump(first)}
-                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${g === group && !atIntro ? "bg-edge font-semibold" : ""}`}
+                      className={`flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-edge ${g === group ? "bg-edge font-semibold" : ""}`}
                     >
-                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${g === group && !atIntro ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{k + 1}</span>
+                      <span className={`grid size-7 flex-none place-items-center rounded-full text-xs font-black ${g === group ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>{k + 1}</span>
                       {g.title}
                     </button>
                   </li>
@@ -422,11 +494,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
         </div>
 
         <div className={`grid flex-1 content-start items-center gap-4 ${focus ? "" : "md:grid-cols-2 md:content-center md:gap-10"}`}>
-          {atIntro && intro ? (
-            <div className={`transition-opacity duration-200 ${fading ? "opacity-0" : ""}`}>{intro.cubes}</div>
-          ) : (
+          <div className="flex flex-col gap-3 md:phone:sticky md:phone:top-4 md:phone:self-start">
           <div
-            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${focus ? "md:max-h-[40dvh]" : "md:max-h-[60dvh]"} md:phone:sticky md:phone:top-4 md:phone:max-h-[calc(100dvh-12rem)] md:phone:self-start ${fading ? "opacity-0" : ""}`}
+            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${focus ? "md:max-h-[40dvh]" : "md:max-h-[60dvh]"} md:phone:max-h-[calc(100dvh-12rem)] ${fading ? "opacity-0" : ""}`}
           >
             <CubeView
               state={anim?.from ?? state}
@@ -441,16 +511,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               next={worked?.fingers && move}
             />
           </div>
-          )}
+          {player}
+          </div>
 
           <div className="flex flex-col gap-4">
-            {atIntro && intro ? (
-              <section className="rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed">
-                <p className={LABEL}>{INTRO_LABEL}</p>
-                <div className="mt-1">{intro.text}</div>
-                <p className="mt-3 text-sm text-mist">{tr({ fr: "Puis ▶ Suite : chaque situation, une par une.", nl: "Dan ▶ Verder: elke situatie, één voor één.", en: "Then ▶ Next: each situation, one by one." })}</p>
-              </section>
-            ) : done ? (
+            {done ? (
               <div>
                 <p className="wide text-4xl">
                   {focus
@@ -588,6 +653,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 </section>
               )
             )}
+            {focus?.footer}
           </div>
         </div>
 
@@ -603,103 +669,6 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           </div>
         )}
 
-        {/* The player floats at the bottom, over the plan's own bar when it sits in a stage's page: its buttons never
-            move or resize, so a pointer can rest on ▶. What each does and its key show on hover. */}
-        <div className={`pointer-events-none fixed inset-x-0 z-20 flex justify-center px-4 ${focus ? "bottom-[calc(5.25rem+env(safe-area-inset-bottom))]" : "bottom-[calc(1rem+env(safe-area-inset-bottom))]"}`}>
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-edge bg-plastic/90 p-1.5 shadow-2xl shadow-black/60 backdrop-blur">
-            {/* Arrows only: a move, or a whole instruction (a case, a piece, a phase); what the move is, the card says. */}
-            <div className="flex gap-1 rounded-full bg-white/8 p-1 ring-1 ring-white/15">
-              <button
-                onClick={prevSeries}
-                onMouseDown={keepFocus}
-                disabled={atIntro || (seriesBack === undefined && !intro)}
-                aria-label={tr({ fr: "Série précédente", nl: "Vorige reeks", en: "Previous series" })}
-                className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
-              >
-                <Icon name="back" />
-                <Tip label={tr({ fr: "Début de la série précédente", nl: "Begin van de vorige reeks", en: "Start of the previous series" })} keys={tr({ fr: "Maj ←", nl: "Shift ←", en: "Shift ←" })} />
-              </button>
-              <button
-                onClick={back}
-                onMouseDown={keepFocus}
-                disabled={atIntro || (!step && !intro)}
-                aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
-                className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
-              >
-                <Icon name="prev" />
-                <Tip label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })} keys="←" />
-              </button>
-              <button
-                onClick={() => forward()}
-                onMouseDown={keepFocus}
-                disabled={done}
-                aria-label={nextTitle}
-                className="group relative grid h-10 w-16 place-items-center rounded-full bg-chalk text-plastic enabled:hover:bg-white disabled:opacity-40"
-              >
-                <Icon name="play" />
-                <Tip label={nextTitle} keys="→" />
-              </button>
-              <button
-                onClick={nextSeries}
-                onMouseDown={keepFocus}
-                disabled={seriesNext === undefined && !atIntro}
-                aria-label={tr({ fr: "Série suivante", nl: "Volgende reeks", en: "Next series" })}
-                className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
-              >
-                <Icon name="next" />
-                <Tip label={tr({ fr: "Série suivante", nl: "Volgende reeks", en: "Next series" })} keys={tr({ fr: "Maj →", nl: "Shift →", en: "Shift →" })} />
-              </button>
-            </div>
-            {/* How the moves play on their own: autoplay and its pace, together. */}
-            <div className="flex items-center gap-1 rounded-full p-1 ring-1 ring-edge">
-              <button
-                onClick={toggleAuto}
-                onMouseDown={keepFocus}
-                disabled={done}
-                aria-pressed={auto}
-                aria-label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })}
-                className={`group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 disabled:opacity-30 ${auto ? "bg-white/12" : "enabled:hover:bg-white/15"}`}
-              >
-                {auto && (
-                  <svg viewBox="0 0 40 40" className="absolute inset-0" aria-hidden>
-                    <rect key={`${step}|${atResult}|${wait}`} x="1.5" y="1.5" width="37" height="37" rx="18.5" pathLength={100} className="countdown" style={{ animationDuration: `${wait}ms` }} />
-                  </svg>
-                )}
-                <Icon name={auto ? "pause" : "auto"} className="size-4.5" />
-                <Tip label={tr({ fr: "Lecture automatique", nl: "Automatisch afspelen", en: "Autoplay" })} keys={tr({ fr: "espace", nl: "spatie", en: "space" })} />
-              </button>
-              <button
-                popoverTarget={settings}
-                onMouseDown={keepFocus}
-                aria-label={tr({ fr: "Durée par coup en lecture automatique", nl: "Duur per zet bij automatisch afspelen", en: "Time per move in autoplay" })}
-                className={`group relative h-10 w-11 rounded-full text-xs font-semibold ${auto ? "text-chalk" : "text-mist hover:text-chalk"}`}
-              >
-                {delay} s
-                <Tip label={tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })} />
-              </button>
-            </div>
-            <div
-              id={settings}
-              popover="auto"
-              className={`inset-auto left-1/2 m-0 w-64 -translate-x-1/2 rounded-2xl border border-edge bg-shell p-3 text-chalk shadow-2xl shadow-black/60 ${focus ? "bottom-40" : "bottom-24"}`}
-            >
-              <p className="mb-2 text-xs text-mist">{tr({ fr: "Durée par coup", nl: "Duur per zet", en: "Time per move" })}</p>
-              <div className="flex gap-1 rounded-xl bg-plastic p-1">
-                {DELAYS.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => chooseDelay(d)}
-                    onMouseDown={keepFocus}
-                    aria-pressed={d === delay}
-                    className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${d === delay ? "bg-chalk text-plastic" : "text-mist hover:text-chalk"}`}
-                  >
-                    {d} s
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
         {lexicon && <Lexicon tab={lexicon.tab} focus={lexicon.focus} onClose={() => setLexicon(null)} />}
       </main>
     </>

@@ -143,20 +143,17 @@ export default function Plan({ stage, onStage, onBack, onCases, onMyCube, childr
                 <ol className="mt-3 grid gap-1.5">
                   {SEEN.map((seen, m) => (
                     <li key={m}>
-                      <button onClick={() => onStage(m + 1)} className="flex w-full items-center gap-3 rounded-xl bg-raised p-2 text-left text-sm hover:ring-1 hover:ring-edge">
-                        <IsoCube state={m ? MILESTONES[m] : SCRAMBLED} below={SEEN_FROM_BELOW.includes(m)} />
+                      {/* The stage to do is what the row says first; what your cube looks like comes under it. */}
+                      <button onClick={() => onStage(m + 1)} className="flex w-full items-center gap-3 rounded-xl bg-raised p-2 pl-3 text-left hover:ring-1 hover:ring-edge">
+                        <span className="grid size-9 flex-none place-items-center rounded-full bg-chalk text-base font-black text-plastic">{m + 1}</span>
                         <span className="min-w-0 flex-1">
-                          <span className="block">
+                          <span className="block font-semibold">{STAGES[m + 1].title}</span>
+                          <span className="block text-sm text-mist">
+                            {tr({ fr: "Ton cube : ", nl: "Je kubus: ", en: "Your cube: " })}
                             <Colored text={seen} />
                           </span>
-                          <span className="mt-0.5 block text-xs text-mist">
-                            {tr({ fr: "À faire :", nl: "Te doen:", en: "To do:" })}{" "}
-                            <span className="font-semibold text-chalk">
-                              {tr({ fr: "étape", nl: "stap", en: "stage" })} {m + 1} · {STAGES[m + 1].title}
-                            </span>
-                          </span>
                         </span>
-                        <Chevron className="text-mist" />
+                        <IsoCube state={m ? MILESTONES[m] : SCRAMBLED} below={SEEN_FROM_BELOW.includes(m)} />
                       </button>
                     </li>
                   ))}

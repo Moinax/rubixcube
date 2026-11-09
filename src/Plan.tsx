@@ -249,7 +249,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
           {/* The same size presented or read: switching between them never moves the cubes. */}
           {/* On a wide screen they take the height the page leaves them, wider than the text if there is room, never
               wider than the top bar. */}
-          {!where && <div className="w-full max-w-56 justify-self-center md:w-[min(60rem,calc(100vw-4rem),max(28rem,calc((100dvh-32rem)*2)))] md:max-w-none">{beforeAfter}</div>}
+          {!where && <div className="w-full max-w-[max(14rem,calc((100dvh-32rem)*2))] justify-self-center md:w-[min(60rem,calc(100vw-4rem),max(28rem,calc((100dvh-32rem)*2)))] md:max-w-none">{beforeAfter}</div>}
 
           <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 [&>:first-child]:mt-0 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
             {/* The menu above names the page: only the idea's page, called something else there, keeps a title. */}

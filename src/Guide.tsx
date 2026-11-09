@@ -3,7 +3,7 @@ import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { LexiconButton, type Tab } from "./Lexicon";
 import { BAR_MENU, Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
-import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, solvedAt, STAGES, type Group, type Stage } from "./beginner";
+import { algOf, buildsOnBottom, findPiece, names, pieceColors, planStates, play, slotOf, solvedAt, STAGES, type Group, type Stage } from "./beginner";
 import { applyMove, describeMove, invert, isRotation, stickerAt, STICKERS, upright, type Face, type Vec } from "./cube";
 import { nOf, tr } from "./i18n";
 
@@ -288,16 +288,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     const whiteBelow = (s: string) => STICKERS.filter((t, i) => t.normal[1] === -1 && s[i] === "U").length;
     return whiteBelow(after) > whiteBelow(before) ? { from: [0, -1, 0] as Vec, key, worked } : undefined;
   })();
-  // At the start of a stage built on what lies below (the white cross done, the middle layer not yet: the white corners,
-  // the second layer), the cube is glanced at from below first, so the stage's starting point shows.
-  const BOTTOM_EDGES: Vec[] = [[0, -1, 1], [1, -1, 0], [0, -1, -1], [-1, -1, 0]];
-  const MIDDLE_EDGES: Vec[] = [[1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1]];
-  const startsBelow =
-    learn &&
-    !atResult &&
-    (step === 0 || stageStartAt(step)) &&
-    BOTTOM_EDGES.every((p) => solvedAt(state, p)) &&
-    !MIDDLE_EDGES.every((p) => solvedAt(state, p));
+  // At the start of a stage built on what lies below (the white corners, the second layer), the cube is glanced at from
+  // below first, so the stage's starting point shows; a hidden piece of its first instruction is glanced at after.
+  const startsBelow = learn && !done && !atResult && (step === 0 || stageStartAt(step)) && buildsOnBottom(state);
   // At the start of an instruction, a piece the view doesn't show is glanced at first, the way a hand tilts the cube:
   // a piece hidden whole (down, left or back), or its white or yellow (which tells how it is turned) facing away.
   const hidden = (() => {
@@ -436,13 +429,13 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   // The stage menu, in the top bar: the number in a circle, the stage's title; its list under it.
   const stageMark = (
     <>
-      <span className="grid size-6 flex-none place-items-center rounded-full bg-chalk text-[11px] font-black text-plastic">{current || "i"}</span>
+      <span className={BAR_MENU.mark}>{current || "i"}</span>
       <span className="line-clamp-2 min-w-0 flex-1 text-sm leading-[1.1] font-semibold">{stage?.title}</span>
     </>
   );
   // A menu only when there is another stage to go to; a single stage (holding the cube) is just its name.
   const stageMenu = !stage ? undefined : firsts.filter((f) => f >= 0).length < 2 ? (
-    <div className={`${BAR_MENU.summary} cursor-default`}>{stageMark}</div>
+    <div className={BAR_MENU.bar}>{stageMark}</div>
   ) : (
     <details ref={picker} className="group flex min-w-0 flex-1">
       <summary className={BAR_MENU.summary}>
@@ -472,9 +465,9 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
       <TopBar back={focus?.back ?? { label: course ? tr({ fr: "Les bases", nl: "De basis", en: "The basics" }) : HOME, onClick: onHome }} menu={focus?.header ?? stageMenu}>
         <LexiconButton onClick={() => setLexicon({ tab: "moves" })} />
       </TopBar>
-      {/* In the plan's page, one column a comfortable line long, like the rest of the plan. */}
+      {/* One column a comfortable line long for a plan's stage and the courses, wider on a short screen (side by side). */}
       <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:px-8 md:phone:gap-2 md:phone:pt-2 ${column ? "max-w-2xl short:max-w-5xl" : "max-w-5xl"} pb-8`}>
-        {focus || course ? null : (
+        {column ? null : (
           <p className="-mb-2 text-sm text-mist">
             {(
                 <>
@@ -584,7 +577,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               centered under both. */}
           <div className={`flex flex-col gap-3 md:phone:sticky md:phone:top-4 md:phone:self-start ${column ? "short:contents" : ""}`}>
           <div
-            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${column ? "short:col-start-1 short:row-start-1" : ""} ${column ? "md:max-h-[40dvh] short:max-h-[60dvh]" : "md:max-h-[60dvh]"} md:phone:max-h-[calc(100dvh-12rem)] ${fading ? "opacity-0" : ""}`}
+            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${column ? "short:col-start-1 short:row-start-1 md:max-h-[40dvh] short:max-h-[60dvh]" : "md:max-h-[60dvh]"} md:phone:max-h-[calc(100dvh-12rem)] ${fading ? "opacity-0" : ""}`}
           >
             <CubeView
               state={anim?.from ?? state}
@@ -595,7 +588,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pair={worked?.pair}
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
-              peek={endPeek ?? (startsBelow ? { from: [0, -1, 0], key: step + 0.5 } : hidden && { from: hidden, key: step })}
+              peek={endPeek ?? (startsBelow && glanced !== step + 0.5 ? { from: [0, -1, 0], key: step + 0.5 } : hidden && { from: hidden, key: step })}
               onPeekEnd={setGlanced}
               next={worked?.fingers && move}
             />

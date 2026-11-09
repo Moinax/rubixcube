@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { beginnerSolve, findPiece, planStates, solvedAt, STAGES, type Group } from "../src/beginner.ts";
+import { beginnerSolve, buildsOnBottom, findPiece, planStates, solvedAt, STAGES, type Group } from "../src/beginner.ts";
 import { cfopSolve } from "../src/cfop.ts";
 import { COURSE, HAND_STAGES, HANDS, riders } from "../src/course.ts";
 import { applyMove, colorsOf, PIECES, SOLVED, STICKERS, stickerAt, type Vec } from "../src/cube.ts";
@@ -182,4 +182,12 @@ test("every case ends on its stage done, through the states its steps name", () 
   assert.ok(placed(after("Aucun coin bien placé", 9)) >= 1);
   const stuck = after("Arête coincée au milieu", 9); // the right insert took it back up, over the center of its color
   assert.equal(at(stuck, [0, 1, 1], [0, 0, 1]), center(stuck, [0, 0, 1]));
+});
+
+test("the stages built on the bottom start there, so the guide glances underneath first: the white corners and the second layer", () => {
+  const starts = (title: string) => buildsOnBottom(startOf(title).at(0));
+  assert.deepEqual(
+    ["Le pétale blanc-vert", "Blanc à droite", "Vers la droite", "Le point"].map(starts),
+    [false, true, true, false], // the cross starts on the daisy, the yellow cross on two finished layers
+  );
 });

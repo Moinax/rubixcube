@@ -17,7 +17,9 @@ one by one on an animated 3D cube:
   cross, the white corners and the second layer play theirs on one cube, from the
   stage's start, one piece a case. How to do it in
   words (what to look for, what to do, why it breaks nothing) opens in a panel
-  over the page; the next stage is offered once its cases are seen. Then reading the moves (the
+  over the page; the next stage is offered once its cases are seen. The courses
+  read in the same centered column; on a wide but short screen the cube and its
+  card sit side by side, the case menu and the player centered over and under them. Then reading the moves (the
   notation, then the beginner method case by case), or holding the cube: the home
   grip marked on the 3D cube and the finger or wrist that makes R, L, U and the
   sexy move, the fingers riding with the face they turn.

@@ -151,9 +151,13 @@ const Back = ({ label, onClick }: { label: string; onClick: () => void }) => (
 );
 
 /** Classes for a menu that sits in the top bar: a pill like the back button, its list under it, wider than it. */
+const BAR = "flex h-10 w-full min-w-0 items-center gap-2 rounded-full border border-edge bg-shell pr-3 pl-1.5";
 export const BAR_MENU = {
-  summary:
-    "flex h-10 w-full min-w-0 cursor-pointer list-none items-center gap-2 rounded-full border border-edge bg-shell pr-3 pl-1.5 [&::-webkit-details-marker]:hidden",
+  /** The bar's pill when there is nothing to pick: a name, not a menu. */
+  bar: BAR,
+  summary: `${BAR} cursor-pointer list-none [&::-webkit-details-marker]:hidden`,
+  /** The page's or stage's number in the bar: smaller than the case's under it. */
+  mark: "grid size-6 flex-none place-items-center rounded-full bg-chalk text-[11px] font-black text-plastic",
   // Under the bar, from its edges on a phone (never past the screen), at the menu's left on a wide screen.
   list: "absolute inset-x-4 top-full z-40 grid gap-0.5 rounded-2xl border border-edge bg-shell p-1.5 shadow-2xl shadow-black/60 md:right-auto md:left-20 md:w-96",
 };

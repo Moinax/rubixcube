@@ -88,7 +88,8 @@ type Props = {
  * so are `pair`, a second piece that goes with it (an F2L edge), and `pairPlace`. A new `replay` count
  * plays the same moves again. `grip` marks where the fingers rest in the home grip: before `next` (the move to
  * play), its fingers stand out and the ones in its way fade; while a move plays, its fingers ride with the face
- * and the ones in its way lift off. `below`: the camera looks from under the cube, at the bottom face. A ↻ in the
+ * and the ones in its way lift off; once it has played, they pause where it left them, then vanish until the next
+ * view shows the grip again. `below`: the camera looks from under the cube, at the bottom face. A ↻ in the
  * corner puts back a view turned by hand, shown once it was.
  * A new `peek` tilts the cube the way a hand would to glance at its side `from` (a face the camera doesn't see) and
  * brings it back as it is held to play, slowing near that face without stopping; a hand on the cube stops it.
@@ -207,7 +208,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
   const tracked = ([[piece, place], [pair, pairPlace]] as [string | undefined, string | undefined][]).filter((t): t is [string, string | undefined] => !!t[0]);
   useEffect(() => {
     const ctx = scene.current!;
-    // The fingers that travel with the turning face, and where each rests in the grip.
+    // The fingers that travel with the turning face, hidden once the move has played.
     let riding: THREE.Object3D[] = [];
     /** The cube `s`, with the cubies that `move` turns in the returned layer. */
     const build = (s: string, move?: string) => {
@@ -283,11 +284,10 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
         }
         // The fingers that turned with the face stay a moment where the move left them, then vanish, to be back in the
         // grip when the cube is shown again for the next move: no trip back that would cross the cube.
-        const back = riding;
         const landed = t;
         ctx.onFrame = (now) => {
           if (now - landed < 300) return;
-          for (const dot of back) dot.visible = false;
+          if (riding[0]?.visible) for (const dot of riding) dot.visible = false;
           if (now - landed < 420) return;
           ctx.onFrame = undefined;
           ended.current?.();

@@ -474,6 +474,11 @@ const holdSteps = (moves: string[], turnCube: string, turnTop: string) =>
   [has(moves, "y") && turnCube, has(moves, "U") && turnTop].filter(Boolean).join(tr({ fr: ", puis ", nl: ", en ", en: ", then " }));
 export const solvedAt = (s: string, pos: Vec) =>
   CUBIES.find((c) => same(c.pos, pos))!.idx.every((i) => s[i] === center(s, STICKERS[i].normal));
+const CROSS_EDGES: Vec[] = [[0, -1, 1], [1, -1, 0], [0, -1, -1], [-1, -1, 0]];
+const MIDDLE_EDGES: Vec[] = [[1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1]];
+/** Whether `s` has the white cross done below and the middle layer not yet: where the white corners and the second
+ * layer start, out of the view held yellow up. */
+export const buildsOnBottom = (s: string) => CROSS_EDGES.every((p) => solvedAt(s, p)) && !MIDDLE_EDGES.every((p) => solvedAt(s, p));
 /** The cubie at `pos` holds the colors of the centers around it, in any orientation. */
 const placedAt = (s: string, pos: Vec) => {
   const c = CUBIES.find((c) => same(c.pos, pos))!;

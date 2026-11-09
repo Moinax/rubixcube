@@ -61,7 +61,7 @@ const pageTitle = (page: number) =>
  * where the case under it carries the bigger number. */
 const PageMark = ({ page, current, small }: { page: number; current?: boolean; small?: boolean }) => (
   <span
-    className={`grid flex-none place-items-center rounded-full font-black ${small ? "size-6 text-[11px]" : "size-8 text-sm"} ${current ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}
+    className={small ? BAR_MENU.mark : `grid size-8 flex-none place-items-center rounded-full text-sm font-black ${current ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}
   >
     {page > 0 ? page : page === WHERE ? "?" : "i"}
   </span>

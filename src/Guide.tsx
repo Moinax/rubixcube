@@ -572,9 +572,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
         </div>
 
         <div className={`grid flex-1 content-start items-center gap-4 ${column ? "short:grid-cols-2 short:content-center short:gap-10" : "md:grid-cols-2 md:content-center md:gap-10"}`}>
-          <div className="flex flex-col gap-3 md:phone:sticky md:phone:top-4 md:phone:self-start">
+          {/* Side by side in one-column mode (a short screen), the cube and the card share the row and the player sits
+              centered under both. */}
+          <div className={`flex flex-col gap-3 md:phone:sticky md:phone:top-4 md:phone:self-start ${column ? "short:contents" : ""}`}>
           <div
-            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${column ? "md:max-h-[40dvh] short:max-h-[60dvh]" : "md:max-h-[60dvh]"} md:phone:max-h-[calc(100dvh-12rem)] ${fading ? "opacity-0" : ""}`}
+            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${column ? "short:col-start-1 short:row-start-1" : ""} ${column ? "md:max-h-[40dvh] short:max-h-[60dvh]" : "md:max-h-[60dvh]"} md:phone:max-h-[calc(100dvh-12rem)] ${fading ? "opacity-0" : ""}`}
           >
             <CubeView
               state={anim?.from ?? state}
@@ -590,10 +592,10 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               next={worked?.fingers && move}
             />
           </div>
-          {player}
+          <div className={column ? "short:col-span-2 short:row-start-2" : ""}>{player}</div>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className={`flex flex-col gap-4 ${column ? "short:col-start-2 short:row-start-1" : ""}`}>
             {done ? (
               <div>
                 <p className="wide text-2xl md:text-3xl">

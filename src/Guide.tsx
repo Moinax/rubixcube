@@ -532,9 +532,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 </>
               );
               const box = "flex h-13 items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2";
-              if (cases.length < 2 && !present) return <div className={`${box} md:max-w-md`}>{line}</div>;
+              // Over the cube: in the plan's page, the cube is centered; elsewhere it heads the left column.
+              const centered = focus ? "md:mx-auto md:w-full md:max-w-md" : "md:max-w-md";
+              if (cases.length < 2 && !present) return <div className={`${box} ${centered}`}>{line}</div>;
               return (
-                <details ref={casePicker} className="group relative md:max-w-md">
+                <details ref={casePicker} className={`group relative ${centered}`}>
                   <summary className={`${box} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
                     {line}
                     <Chevron to="down" className="text-mist transition group-open:rotate-180" />

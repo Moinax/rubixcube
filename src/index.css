@@ -71,6 +71,8 @@
   }
 }
 @custom-variant roomy (@media (min-width: 48rem) and (min-height: 32.01rem));
+/* Wide but too short for the cube, the player and the card one under the other: they go side by side. */
+@custom-variant short (@media (min-width: 48rem) and (max-height: 59.99rem));
 
 /* No double-tap zoom when tapping "Suivant" quickly on a phone. */
 button,

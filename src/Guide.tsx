@@ -128,6 +128,10 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   // Before the first case, the plan's page presents the stage: its case menu leads there, never the player, whose keys
   // stay within its moves.
   const present = focus?.onPresent;
+  // A plan's stage and the courses of the basics read in one column on a wide screen, the case menu, the cube and its
+  // card one under the other (side by side under the centered menu when the screen is too short for that); a guide on
+  // your own cube keeps the cube beside the card.
+  const column = !!focus || course;
   const done = step === total;
   const gi = atResult ? flat[step - 1].group : flat[step]?.group;
   const group = gi === undefined ? undefined : groups[gi];
@@ -461,7 +465,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
         <LexiconButton onClick={() => setLexicon({ tab: "moves" })} />
       </TopBar>
       {/* In the plan's page, one column a comfortable line long, like the rest of the plan. */}
-      <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:px-8 md:phone:gap-2 md:phone:pt-2 ${focus ? "max-w-2xl pb-28" : "max-w-5xl pb-8"}`}>
+      <main className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 md:px-8 md:phone:gap-2 md:phone:pt-2 ${column ? "max-w-2xl short:max-w-5xl" : "max-w-5xl"} pb-8`}>
         {focus || course ? null : (
           <p className="-mb-2 text-sm text-mist">
             {(
@@ -532,8 +536,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
                 </>
               );
               const box = "flex h-13 items-center gap-3 rounded-2xl border border-edge bg-shell pr-3 pl-2";
-              // Over the cube: in the plan's page, the cube is centered; elsewhere it heads the left column.
-              const centered = focus ? "md:mx-auto md:w-full md:max-w-md" : "md:max-w-md";
+              // Over the cube: centered in one column, heading the left one beside the card.
+              const centered = column ? "md:mx-auto md:w-full md:max-w-md" : "md:max-w-md";
               if (cases.length < 2 && !present) return <div className={`${box} ${centered}`}>{line}</div>;
               return (
                 <details ref={casePicker} className={`group relative ${centered}`}>
@@ -567,10 +571,10 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
             })()}
         </div>
 
-        <div className={`grid flex-1 content-start items-center gap-4 ${focus ? "" : "md:grid-cols-2 md:content-center md:gap-10"}`}>
+        <div className={`grid flex-1 content-start items-center gap-4 ${column ? "short:grid-cols-2 short:content-center short:gap-10" : "md:grid-cols-2 md:content-center md:gap-10"}`}>
           <div className="flex flex-col gap-3 md:phone:sticky md:phone:top-4 md:phone:self-start">
           <div
-            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${focus ? "md:max-h-[40dvh]" : "md:max-h-[60dvh]"} md:phone:max-h-[calc(100dvh-12rem)] ${fading ? "opacity-0" : ""}`}
+            className={`aspect-square max-h-[30dvh] w-full justify-self-center transition-opacity duration-200 ${column ? "md:max-h-[40dvh] short:max-h-[60dvh]" : "md:max-h-[60dvh]"} md:phone:max-h-[calc(100dvh-12rem)] ${fading ? "opacity-0" : ""}`}
           >
             <CubeView
               state={anim?.from ?? state}

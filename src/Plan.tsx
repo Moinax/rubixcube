@@ -11,16 +11,13 @@ import { tr } from "./i18n";
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
 const LAST = PLAN.length - 1;
 
-/** A stage opens on its presentation; `view` "see" plays its cases (`cases`: the step in them). How to do it, in
- * words, opens over either. */
-export type View = "see";
+/** A stage opens on its presentation; with a `step`, its cases play, from that step. How to do it, in words, opens
+ * over either. */
 type Props = {
   stage: number;
-  view?: View;
-  cases?: number;
+  step?: number;
   onStage: (stage: number) => void;
-  onView: (view?: View) => void;
-  onCases: (step?: number) => void;
+  onStep: (step?: number) => void;
   onBack: () => void;
 };
 
@@ -67,14 +64,15 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
   </span>
 );
 
-/** How to do a stage, in words, over the page: rising from the bottom on a phone, from the right on a wide screen,
- * where the cube stays in view beside it. Closed by ✕, a tap outside it, or Escape. */
+/** Words over the page, how to do a stage or the method's key ideas: rising from the bottom on a phone, from the
+ * right on a wide screen, where the cubes stay in view beside it. Closed by ✕, a tap outside it, or Escape (unless
+ * the glossary is open over it: that Escape is the glossary's). */
 function HowSheet({ title, onClose, children }: { title: ReactNode; onClose: () => void; children: ReactNode }) {
   // It slides out before it goes: the parent drops it once the panel's own animation ends.
   const [leaving, setLeaving] = useState(false);
   const close = () => setLeaving(true);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setLeaving(true);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("dialog[open]") && setLeaving(true);
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
   }, []);
@@ -99,13 +97,16 @@ function HowSheet({ title, onClose, children }: { title: ReactNode; onClose: () 
 }
 
 /** The beginner method as a map: the idea of it, where you stand, then each stage on its own, for any cube. */
-export default function Plan({ stage, view, cases: step, onStage, onView, onCases, onBack }: Props) {
+export default function Plan({ stage, step, onStage, onStep, onBack }: Props) {
   const plan = PLAN[stage];
   const [intro, where] = [stage === 0, stage === WHERE];
   const { ref: menu } = usePopover(stage);
   const [lexicon, setLexicon] = useState(false);
-  const [how, setHow] = useState(false);
-  const watched = view === "see" && stage > 0;
+  // The panel belongs to the page it was opened on: going to another stage (the browser's back too) closes it.
+  const [howOn, setHowOn] = useState<number>();
+  const how = howOn === stage;
+  const setHow = (open: boolean) => setHowOn(open ? stage : undefined);
+  const watched = step !== undefined && stage > 0;
   // "?" opens the glossary here too; the guide listens for itself when it shows.
   useEffect(() => {
     if (watched) return;
@@ -138,12 +139,12 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
       </p>
     </div>
   );
-  const cases = new Set(CASES[stage]?.map((g) => g.title)).size;
+  const count = new Set(CASES[stage]?.map((g) => g.title)).size;
   const chained = !!CASES[stage]?.slice(1).every((g) => !g.from);
   const watchLabel = tr({
-    fr: cases > 1 ? `Voir les ${cases} ${chained ? "étapes" : "situations"} en 3D` : "Voir la situation en 3D",
-    nl: cases > 1 ? `De ${cases} ${chained ? "stappen" : "situaties"} in 3D bekijken` : "De situatie in 3D bekijken",
-    en: cases > 1 ? `Watch the ${cases} ${chained ? "steps" : "situations"} in 3D` : "Watch the situation in 3D",
+    fr: count > 1 ? `Voir les ${count} ${chained ? "étapes" : "situations"} en 3D` : "Voir la situation en 3D",
+    nl: count > 1 ? `De ${count} ${chained ? "stappen" : "situaties"} in 3D bekijken` : "De situatie in 3D bekijken",
+    en: count > 1 ? `Watch the ${count} ${chained ? "steps" : "situations"} in 3D` : "Watch the situation in 3D",
   });
   // How to do it, in words: a light link under the card that opens a panel over the page, never a mode of its own.
   const howLink = (
@@ -245,16 +246,15 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
         groups={CASES[stage]}
         learn
         course
-        step={step ?? 0}
-        onStep={onCases}
+        step={step}
+        onStep={onStep}
         onHome={onBack}
         onScan={() => {}}
         onEdit={() => {}}
         focus={{
-          title: STAGES[stage].title,
           back,
           header,
-          onPresent: () => onView(undefined),
+          onPresent: () => onStep(undefined),
           footer: howLink,
           next: onward,
         }}
@@ -274,10 +274,8 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
 
         {/* On a wide screen the page sits in the middle of the height, the quiet link to the next stage at the foot. */}
         <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:my-auto md:gap-6">
-          {/* Where you are is a list of drawings already: it takes the whole width. */}
-          {/* The same size presented or read: switching between them never moves the cubes. */}
-          {/* On a wide screen they take the height the page leaves them, wider than the text if there is room, never
-              wider than the top bar. */}
+          {/* The start and the goal, but where you are, a list of drawings already. On a wide screen they take the
+              height the page leaves them, wider than the text if there is room, never wider than the top bar. */}
           {!where && <div className="w-full max-w-[max(14rem,calc((100dvh-32rem)*2))] justify-self-center md:w-[min(60rem,calc(100vw-4rem),max(28rem,calc((100dvh-32rem)*2)))] md:max-w-none">{beforeAfter}</div>}
 
           <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 [&>:first-child]:mt-0 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
@@ -370,7 +368,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
           )}
           {stage > 0 && (
             <>
-              <button onClick={() => onView("see")} className="btn btn-main w-full">
+              <button onClick={() => onStep(0)} className="btn btn-main w-full">
                 <svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden>
                   <path d="M7 5v14l11-7z" />
                 </svg>

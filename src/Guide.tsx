@@ -3,16 +3,12 @@ import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { LexiconButton, type Tab } from "./Lexicon";
 import { BAR_MENU, Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
 import { Chip, Colored, Swatches } from "./Scanner";
-import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, STAGES, type Group, type Stage } from "./beginner";
-import { applyMove, center, describeMove, invert, isRotation, stickerAt, STICKERS, upright, type Face, type Vec } from "./cube";
+import { algOf, findPiece, names, pieceColors, planStates, play, slotOf, solvedAt, STAGES, type Group, type Stage } from "./beginner";
+import { applyMove, describeMove, invert, isRotation, stickerAt, STICKERS, upright, type Face, type Vec } from "./cube";
 import { nOf, tr } from "./i18n";
 
-/** Whether `piece` sits in its place, turned right: each of its stickers matches the center of its face. */
-function isHome(s: string, piece: string) {
-  const pos = findPiece(s, piece);
-  const axis = (k: number) => pos.map((v, j) => (j === k ? v : 0)) as Vec;
-  return pos.every((v, k) => !v || s[stickerAt(pos, axis(k))!] === center(s, axis(k)));
-}
+/** Whether `piece` sits in its place, turned right. */
+const isHome = (s: string, piece: string) => solvedAt(s, findPiece(s, piece));
 
 /** « L'arête blanc-vert », "the white-green edge", named as the instructions name it. */
 function pieceName(piece: string) {
@@ -51,7 +47,6 @@ type GuideProps = {
    * page's own) takes their place, `back` is the way back, `onPresent` goes back to the stage's presentation (before
    * the first case), `footer` goes under the card. */
   focus?: {
-    title: string;
     back: { label: string; onClick: () => void };
     header: ReactNode;
     onPresent?: () => void;

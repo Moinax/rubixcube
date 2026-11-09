@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import CubeView from "./CubeView";
 import Guide from "./Guide";
 import { BasicsChoice, Home, InputChoice, modeTitle, TopBar, type Mode, type Resume } from "./Home";
-import Plan, { type View } from "./Plan";
+import Plan from "./Plan";
 import NetEditor from "./NetEditor";
 import Scanner, { Colored, type Scan } from "./Scanner";
 import { beginnerSolve, planStates, STAGES, type Group } from "./beginner";
@@ -18,8 +18,8 @@ type GuideScreen = { name: "guide"; start: string; groups: Group[]; learn: boole
 type Screen =
   | { name: "home" }
   | { name: "basics" }
-  /** `view`: what was chosen from the stage's presentation; `cases`: the step in its cases, when watched. */
-  | { name: "plan"; stage: number; view?: View; cases?: number }
+  /** `step`: where in the stage's cases, once they are watched; none on its presentation. */
+  | { name: "plan"; stage: number; step?: number }
   | { name: "input"; mode: CubeMode }
   | { name: "scan"; mode: CubeMode; scan?: Scan }
   | { name: "edit"; mode: CubeMode; state: string; scan?: Scan }
@@ -214,10 +214,8 @@ export default function App() {
       return (
         <Plan
           stage={screen.stage}
-          view={screen.view}
-          onView={(view) => setScreen({ ...screen, view })}
-          cases={screen.cases}
-          onCases={(cases) => setScreen({ ...screen, cases })}
+          step={screen.step}
+          onStep={(step) => setScreen({ ...screen, step })}
           onStage={(stage) => {
             setScreen({ name: "plan", stage });
             scrollTo(0, 0);

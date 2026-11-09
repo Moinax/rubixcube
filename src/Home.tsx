@@ -332,7 +332,7 @@ export function InputChoice({ mode: id, onScan, onManual, onRandom, onBack }: In
   );
 }
 
-export type Part = "plan" | "moves" | "hands";
+type Part = "plan" | "moves" | "hands";
 type BasicsProps = { onPick: (part: Part) => void; onBack: () => void };
 
 /** The basics come in three parts, each on its own: the plan of the method, reading the moves, or holding the cube. */

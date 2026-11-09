@@ -50,10 +50,6 @@ const WORDS: [word: string, text: string, piece?: string][] = tr({
 const CLOSE = tr({ fr: "Fermer", nl: "Sluiten", en: "Close" });
 const CARD = "rounded-xl border border-edge bg-raised p-2.5 text-left hover:border-mist/60 aria-pressed:border-chalk";
 
-/**
- * The notation, the named sequences and the words of the method, in a dialog: a sheet from the bottom on a
- * phone. A card's moves play on the small cube; `focus`, a move, plays first.
- */
 /** The glossary's button, in the top bar of every screen that offers it. */
 export const LexiconButton = ({ onClick }: { onClick: () => void }) => (
   <button
@@ -70,6 +66,10 @@ export const LexiconButton = ({ onClick }: { onClick: () => void }) => (
   </button>
 );
 
+/**
+ * The notation, the named sequences and the words of the method, in a dialog: a sheet from the bottom on a
+ * phone. A card's moves play on the small cube; `focus`, a move, plays first.
+ */
 export default function Lexicon({ tab, focus, onClose }: { tab: Tab; focus?: string; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [shown, setShown] = useState(tab);

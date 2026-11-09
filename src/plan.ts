@@ -80,7 +80,7 @@ export const SEEN: string[] = tr({
 });
 
 /** `done`: when the stage is done, going on from « C'est fini quand… ». */
-export type PlanStage = { look: string; how: string[]; why: string; done: string };
+type PlanStage = { look: string; how: string[]; why: string; done: string };
 
 /** Before the stages: the idea of the method, in a few headed paragraphs. */
 export const PRINCIPLES: [heading: string, text: string][] = tr({

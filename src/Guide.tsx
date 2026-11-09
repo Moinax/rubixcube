@@ -284,6 +284,16 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     const whiteBelow = (s: string) => STICKERS.filter((t, i) => t.normal[1] === -1 && s[i] === "U").length;
     return whiteBelow(after) > whiteBelow(before) ? { from: [0, -1, 0] as Vec, key, worked } : undefined;
   })();
+  // At the start of a stage built on what lies below (the white cross done, the middle layer not yet: the white corners,
+  // the second layer), the cube is glanced at from below first, so the stage's starting point shows.
+  const BOTTOM_EDGES: Vec[] = [[0, -1, 1], [1, -1, 0], [0, -1, -1], [-1, -1, 0]];
+  const MIDDLE_EDGES: Vec[] = [[1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1]];
+  const startsBelow =
+    learn &&
+    !atResult &&
+    (step === 0 || stageStartAt(step)) &&
+    BOTTOM_EDGES.every((p) => solvedAt(state, p)) &&
+    !MIDDLE_EDGES.every((p) => solvedAt(state, p));
   // At the start of an instruction, a piece the view doesn't show is glanced at first, the way a hand tilts the cube:
   // a piece hidden whole (down, left or back), or its white or yellow (which tells how it is turned) facing away.
   const hidden = (() => {
@@ -569,7 +579,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pair={worked?.pair}
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
-              peek={endPeek ?? (hidden && { from: hidden, key: step })}
+              peek={endPeek ?? (startsBelow ? { from: [0, -1, 0], key: step + 0.5 } : hidden && { from: hidden, key: step })}
               onPeekEnd={setGlanced}
               next={worked?.fingers && move}
             />

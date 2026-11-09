@@ -28,12 +28,13 @@ type Props = {
 function Milestone({ at, label }: { at: number; label: string }) {
   const below = SEEN_FROM_BELOW.includes(at);
   return (
-    <figure className="min-w-0 text-center">
+    <figure className="@container min-w-0 text-center">
       <div className="aspect-square w-full">
         <CubeView state={MILESTONES[at]} below={below} />
       </div>
-      <figcaption className="text-sm font-semibold">{label}</figcaption>
-      <p className={`text-xs text-mist ${below ? "" : "invisible"}`}>{tr({ fr: "vu du dessous", nl: "van onderen gezien", en: "seen from below" })}</p>
+      {/* The captions grow with the cube they name. */}
+      <figcaption className="text-[clamp(0.875rem,5cqi,1.375rem)] font-semibold">{label}</figcaption>
+      <p className={`text-[clamp(0.75rem,3.5cqi,1rem)] text-mist ${below ? "" : "invisible"}`}>{tr({ fr: "vu du dessous", nl: "van onderen gezien", en: "seen from below" })}</p>
     </figure>
   );
 }
@@ -234,13 +235,15 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
       </TopBar>
       {lexicon && <Lexicon tab="moves" onClose={() => setLexicon(false)} />}
       {/* One column a comfortable line long: the drawings, then the text under them. */}
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4 pb-10 md:px-8">
+      <main className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4 pb-10 md:px-8 md:pb-16">
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:gap-6">
+        {/* On a wide screen the page sits in the middle of the height, the quiet link to the next stage at the foot. */}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:my-auto md:gap-6">
           {/* Where you are is a list of drawings already: it takes the whole width. */}
           {/* The same size presented or read: switching between them never moves the cubes. */}
-          {/* On a wide screen they take the height the page leaves them, wider than the text if there is room. */}
-          {!where && <div className="w-full max-w-56 justify-self-center md:w-[min(80rem,calc(100vw-4rem),max(28rem,calc((100dvh-29rem)*2)))] md:max-w-none">{beforeAfter}</div>}
+          {/* On a wide screen they take the height the page leaves them, wider than the text if there is room, never
+              wider than the top bar. */}
+          {!where && <div className="w-full max-w-56 justify-self-center md:w-[min(60rem,calc(100vw-4rem),max(28rem,calc((100dvh-32rem)*2)))] md:max-w-none">{beforeAfter}</div>}
 
           <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 [&>:first-child]:mt-0 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
             {/* The menu above names the page: only the idea's page, called something else there, keeps a title. */}
@@ -333,7 +336,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
         </div>
         {/* A quiet way on, for who wants to skip ahead without watching. */}
         {stage > 0 && (
-          <button onClick={onward.onClick} className="mt-auto flex items-center gap-1 self-center pt-6 text-xs text-mist hover:text-chalk">
+          <button onClick={onward.onClick} className="mt-auto flex items-center gap-1 self-center pt-6 text-xs text-mist hover:text-chalk md:absolute md:bottom-6 md:left-1/2 md:-translate-x-1/2">
             {next !== undefined ? tr({ fr: "Passer à l'étape suivante", nl: "Naar de volgende stap", en: "Skip to the next stage" }) : onward.label}
             <Chevron className="size-3" />
           </button>

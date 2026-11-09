@@ -77,6 +77,7 @@ type Props = {
   autoRotate?: boolean;
   below?: boolean;
   peek?: { from: Vec; key: number };
+  onPeekEnd?: (key: number) => void;
 };
 
 /**
@@ -89,12 +90,15 @@ type Props = {
  * corner puts back a view turned by hand, shown once it was.
  * A new `peek` tilts the cube the way a hand would to glance at its side `from` (a face the camera doesn't see) and
  * brings it back as it is held to play, slowing near that face without stopping; a hand on the cube stops it.
+ * `onPeekEnd` hears when a glance is over, back in the hand or stopped by it.
  */
-export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, peek }: Props) {
+export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, peek, onPeekEnd }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; onCamera?: (t: number) => void }>(null);
+  const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; onCamera?: (t: number) => void; endPeek?: () => void }>(null);
   const ended = useRef(onEnd);
   ended.current = onEnd;
+  const peeked = useRef(onPeekEnd);
+  peeked.current = onPeekEnd;
   const born = useRef(performance.now());
   const [turned, setTurned] = useState(false);
   const home = () => {
@@ -123,7 +127,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     // A hand on the cube stops a glance where it is: the hand turns it from there.
     controls.addEventListener("start", () => {
       setTurned(true);
-      if (scene.current) scene.current.onCamera = undefined;
+      scene.current?.endPeek?.();
     });
     const root = new THREE.Group();
     world.add(root);
@@ -179,6 +183,10 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
     // Out from wherever the camera is (a glance cut short by the next one), back into the hand: never a jump. A glance
     // under way runs to its end even when the guide moves on, so the cube is never left tilted.
     let origin = held;
+    ctx.endPeek = () => {
+      ctx.onCamera = ctx.endPeek = undefined;
+      peeked.current?.(peek.key);
+    };
     ctx.onCamera = (t) => {
       if (start === undefined) {
         if (ctx.onFrame || t < born.current + ARRIVAL) return; // a move still turning goes first
@@ -188,7 +196,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
       const d = k - 0.5;
       const slowed = 0.5 + (Math.sign(d) * Math.abs(2 * d) ** 1.35) / 2;
       camera.position.copy(k < 0.5 ? origin : held).lerp(look, (1 - Math.cos(2 * Math.PI * slowed)) / 2).setLength(held.length());
-      if (k === 1) ctx.onCamera = undefined;
+      if (k === 1) ctx.endPeek!();
     };
     setTurned(false);
   }, [peek?.key]);

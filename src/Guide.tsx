@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import CubeView, { INDEX_COLOR, THUMB_COLOR } from "./CubeView";
 import Lexicon, { LexiconButton, type Tab } from "./Lexicon";
 import { BAR_MENU, Chevron, HOME, modeTitle, TopBar, usePopover } from "./Home";
@@ -284,13 +284,13 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
       for (const p of tracked) {
         if (isHome(before, p) || !isHome(after, p)) continue;
         const pos = findPiece(after, p);
-        if (pos.some((v) => v < 0)) return { from: pos.map((v) => (v < 0 ? -1 : 0)) as Vec, key };
+        if (pos.some((v) => v < 0)) return { from: pos.map((v) => (v < 0 ? -1 : 0)) as Vec, key, worked };
       }
       return;
     }
     // No single piece (the four petals dropped one after the other): white squares that came onto the bottom face.
     const whiteBelow = (s: string) => STICKERS.filter((t, i) => t.normal[1] === -1 && s[i] === "U").length;
-    return whiteBelow(after) > whiteBelow(before) ? { from: [0, -1, 0] as Vec, key } : undefined;
+    return whiteBelow(after) > whiteBelow(before) ? { from: [0, -1, 0] as Vec, key, worked } : undefined;
   })();
   // At the start of an instruction, a piece the view doesn't show is glanced at first, the way a hand tilts the cube:
   // a piece hidden whole (down, left or back), or its white or yellow (which tells how it is turned) facing away.
@@ -309,8 +309,11 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   /** What one case of a stage does toward it; lessons (stage 0) and the fast mode's phases have none. */
   const aim = learn && group && group.stage > 0 ? (stages[group.stage].aim ?? stages[group.stage].goal) : undefined;
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
-  // While a move plays, the outlines follow the piece it works on, from where it starts.
-  const worked = anim?.group ?? group;
+  // While a move plays, the outlines follow the piece it works on, from where it starts; while the cube glances at
+  // where an instruction just put it, they stay on it, and only then move on to the next one.
+  const [glanced, setGlanced] = useState<number>();
+  useLayoutEffect(() => setGlanced(undefined), [step]); // coming back to a step glances again
+  const worked = anim?.group ?? (endPeek && endPeek.key !== glanced ? endPeek.worked : group);
   const { ref: pace } = usePopover(delay);
   // What a result stop closes: the last demo of a stage, or one demo among its cases.
   const ending = !atResult ? undefined : stageEndAt(step) ? "stage" : "demo";
@@ -575,6 +578,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
               peek={endPeek ?? (hidden && { from: hidden, key: step })}
+              onPeekEnd={setGlanced}
               next={worked?.fingers && move}
             />
           </div>

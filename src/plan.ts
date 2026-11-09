@@ -39,16 +39,11 @@ export const SCRAMBLED = play(YELLOW_UP, "R U F' L2 D B' R2 U'".split(" "));
 
 /** What the cube looks like at each milestone but the last, said the way you'd see it on yours: it follows
  * « Ton cube : ». */
-/** Each milestone named in a short sentence: where a stage starts from, and where it ends up. */
-export const STARTS: string[] = tr({
-  fr: ["Tu pars d'un cube mélangé", "Tu pars de la marguerite", "Tu pars de la croix blanche", "Tu pars des coins blancs", "Tu pars de la deuxième couronne", "Tu pars de la croix jaune", "Tu pars des arêtes jaunes", "Tu pars des coins jaunes placés"],
-  nl: ["Je begint bij een gemengde kubus", "Je begint bij het madeliefje", "Je begint bij het witte kruis", "Je begint bij de witte hoeken", "Je begint bij de tweede laag", "Je begint bij het gele kruis", "Je begint bij de gele randstukken", "Je begint bij de geplaatste gele hoeken"],
-  en: ["You start from a scrambled cube", "You start from the daisy", "You start from the white cross", "You start from the white corners", "You start from the second layer", "You start from the yellow cross", "You start from the yellow edges", "You start from the yellow corners in place"],
-});
-export const ENDS: string[] = tr({
-  fr: ["", "Tu arrives à la marguerite", "Tu arrives à la croix blanche", "Tu arrives aux coins blancs", "Tu arrives à la deuxième couronne", "Tu arrives à la croix jaune", "Tu arrives aux arêtes jaunes", "Tu arrives aux coins jaunes placés", "Tu arrives au cube résolu"],
-  nl: ["", "Je komt uit bij het madeliefje", "Je komt uit bij het witte kruis", "Je komt uit bij de witte hoeken", "Je komt uit bij de tweede laag", "Je komt uit bij het gele kruis", "Je komt uit bij de gele randstukken", "Je komt uit bij de geplaatste gele hoeken", "Je komt uit bij de opgeloste kubus"],
-  en: ["", "You reach the daisy", "You reach the white cross", "You reach the white corners", "You reach the second layer", "You reach the yellow cross", "You reach the yellow edges", "You reach the yellow corners in place", "You reach the solved cube"],
+/** Each milestone's name: what a stage starts from, and what it reaches. */
+export const MILESTONE_NAMES: string[] = tr({
+  fr: ["Un cube mélangé", "La marguerite", "La croix blanche", "Les coins blancs", "La deuxième couronne", "La croix jaune", "Les arêtes jaunes", "Les coins jaunes placés", "Le cube résolu"],
+  nl: ["Een gemengde kubus", "Het madeliefje", "Het witte kruis", "De witte hoeken", "De tweede laag", "Het gele kruis", "De gele randstukken", "De geplaatste gele hoeken", "De opgeloste kubus"],
+  en: ["A scrambled cube", "The daisy", "The white cross", "The white corners", "The second layer", "The yellow cross", "The yellow edges", "The yellow corners in place", "The solved cube"],
 });
 
 export const SEEN: string[] = tr({

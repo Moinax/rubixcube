@@ -5,7 +5,7 @@ import Lexicon, { LexiconButton } from "./Lexicon";
 import { BAR_MENU, Chevron, IsoCube, MiniFace, TopBar, usePopover } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
-import { CASES, ENDS, MILESTONES, PLAN, PRINCIPLES, SCRAMBLED, SEEN, SEEN_FROM_BELOW, STARTS, TOPS } from "./plan";
+import { CASES, MILESTONE_NAMES, MILESTONES, PLAN, PRINCIPLES, SCRAMBLED, SEEN, SEEN_FROM_BELOW, TOPS } from "./plan";
 import { tr } from "./i18n";
 
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
@@ -24,22 +24,27 @@ type Props = {
   onBack: () => void;
 };
 
-/** The cube at a milestone; greyed stickers can be anything. */
-function Milestone({ at }: { at: number }) {
+/** A milestone in its card: the cube on a soft shadow, then what the card stands for and the milestone's name, which
+ * grow with the card. The goal's card is tinted with the place's green. Greyed stickers can be anything. */
+function Milestone({ at, goal = false }: { at: number; goal?: boolean }) {
+  const below = SEEN_FROM_BELOW.includes(at);
   return (
-    <div className="aspect-square w-full min-w-0">
-      <CubeView state={MILESTONES[at]} below={SEEN_FROM_BELOW.includes(at)} />
-    </div>
-  );
-}
-
-/** A milestone named in a short sentence, under its cube and growing with it; "seen from below" when it is. */
-function MilestoneName({ at, label }: { at: number; label: string }) {
-  return (
-    <div className="@container min-w-0 self-start text-center">
-      <p className="text-[clamp(0.8125rem,4.5cqi,1.25rem)] leading-snug font-semibold text-balance">{label}</p>
+    <div
+      className={`@container relative min-w-0 overflow-hidden rounded-[22px] border p-2.5 text-center md:p-3.5 ${
+        goal ? "border-place/35 bg-linear-to-b from-[#1f2a27] to-[#1b1d22]" : "border-edge bg-linear-to-b from-[#22242b] to-[#1b1d22]"
+      }`}
+    >
+      {goal && <div className="pointer-events-none absolute inset-x-[15%] top-[25%] h-[45%] bg-[radial-gradient(closest-side,#34d39922,transparent)]" />}
+      <div className="relative aspect-square w-full">
+        <div className="absolute inset-x-[18%] bottom-[2%] h-[9%] bg-[radial-gradient(closest-side,#00000090,transparent)]" />
+        <CubeView state={MILESTONES[at]} below={below} />
+      </div>
+      <p className={`mt-1 text-[clamp(0.5625rem,2.8cqi,0.6875rem)] font-bold tracking-[0.12em] uppercase ${goal ? "text-place" : "text-mist"}`}>
+        {goal ? tr({ fr: "Objectif", nl: "Doel", en: "Goal" }) : tr({ fr: "Point de départ", nl: "Startpunt", en: "Starting point" })}
+      </p>
+      <p className="wide mt-1 text-[clamp(0.875rem,5.4cqi,1.25rem)] leading-tight text-balance">{MILESTONE_NAMES[at]}</p>
       {/* Kept, unseen, when it is not: the page stays the same height from stage to stage. */}
-      <p className={`text-[clamp(0.75rem,3.5cqi,1rem)] text-mist ${SEEN_FROM_BELOW.includes(at) ? "" : "invisible"}`}>
+      <p className={`mt-0.5 text-[clamp(0.6875rem,3.2cqi,0.875rem)] text-mist ${below ? "" : "invisible"}`}>
         {tr({ fr: "vu du dessous", nl: "van onderen gezien", en: "seen from below" })}
       </p>
     </div>
@@ -110,21 +115,22 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
   const [from, to] = intro ? [0, LAST] : [stage - 1, stage];
   const beforeAfter = (
     <div>
-      {/* The cubes on one row, their names on the next: a name a line longer never moves its cube. */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-1">
+      {/* Two cards, the arrow a chip astride them at the cubes' middle: a quarter of the row, less its gap. */}
+      <div className="@container relative grid grid-cols-2 items-stretch gap-(--gap) [--gap:0.625rem] md:[--gap:0.875rem]">
         <Milestone at={from} />
-        <Chevron className="text-mist" />
-        <Milestone at={to} />
-        <MilestoneName at={from} label={STARTS[from]} />
-        <span />
-        <MilestoneName at={to} label={ENDS[to]} />
+        <Milestone at={to} goal />
+        <span className="absolute top-[calc((100cqi-var(--gap))/4)] left-1/2 grid size-7 -translate-1/2 place-items-center rounded-full border border-edge bg-plastic text-mist shadow-[0_0_0_5px_var(--color-plastic)] md:size-9">
+          <svg viewBox="0 0 24 24" className="size-3.5 fill-none stroke-current stroke-[2.4] md:size-4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </span>
       </div>
-      <p className="mt-3 flex items-start justify-center gap-2 text-center text-xs text-mist">
-        <i className="mt-0.5 size-3 flex-none rounded-[3px] " style={{ background: BLANK }} />
+      <p className="mx-auto mt-3 flex w-fit items-center gap-2 rounded-full border border-edge bg-shell/60 py-1 pr-3 pl-2 text-center text-[11px] text-mist md:mt-4 md:text-xs">
+        <i className="size-3 flex-none rounded-[3px] shadow-[inset_0_0_0_1px_#ffffff14]" style={{ background: BLANK }} />
         {tr({
-          fr: "Gris : n'importe quelle couleur, ça ne compte pas encore.",
-          nl: "Grijs: eender welke kleur, het telt nog niet mee.",
-          en: "Grey: any color, it doesn't count yet.",
+          fr: "Gris : n'importe quelle couleur, ça ne compte pas encore",
+          nl: "Grijs: eender welke kleur, het telt nog niet mee",
+          en: "Grey: any color, it doesn't count yet",
         })}
       </p>
     </div>

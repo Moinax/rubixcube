@@ -330,8 +330,14 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
             </>
           )}
         </div>
+        {/* A quiet way on, for who wants to skip ahead without watching. */}
+        {stage > 0 && (
+          <button onClick={onward.onClick} className="mt-auto flex items-center gap-1 self-center pt-6 text-xs text-mist hover:text-chalk">
+            {next !== undefined ? tr({ fr: "Passer à l'étape suivante", nl: "Naar de volgende stap", en: "Skip to the next stage" }) : onward.label}
+            <Chevron className="size-3" />
+          </button>
+        )}
         {howSheet}
-
       </main>
     </>
   );

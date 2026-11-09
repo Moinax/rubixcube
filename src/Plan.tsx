@@ -69,20 +69,18 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
 
 /** How to do a stage, in words, over the page: rising from the bottom on a phone, from the right on a wide screen,
  * where the cube stays in view beside it. Closed by ✕, a tap outside it, or Escape. */
-function HowSheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+function HowSheet({ title, onClose, children }: { title: ReactNode; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
     const close = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     addEventListener("keydown", close);
     return () => removeEventListener("keydown", close);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-40" role="dialog" aria-modal aria-label={title}>
+    <div className="fixed inset-0 z-40" role="dialog" aria-modal>
       <button aria-label={tr({ fr: "Fermer", nl: "Sluiten", en: "Close" })} onClick={onClose} className="absolute inset-0 bg-black/60" />
       <section className="absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col rounded-t-3xl border-t border-edge bg-shell shadow-2xl shadow-black md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:w-[26rem] md:rounded-none md:border-t-0 md:border-l">
         <header className="flex flex-none items-center gap-3 px-5 pt-4 pb-2">
-          <h2 className="min-w-0 flex-1 font-semibold">
-            {tr({ fr: "Comment faire", nl: "Hoe je het doet", en: "How to do it" })} <span className="text-mist">· {title}</span>
-          </h2>
+          <h2 className="min-w-0 flex-1 font-semibold">{title}</h2>
           <button onClick={onClose} aria-label={tr({ fr: "Fermer", nl: "Sluiten", en: "Close" })} className="grid size-9 flex-none place-items-center rounded-full border border-edge text-mist hover:text-chalk">
             ✕
           </button>
@@ -158,8 +156,28 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
         : tr({ fr: "Terminer · Les bases", nl: "Afronden · De basis", en: "Finish · The basics" }),
     onClick: () => (next !== undefined ? onStage(next) : onBack()),
   };
+  const principles = PRINCIPLES.map(([heading, text]) => (
+    <div key={heading} className="mt-4 first:mt-0">
+      <h2 className="font-semibold">{heading}</h2>
+      <p className="mt-1 text-mist">
+        <Colored text={text} />
+      </p>
+    </div>
+  ));
+  const ideasSheet = how && intro && (
+    <HowSheet title={tr({ fr: "Les idées clés", nl: "De kernideeën", en: "The key ideas" })} onClose={() => setHow(false)}>
+      {principles}
+    </HowSheet>
+  );
   const howSheet = how && stage > 0 && (
-    <HowSheet title={STAGES[stage].title} onClose={() => setHow(false)}>
+    <HowSheet
+      title={
+        <>
+          {tr({ fr: "Comment faire", nl: "Hoe je het doet", en: "How to do it" })} <span className="text-mist">· {STAGES[stage].title}</span>
+        </>
+      }
+      onClose={() => setHow(false)}
+    >
       <h3 className={LABEL}>{tr({ fr: "Ce que tu cherches", nl: "Wat je zoekt", en: "What you look for" })}</h3>
       <p className="mt-1">
         <Colored text={plan.look} />
@@ -259,17 +277,20 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
 
           <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 [&>:first-child]:mt-0 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
             {/* The menu above names the page: only the idea's page, called something else there, keeps a title. */}
-            {intro && <h1 className="wide text-xl leading-tight">{tr({ fr: "Comment on résout un cube", nl: "Hoe je een kubus oplost", en: "How a cube gets solved" })}</h1>}
+            {intro && <h1 className="wide text-xl leading-tight md:hidden">{tr({ fr: "Comment on résout un cube", nl: "Hoe je een kubus oplost", en: "How a cube gets solved" })}</h1>}
             {intro ? (
               <>
-                {PRINCIPLES.map(([heading, text]) => (
-                  <div key={heading} className="mt-4">
-                    <h2 className="font-semibold">{heading}</h2>
-                    <p className="mt-1 text-mist">
-                      <Colored text={text} />
-                    </p>
-                  </div>
-                ))}
+                {/* On a phone the ideas are read here; on a wide screen the page keeps a stage's shape, the cubes where
+                    every stage has them, and the ideas open in the panel. */}
+                <div className="mt-4 md:hidden">{principles}</div>
+                <p className="hidden md:block md:min-h-[3.25em]">
+                  <span className="text-place">{tr({ fr: "L'idée… ", nl: "Het idee… ", en: "The idea… " })}</span>
+                  {tr({
+                    fr: "on résout le cube couronne par couronne, de bas en haut, sans jamais casser ce qui est déjà fait.",
+                    nl: "je lost de kubus laag per laag op, van onder naar boven, zonder ooit te breken wat al klaar is.",
+                    en: "you solve the cube one layer at a time, bottom to top, never breaking what is already done.",
+                  })}
+                </p>
               </>
             ) : where ? (
               <>
@@ -329,10 +350,18 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
           </section>
           {/* The principle leads to where you are; a stage, to its cases watched, its how in a panel. */}
           {intro && (
-            <button onClick={() => onStage(WHERE)} className="btn btn-main w-full">
-              {WHERE_TITLE}
-              <Chevron />
-            </button>
+            <>
+              <button onClick={() => onStage(WHERE)} className="btn btn-main w-full">
+                {WHERE_TITLE}
+                <Chevron />
+              </button>
+              <button onClick={() => setHow(true)} className="group mx-auto hidden items-center gap-1.5 text-sm font-semibold text-mist hover:text-chalk md:flex">
+                <span aria-hidden>≡</span>
+                <span className="underline decoration-current/40 underline-offset-4 group-hover:decoration-current">
+                  {tr({ fr: "Les idées clés", nl: "De kernideeën", en: "The key ideas" })}
+                </span>
+              </button>
+            </>
           )}
           {stage > 0 && (
             <>
@@ -354,6 +383,7 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
           </button>
         )}
         {howSheet}
+        {ideasSheet}
       </main>
     </>
   );

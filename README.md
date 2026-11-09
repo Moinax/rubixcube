@@ -12,8 +12,10 @@ one by one on an animated 3D cube:
   8 stages for any cube. Each opens on its presentation (where it starts and its
   goal, two 3D cubes in two cards, what doesn't count yet greyed out, and when it
   is done), then its cases are watched in the guide's player in the page, the
-  player under the cube; each case (`src/course.ts`) a demo cube built backwards
-  from its algorithm, what its stage doesn't use greyed out. How to do it in
+  player under the cube. The cases (`src/course.ts`) are demo cubes built backwards
+  from their algorithms, what their stage doesn't use greyed out; the daisy, the
+  cross, the white corners and the second layer play theirs on one cube, from the
+  stage's start, one piece a case. How to do it in
   words (what to look for, what to do, why it breaks nothing) opens in a panel
   over the page; the next stage is offered once its cases are seen. Then reading the moves (the
   notation, then the beginner method case by case), or holding the cube: the home

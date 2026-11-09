@@ -1,5 +1,5 @@
 import { algOf, CYCLE, FLIP, LEFT, play, RIGHT, SEXY, SUNE, times, TWIST, YELLOW_UP, type Group, type Stage } from "./beginner.ts";
-import { colorsOf, invert as undo, PIECES, SOLVED } from "./cube.ts";
+import { colorsOf, invert as undo, isRotation, PIECES, SOLVED } from "./cube.ts";
 import { tr, type Lang } from "./i18n.ts";
 
 // The beginner method as a course, for a cube the app has not seen: each case
@@ -46,6 +46,25 @@ const lesson = (texts: Texts, moves: string[]) => group(0, texts, moves, SOLVED)
 /** A case that goes on from where the case before it stopped, on the same cube. */
 const then = (stage: number, texts: Texts, moves: string[], piece?: string, split?: number[]): Group => ({ ...group(stage, texts, moves, "", piece, split), from: undefined });
 
+/** One case of a chain: its texts and moves, the piece it finishes, and first, when its piece isn't where its moves
+ * expect it, a `setup` (a turn of the cube, or of the top) that `turn` says. */
+type Case = { texts: Texts; moves: string[]; piece: string; split?: number[]; setup?: string[]; turn?: Record<Lang, string> };
+/** A stage's cases on one cube, the first starting where the stage starts, each finishing one more piece, the last
+ * ending on `goal` (turned by the cases' turns of the cube, so the first case is held green in front). Built backwards
+ * from there; the setups were chosen so that no piece is done at the start and no case breaks one done before it. */
+function chain(stage: number, goal: string, cases: Case[]): Group[] {
+  const all = cases.map((c) => [...(c.setup ?? []), ...c.moves]);
+  const start = [...all].reverse().reduce((s, moves) => play(s, undo(moves)), play(goal, all.flat().filter(isRotation)));
+  return cases.map((c, i) => {
+    const texts = Object.fromEntries(
+      Object.entries(c.texts).map(([lang, [title, text, ...steps]]) => [lang, [title, text, ...(c.setup ? [c.turn![lang as Lang]] : []), ...steps]]),
+    ) as Texts;
+    const split = [...(c.setup ? [c.setup.length] : []), ...(c.split ?? [c.moves.length])];
+    const g = group(stage, texts, all[i], focusOn(stage, start), c.piece, split);
+    return i ? { ...g, from: undefined } : g;
+  });
+}
+
 // Pieces by color letters (white U, yellow D, green F, blue B, red R, orange L).
 const WHITE_GREEN = "FU";
 const WHITE_ORANGE = "LU";
@@ -59,7 +78,6 @@ const DAISY = play(YELLOW_UP, ["F2", "R2", "B2", "L2"]); // the 4 white edges on
 // from a solved cube (undone, a later turn of the top would carry a dropped petal back up).
 const SHUFFLED_DAISY = play(DAISY, "U F U F' U' F".split(" "));
 const ONE_CORNER_PLACED = play(YELLOW_UP, ["y", ...undo(CYCLE), "y'"]);
-const EDGE_FLIPPED_IN_SLOT = play(YELLOW_UP, [...RIGHT, "U2", ...RIGHT]); // green-orange in its slot, upside down
 const OPPOSITE_DONE = play(YELLOW_UP, ["y", ...undo(SUNE), "y'", "U'"]);
 
 export const COURSE: Group[] = [
@@ -104,52 +122,54 @@ export const COURSE: Group[] = [
     ["z2"],
   ),
 
-  demo(
-    1,
+  // The daisy, one edge a case, all on one cube from a cube with no petal: each case brings one more white edge up.
+  ...chain(1, SHUFFLED_DAISY, [
     {
-      fr: ["Arête en bas, blanc vers le sol", "Une arête blanche est en bas, sa case blanche tournée vers le sol.", "Fais un demi-tour de sa face : elle monte, sa case blanche sur le dessus. Si la place juste au-dessus est déjà un pétale, tourne d'abord le haut pour la libérer."],
-      nl: ["Randstuk onderaan, wit naar de grond", "Een wit randstuk zit onderaan, met het witte vakje naar de grond.", "Draai zijn kant een halve slag: het gaat naar boven, met het witte vakje bovenop. Is de plek er recht boven al een blaadje, draai dan eerst de bovenkant om die vrij te maken."],
-      en: ["Edge at the bottom, white facing the floor", "A white edge is at the bottom, its white square facing the floor.", "Give its face a half turn: it goes up, its white square on top. If the spot right above is already a petal, turn the top first to free it."],
+      texts: {
+        fr: ["Arête en bas, blanc vers le sol", "Une arête blanche est en bas, sa case blanche tournée vers le sol.", "Fais un demi-tour de sa face : elle monte, sa case blanche sur le dessus. Si la place juste au-dessus est déjà un pétale, tourne d'abord le haut pour la libérer."],
+        nl: ["Randstuk onderaan, wit naar de grond", "Een wit randstuk zit onderaan, met het witte vakje naar de grond.", "Draai zijn kant een halve slag: het gaat naar boven, met het witte vakje bovenop. Is de plek er recht boven al een blaadje, draai dan eerst de bovenkant om die vrij te maken."],
+        en: ["Edge at the bottom, white facing the floor", "A white edge is at the bottom, its white square facing the floor.", "Give its face a half turn: it goes up, its white square on top. If the spot right above is already a petal, turn the top first to free it."],
+      },
+      moves: ["F2"],
+      piece: WHITE_GREEN,
     },
-    ["F2"],
-    DAISY,
-    WHITE_GREEN,
-  ),
-  demo(
-    1,
     {
-      fr: ["Arête dans la couronne du milieu", "Une arête blanche est dans la couronne du milieu.", "Tourne d'un quart la face de son autre couleur (ici l'avant), dans le sens qui amène le blanc en haut. Libère d'abord la place du haut où elle arrive."],
-      nl: ["Randstuk in de middelste laag", "Een wit randstuk zit in de middelste laag.", "Draai de kant van zijn andere kleur (hier de voorkant) een kwartslag, in de richting die het wit naar boven brengt. Maak eerst de plek bovenaan vrij waar het terechtkomt."],
-      en: ["Edge in the middle layer", "A white edge is in the middle layer.", "Give the face of its other color (here the front) a quarter turn, the way that brings the white up. First free the top spot it lands in."],
+      texts: {
+        fr: ["Arête dans la couronne du milieu", "Une arête blanche est dans la couronne du milieu.", "Tourne d'un quart la face de son autre couleur (ici l'avant), dans le sens qui amène le blanc en haut. Libère d'abord la place du haut où elle arrive."],
+        nl: ["Randstuk in de middelste laag", "Een wit randstuk zit in de middelste laag.", "Draai de kant van zijn andere kleur (hier de voorkant) een kwartslag, in de richting die het wit naar boven brengt. Maak eerst de plek bovenaan vrij waar het terechtkomt."],
+        en: ["Edge in the middle layer", "A white edge is in the middle layer.", "Give the face of its other color (here the front) a quarter turn, the way that brings the white up. First free the top spot it lands in."],
+      },
+      moves: ["F'"],
+      piece: WHITE_BLUE,
+      setup: ["U"],
+      turn: { fr: "Tourne le haut : la place du haut où elle va arriver se libère.", nl: "Draai de bovenkant: de plek bovenaan waar het terechtkomt, komt vrij.", en: "Turn the top: the top spot it will land in frees up." },
     },
-    ["F'"],
-    DAISY,
-    WHITE_GREEN,
-  ),
-  demo(
-    1,
     {
-      fr: ["Arête en haut, blanc sur le côté", "Une arête blanche est en haut, mais son blanc regarde sur le côté.", "Descends-la au milieu.", "Tourne le haut pour amener une place vide juste au-dessus d'elle, à droite : les pétales sont à l'abri.", "Remonte-la par le côté, sa case blanche sur le dessus : la marguerite est complète."],
-      nl: ["Randstuk boven, wit opzij", "Een wit randstuk zit boven, maar zijn wit kijkt opzij.", "Breng het naar het midden.", "Draai de bovenkant zodat er een lege plek recht boven het stuk komt, rechts: de blaadjes zijn veilig.", "Breng het langs de zijkant weer naar boven, met het witte vakje bovenop: het madeliefje is klaar."],
-      en: ["Edge on top, white on the side", "A white edge is on top, but its white faces the side.", "Bring it down to the middle.", "Turn the top to bring an empty spot right above it, on the right: the petals are safe.", "Bring it back up from the side, its white square on top: the daisy is complete."],
+      texts: {
+        fr: ["Arête en haut, blanc sur le côté", "Une arête blanche est en haut, mais son blanc regarde sur le côté.", "Descends-la au milieu.", "Tourne le haut pour amener une place vide juste au-dessus d'elle, à droite : les pétales sont à l'abri.", "Remonte-la par le côté, sa case blanche sur le dessus."],
+        nl: ["Randstuk boven, wit opzij", "Een wit randstuk zit boven, maar zijn wit kijkt opzij.", "Breng het naar het midden.", "Draai de bovenkant zodat er een lege plek recht boven het stuk komt, rechts: de blaadjes zijn veilig.", "Breng het langs de zijkant weer naar boven, met het witte vakje bovenop."],
+        en: ["Edge on top, white on the side", "A white edge is on top, but its white faces the side.", "Bring it down to the middle.", "Turn the top to bring an empty spot right above it, on the right: the petals are safe.", "Bring it back up from the side, its white square on top."],
+      },
+      moves: ["F", "U'", "R"],
+      piece: WHITE_ORANGE,
+      split: [1, 1, 1],
+      setup: ["U"],
+      turn: { fr: "Tourne le haut : l'arête vient devant toi.", nl: "Draai de bovenkant: het randstuk komt voor je.", en: "Turn the top: the edge comes to the front." },
     },
-    ["F", "U'", "R"],
-    DAISY,
-    WHITE_ORANGE,
-    [1, 1, 1],
-  ),
-  demo(
-    1,
     {
-      fr: ["Arête en bas, blanc sur le côté", "Une arête blanche est en bas, son blanc sur le côté.", "Tourne le haut pour mettre une place vide au-dessus d'elle : sa face peut tourner sans faire tomber de pétale.", "Un quart de tour de sa face la met au milieu.", "Tourne le haut pour amener la place vide juste au-dessus d'elle, à droite.", "La face d'à côté la monte, sa case blanche sur le dessus : la marguerite est complète."],
-      nl: ["Randstuk onderaan, wit opzij", "Een wit randstuk zit onderaan, met zijn wit opzij.", "Draai de bovenkant zodat er een lege plek boven het stuk komt: zijn kant kan draaien zonder een blaadje te laten vallen.", "Een kwartslag van zijn kant brengt het naar het midden.", "Draai de bovenkant zodat de lege plek recht boven het stuk komt, rechts.", "De kant ernaast brengt het naar boven, met het witte vakje bovenop: het madeliefje is klaar."],
-      en: ["Edge at the bottom, white on the side", "A white edge is at the bottom, its white on the side.", "Turn the top to put an empty spot above it: its face can turn without knocking a petal off.", "A quarter turn of its face puts it in the middle.", "Turn the top to bring the empty spot right above it, on the right.", "The face next to it brings it up, its white square on top: the daisy is complete."],
+      texts: {
+        fr: ["Arête en bas, blanc sur le côté", "Une arête blanche est en bas, son blanc sur le côté.", "Tourne le haut pour mettre une place vide au-dessus d'elle : sa face peut tourner sans faire tomber de pétale.", "Un quart de tour de sa face la met au milieu.", "Tourne le haut pour amener la place vide juste au-dessus d'elle, à droite.", "La face d'à côté la monte, sa case blanche sur le dessus : la marguerite est complète."],
+        nl: ["Randstuk onderaan, wit opzij", "Een wit randstuk zit onderaan, met zijn wit opzij.", "Draai de bovenkant zodat er een lege plek boven het stuk komt: zijn kant kan draaien zonder een blaadje te laten vallen.", "Een kwartslag van zijn kant brengt het naar het midden.", "Draai de bovenkant zodat de lege plek recht boven het stuk komt, rechts.", "De kant ernaast brengt het naar boven, met het witte vakje bovenop: het madeliefje is klaar."],
+        en: ["Edge at the bottom, white on the side", "A white edge is at the bottom, its white on the side.", "Turn the top to put an empty spot above it: its face can turn without knocking a petal off.", "A quarter turn of its face puts it in the middle.", "Turn the top to bring the empty spot right above it, on the right.", "The face next to it brings it up, its white square on top: the daisy is complete."],
+      },
+      moves: ["U", "F'", "U'", "R"],
+      piece: WHITE_RED,
+      split: [1, 1, 1, 1],
+      setup: ["y"],
+      turn: { fr: "Tourne tout le cube : l'arête vient devant toi.", nl: "Draai de hele kubus: het randstuk komt voor je.", en: "Turn the whole cube: the edge comes to the front." },
     },
-    ["U", "F'", "U'", "R"],
-    DAISY,
-    WHITE_ORANGE,
-    [1, 1, 1, 1],
-  ),
+  ]),
+
 
   // The whole cross, one petal a case, all on one cube: each case goes on where the last one stopped, the cube turning
   // so the next center faces you (no blind back turn).
@@ -158,85 +178,97 @@ export const COURSE: Group[] = [
   then(2, { fr: ["Le pétale blanc-bleu", "Le pétale blanc-bleu va sous le centre bleu.", "Tourne tout le cube : le centre bleu vient devant toi.", "Tourne le haut pour amener le pétale blanc-bleu juste au-dessus de lui.", "Demi-tour de la face avant : il descend."], nl: ["Het wit-blauwe blaadje", "Het wit-blauwe blaadje hoort onder het blauwe middenstuk.", "Draai de hele kubus: het blauwe middenstuk komt voor je.", "Draai de bovenkant tot het wit-blauwe blaadje er recht boven staat.", "Draai de voorkant een halve slag: het zakt."], en: ["The white-blue petal", "The white-blue petal goes under the blue center.", "Turn the whole cube: the blue center comes in front of you.", "Turn the top to bring the white-blue petal right above it.", "Half turn of the front face: it drops."] }, ["y", "U2", "F2"], WHITE_BLUE, [1, 1, 1]),
   then(2, { fr: ["Le pétale blanc-rouge", "Le dernier, blanc-rouge, va sous le centre rouge.", "Tourne tout le cube : le centre rouge vient devant toi.", "Tourne le haut pour amener le pétale blanc-rouge juste au-dessus de lui.", "Demi-tour de la face avant : il descend, la croix blanche est faite."], nl: ["Het wit-rode blaadje", "Het laatste, wit-rood, hoort onder het rode middenstuk.", "Draai de hele kubus: het rode middenstuk komt voor je.", "Draai de bovenkant tot het wit-rode blaadje er recht boven staat.", "Draai de voorkant een halve slag: het zakt, het witte kruis is klaar."], en: ["The white-red petal", "The last one, white-red, goes under the red center.", "Turn the whole cube: the red center comes in front of you.", "Turn the top to bring the white-red petal right above it.", "Half turn of the front face: it drops, the white cross is done."] }, ["y", "U", "F2"], WHITE_RED, [1, 1, 1]),
 
-  demo(
-    3,
+  // The white corners, one a case, all on one cube from the white cross: the cube turns to bring each next corner over
+  // its place.
+  ...chain(3, YELLOW_UP, [
     {
-      fr: ["Blanc à droite", "Le coin est en haut, juste au-dessus de sa place (en bas à droite devant toi), son blanc vers la droite. Sur ton cube, tourne le cube puis le haut pour arriver là.", "Répète le sexy move jusqu'à ce que le coin soit à sa place, blanc en bas. Blanc vers la droite : une fois."],
-      nl: ["Wit rechts", "Het hoekstuk zit boven, recht boven zijn plek (rechtsonder vooraan), met zijn wit naar rechts. Draai op je eigen kubus eerst de kubus en dan de bovenkant om daar te komen.", "Herhaal de sexy move tot het hoekstuk op zijn plek zit, met wit onderaan. Wit naar rechts: één keer."],
-      en: ["White on the right", "The corner is on top, right above its place (bottom right in front of you), its white facing right. On your cube, turn the cube and then the top to get there.", "Repeat the sexy move until the corner sits in its place, white at the bottom. White facing right: once."],
+      texts: {
+        fr: ["Blanc à droite", "Le coin est en haut, juste au-dessus de sa place (en bas à droite devant toi), son blanc vers la droite. Sur ton cube, tourne le cube puis le haut pour arriver là.", "Répète le sexy move jusqu'à ce que le coin soit à sa place, blanc en bas. Blanc vers la droite : une fois."],
+        nl: ["Wit rechts", "Het hoekstuk zit boven, recht boven zijn plek (rechtsonder vooraan), met zijn wit naar rechts. Draai op je eigen kubus eerst de kubus en dan de bovenkant om daar te komen.", "Herhaal de sexy move tot het hoekstuk op zijn plek zit, met wit onderaan. Wit naar rechts: één keer."],
+        en: ["White on the right", "The corner is on top, right above its place (bottom right in front of you), its white facing right. On your cube, turn the cube and then the top to get there.", "Repeat the sexy move until the corner sits in its place, white at the bottom. White facing right: once."],
+      },
+      moves: SEXY,
+      piece: WHITE_GREEN_ORANGE,
     },
-    SEXY,
-    YELLOW_UP,
-    WHITE_GREEN_ORANGE,
-  ),
-  demo(
-    3,
     {
-      fr: ["Blanc en haut", "Même position, mais le blanc du coin regarde vers le haut.", "Même règle : le sexy move 3 fois."],
-      nl: ["Wit boven", "Zelfde positie, maar het wit van het hoekstuk kijkt naar boven.", "Zelfde regel: 3 keer de sexy move."],
-      en: ["White on top", "Same position, but the corner's white faces up.", "Same rule: the sexy move 3 times."],
+      texts: {
+        fr: ["Blanc en haut", "Même position, mais le blanc du coin regarde vers le haut.", "Même règle : le sexy move 3 fois."],
+        nl: ["Wit boven", "Zelfde positie, maar het wit van het hoekstuk kijkt naar boven.", "Zelfde regel: 3 keer de sexy move."],
+        en: ["White on top", "Same position, but the corner's white faces up.", "Same rule: the sexy move 3 times."],
+      },
+      moves: times(SEXY, 3),
+      piece: "BLU",
+      setup: ["y"],
+      turn: { fr: "Tourne tout le cube : le coin suivant vient en haut à droite devant toi, juste au-dessus de sa place.", nl: "Draai de hele kubus: het volgende hoekstuk komt rechtsboven vooraan, recht boven zijn plek.", en: "Turn the whole cube: the next corner comes to the top right in front of you, right above its place." },
     },
-    times(SEXY, 3),
-    YELLOW_UP,
-    WHITE_GREEN_ORANGE,
-  ),
-  demo(
-    3,
     {
-      fr: ["Blanc devant", "Même position, le blanc du coin vers toi.", "Même règle : le sexy move 5 fois."],
-      nl: ["Wit vooraan", "Zelfde positie, met het wit van het hoekstuk naar je toe.", "Zelfde regel: 5 keer de sexy move."],
-      en: ["White in front", "Same position, the corner's white facing you.", "Same rule: the sexy move 5 times."],
+      texts: {
+        fr: ["Blanc devant", "Même position, le blanc du coin vers toi.", "Même règle : le sexy move 5 fois."],
+        nl: ["Wit vooraan", "Zelfde positie, met het wit van het hoekstuk naar je toe.", "Zelfde regel: 5 keer de sexy move."],
+        en: ["White in front", "Same position, the corner's white facing you.", "Same rule: the sexy move 5 times."],
+      },
+      moves: times(SEXY, 5),
+      piece: "BRU",
+      setup: ["y"],
+      turn: { fr: "Tourne tout le cube : le coin suivant vient en haut à droite devant toi, juste au-dessus de sa place.", nl: "Draai de hele kubus: het volgende hoekstuk komt rechtsboven vooraan, recht boven zijn plek.", en: "Turn the whole cube: the next corner comes to the top right in front of you, right above its place." },
     },
-    times(SEXY, 5),
-    YELLOW_UP,
-    WHITE_GREEN_ORANGE,
-  ),
-  demo(
-    3,
     {
-      fr: ["Coin en bas mal tourné", "Le coin est déjà à sa place, mais mal tourné.", "La même règle le répare : le sexy move 2 ou 4 fois. S'il est coincé à une autre place du bas, mets cette place en bas à droite devant toi et fais une fois le sexy move : il remonte, et tu reprends un des cas précédents."],
-      nl: ["Hoekstuk onderaan verkeerd gedraaid", "Het hoekstuk zit al op zijn plek, maar verkeerd gedraaid.", "Dezelfde regel herstelt het: 2 of 4 keer de sexy move. Zit het vast op een andere plek onderaan, zet die plek dan rechtsonder vooraan en doe één keer de sexy move: het komt naar boven, en je gaat verder met een van de vorige gevallen."],
-      en: ["Bottom corner twisted", "The corner is already in its place, but twisted.", "The same rule fixes it: the sexy move 2 or 4 times. If it is stuck in another bottom spot, put that spot at the bottom right in front of you and do the sexy move once: it comes up, and you go on with one of the previous cases."],
+      texts: {
+        fr: ["Coin en bas mal tourné", "Le coin est déjà à sa place, mais mal tourné.", "La même règle le répare : le sexy move 2 ou 4 fois. S'il est coincé à une autre place du bas, mets cette place en bas à droite devant toi et fais une fois le sexy move : il remonte, et tu reprends un des cas précédents."],
+        nl: ["Hoekstuk onderaan verkeerd gedraaid", "Het hoekstuk zit al op zijn plek, maar verkeerd gedraaid.", "Dezelfde regel herstelt het: 2 of 4 keer de sexy move. Zit het vast op een andere plek onderaan, zet die plek dan rechtsonder vooraan en doe één keer de sexy move: het komt naar boven, en je gaat verder met een van de vorige gevallen."],
+        en: ["Bottom corner twisted", "The corner is already in its place, but twisted.", "The same rule fixes it: the sexy move 2 or 4 times. If it is stuck in another bottom spot, put that spot at the bottom right in front of you and do the sexy move once: it comes up, and you go on with one of the previous cases."],
+      },
+      moves: times(SEXY, 2),
+      piece: "FRU",
+      setup: ["y"],
+      turn: { fr: "Tourne tout le cube : le dernier coin, mal tourné, vient en bas à droite devant toi.", nl: "Draai de hele kubus: het laatste hoekstuk, verkeerd gedraaid, komt rechtsonder vooraan.", en: "Turn the whole cube: the last corner, twisted, comes to the bottom right in front of you." },
     },
-    times(SEXY, 2),
-    YELLOW_UP,
-    WHITE_GREEN_ORANGE,
-  ),
+  ]),
 
-  demo(
-    4,
+  // The second layer, one edge a case, all on one cube from the first layer.
+  ...chain(4, YELLOW_UP, [
     {
-      fr: ["Vers la droite", "Une arête du haut sans jaune : son vert est au-dessus du centre vert, son orange regarde vers le haut, et le centre orange est à droite. Sur ton cube, tourne le cube et le haut pour arriver là.", "Fais l'insertion à droite : l'arête glisse à sa place, entre le vert et l'orange."],
-      nl: ["Naar rechts", "Een randstuk bovenaan zonder geel: zijn groen staat boven het groene middenstuk, zijn oranje kijkt naar boven, en het oranje middenstuk zit rechts. Draai op je eigen kubus de kubus en de bovenkant om daar te komen.", "Doe het invoegen naar rechts: het randstuk schuift op zijn plek, tussen groen en oranje."],
-      en: ["To the right", "A top edge without yellow: its green is above the green center, its orange faces up, and the orange center is on the right. On your cube, turn the cube and the top to get there.", "Do the right insert: the edge slides into its place, between green and orange."],
+      texts: {
+        fr: ["Vers la droite", "Une arête du haut sans jaune : son vert est au-dessus du centre vert, son orange regarde vers le haut, et le centre orange est à droite. Sur ton cube, tourne le cube et le haut pour arriver là.", "Fais l'insertion à droite : l'arête glisse à sa place, entre le vert et l'orange."],
+        nl: ["Naar rechts", "Een randstuk bovenaan zonder geel: zijn groen staat boven het groene middenstuk, zijn oranje kijkt naar boven, en het oranje middenstuk zit rechts. Draai op je eigen kubus de kubus en de bovenkant om daar te komen.", "Doe het invoegen naar rechts: het randstuk schuift op zijn plek, tussen groen en oranje."],
+        en: ["To the right", "A top edge without yellow: its green is above the green center, its orange faces up, and the orange center is on the right. On your cube, turn the cube and the top to get there.", "Do the right insert: the edge slides into its place, between green and orange."],
+      },
+      moves: RIGHT,
+      piece: GREEN_ORANGE,
     },
-    RIGHT,
-    YELLOW_UP,
-    GREEN_ORANGE,
-  ),
-  demo(
-    4,
     {
-      fr: ["Vers la gauche", "Même chose, mais sa couleur du dessus (rouge) est celle du centre de gauche.", "Fais l'insertion à gauche : l'arête glisse à sa place, entre le vert et le rouge."],
-      nl: ["Naar links", "Hetzelfde, maar zijn kleur bovenop (rood) is die van het linker middenstuk.", "Doe het invoegen naar links: het randstuk schuift op zijn plek, tussen groen en rood."],
-      en: ["To the left", "Same thing, but its top color (red) is the left center's.", "Do the left insert: the edge slides into its place, between green and red."],
+      texts: {
+        fr: ["Vers la gauche", "Même chose, mais sa couleur du dessus (orange) est celle du centre de gauche.", "Fais l'insertion à gauche : l'arête glisse à sa place, entre le bleu et l'orange."],
+        nl: ["Naar links", "Hetzelfde, maar zijn kleur bovenop (oranje) is die van het linker middenstuk.", "Doe het invoegen naar links: het randstuk schuift op zijn plek, tussen blauw en oranje."],
+        en: ["To the left", "Same thing, but its top color (orange) is the left center's.", "Do the left insert: the edge slides into its place, between blue and orange."],
+      },
+      moves: LEFT,
+      piece: "BL",
+      setup: ["y2"],
+      turn: { fr: "Tourne tout le cube d'un demi-tour : l'arête bleu-orange vient devant toi, au-dessus du centre bleu.", nl: "Draai de hele kubus een halve slag: het blauw-oranje randstuk komt voor je, boven het blauwe middenstuk.", en: "Turn the whole cube half a turn: the blue-orange edge comes to the front, above the blue center." },
     },
-    LEFT,
-    YELLOW_UP,
-    GREEN_RED,
-  ),
-  demo(
-    4,
     {
-      fr: ["Arête coincée au milieu", "Une arête du milieu est coincée : à sa place mais à l'envers, ou à la place d'une autre.", "Mets-la à droite devant toi et fais une fois l'insertion à droite : elle remonte en haut.", "Tourne le haut jusqu'à ce que sa couleur de côté soit au-dessus du centre de même couleur.", "Sa couleur du dessus est celle du centre de droite : insertion à droite, elle glisse à sa place."],
-      nl: ["Randstuk vast in het midden", "Een randstuk in het midden zit vast: op zijn plek maar omgekeerd, of op de plek van een ander.", "Zet het rechts vooraan en doe één keer het invoegen naar rechts: het komt weer boven.", "Draai de bovenkant tot zijn kleur aan de zijkant boven het middenstuk van dezelfde kleur staat.", "Zijn kleur bovenop is die van het middenstuk rechts: invoegen naar rechts, het schuift op zijn plek."],
-      en: ["Edge stuck in the middle", "A middle edge is stuck: in its place but flipped, or in another edge's place.", "Put it at the front right and do the right insert once: it comes back up.", "Turn the top until its side color sits above the center of the same color.", "Its top color is the right center's: right insert, it slides into its place."],
+      texts: {
+        fr: ["Arête coincée au milieu", "Une arête du milieu est coincée : à sa place mais à l'envers, ou à la place d'une autre.", "Mets-la à droite devant toi et fais une fois l'insertion à droite : elle remonte en haut.", "Tourne le haut jusqu'à ce que sa couleur de côté soit au-dessus du centre de même couleur.", "Sa couleur du dessus est celle du centre de droite : insertion à droite, elle glisse à sa place."],
+        nl: ["Randstuk vast in het midden", "Een randstuk in het midden zit vast: op zijn plek maar omgekeerd, of op de plek van een ander.", "Zet het rechts vooraan en doe één keer het invoegen naar rechts: het komt weer boven.", "Draai de bovenkant tot zijn kleur aan de zijkant boven het middenstuk van dezelfde kleur staat.", "Zijn kleur bovenop is die van het middenstuk rechts: invoegen naar rechts, het schuift op zijn plek."],
+        en: ["Edge stuck in the middle", "A middle edge is stuck: in its place but flipped, or in another edge's place.", "Put it at the front right and do the right insert once: it comes back up.", "Turn the top until its side color sits above the center of the same color.", "Its top color is the right center's: right insert, it slides into its place."],
+      },
+      moves: [...RIGHT, "U2", ...RIGHT],
+      piece: "BR",
+      split: [8, 1, 8],
     },
-    [...RIGHT, "U2", ...RIGHT],
-    play(EDGE_FLIPPED_IN_SLOT, [...RIGHT, "U2", ...RIGHT]),
-    GREEN_ORANGE,
-    [8, 1, 8],
-  ),
+    {
+      texts: {
+        fr: ["La dernière arête", "La dernière arête du haut sans jaune va entre le rouge et le vert.", "Son rouge est au-dessus du centre rouge, son vert regarde vers le haut, et le centre vert est à droite : insertion à droite, la deuxième couronne est finie."],
+        nl: ["Het laatste randstuk", "Het laatste randstuk bovenaan zonder geel hoort tussen rood en groen.", "Zijn rood staat boven het rode middenstuk, zijn groen kijkt naar boven, en het groene middenstuk zit rechts: invoegen naar rechts, de tweede laag is klaar."],
+        en: ["The last edge", "The last top edge without yellow goes between red and green.", "Its red is above the red center, its green faces up, and the green center is on the right: right insert, the second layer is done."],
+      },
+      moves: RIGHT,
+      piece: GREEN_RED,
+      setup: ["y"],
+      turn: { fr: "Tourne tout le cube : la dernière arête vient devant toi, au-dessus du centre rouge.", nl: "Draai de hele kubus: het laatste randstuk komt voor je, boven het rode middenstuk.", en: "Turn the whole cube: the last edge comes to the front, above the red center." },
+    },
+  ]),
 
   demo(
     5,

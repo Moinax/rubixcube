@@ -291,7 +291,6 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
                             <Colored text={seen} />
                           </span>
                         </span>
-                        <Chevron className="mt-2 self-start text-mist sm:hidden" />
                         <span className="col-span-2 col-start-2 flex items-center justify-center gap-6 rounded-xl bg-plastic/60 px-2 py-1.5 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:gap-1 sm:bg-transparent sm:p-0">
                           {[
                             [m ? MILESTONES[m] : SCRAMBLED, m, tr({ fr: "ton cube", nl: "je kubus", en: "your cube" })] as const,

@@ -236,10 +236,11 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
       {/* One column a comfortable line long: the drawings, then the text under them. */}
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 p-4 pb-10 md:px-8">
 
-        <div className="grid gap-4 md:gap-6">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:gap-6">
           {/* Where you are is a list of drawings already: it takes the whole width. */}
           {/* The same size presented or read: switching between them never moves the cubes. */}
-          {!where && <div className="mx-auto w-full max-w-56 md:max-w-md">{beforeAfter}</div>}
+          {/* On a wide screen they take the height the page leaves them, wider than the text if there is room. */}
+          {!where && <div className="w-full max-w-56 justify-self-center md:w-[min(80rem,calc(100vw-4rem),max(28rem,calc((100dvh-29rem)*2)))] md:max-w-none">{beforeAfter}</div>}
 
           <section className={`rounded-2xl border border-edge bg-shell p-4 text-[15px] leading-relaxed md:p-5 [&>:first-child]:mt-0 ${where ? "max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : ""}`}>
             {/* The menu above names the page: only the idea's page, called something else there, keeps a title. */}

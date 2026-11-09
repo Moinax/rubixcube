@@ -70,24 +70,29 @@ const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
 /** How to do a stage, in words, over the page: rising from the bottom on a phone, from the right on a wide screen,
  * where the cube stays in view beside it. Closed by ✕, a tap outside it, or Escape. */
 function HowSheet({ title, onClose, children }: { title: ReactNode; onClose: () => void; children: ReactNode }) {
+  // It slides out before it goes: the parent drops it once the panel's own animation ends.
+  const [leaving, setLeaving] = useState(false);
+  const close = () => setLeaving(true);
   useEffect(() => {
-    const close = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    addEventListener("keydown", close);
-    return () => removeEventListener("keydown", close);
-  }, [onClose]);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setLeaving(true);
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, []);
+  const CLOSE = tr({ fr: "Fermer", nl: "Sluiten", en: "Close" });
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal>
-      <button aria-label={tr({ fr: "Fermer", nl: "Sluiten", en: "Close" })} onClick={onClose} className="absolute inset-0 bg-black/60" />
-      <section className="absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col rounded-t-3xl border-t border-edge bg-shell shadow-2xl shadow-black md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:w-[26rem] md:rounded-none md:border-t-0 md:border-l">
+      <button aria-label={CLOSE} onClick={close} className={`absolute inset-0 bg-black/60 ${leaving ? "fade-out" : "fade-in"}`} />
+      <section
+        onAnimationEnd={(e) => leaving && e.target === e.currentTarget && onClose()}
+        className={`absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col rounded-t-3xl border-t border-edge bg-shell shadow-2xl shadow-black md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:w-[26rem] md:rounded-none md:border-t-0 md:border-l ${leaving ? "drawer-out" : "drawer-in"}`}
+      >
         <header className="flex flex-none items-center gap-3 px-5 pt-4 pb-2">
           <h2 className="min-w-0 flex-1 font-semibold">{title}</h2>
-          <button onClick={onClose} aria-label={tr({ fr: "Fermer", nl: "Sluiten", en: "Close" })} className="grid size-9 flex-none place-items-center rounded-full border border-edge text-mist hover:text-chalk">
+          <button onClick={close} aria-label={CLOSE} className="grid size-9 flex-none place-items-center rounded-full border border-edge text-mist hover:text-chalk">
             ✕
           </button>
         </header>
-        <div className="overflow-y-auto px-5 pb-5 text-[15px] leading-relaxed">
-          {children}
-        </div>
+        <div className="overflow-y-auto px-5 pb-5 text-[15px] leading-relaxed">{children}</div>
       </section>
     </div>
   );

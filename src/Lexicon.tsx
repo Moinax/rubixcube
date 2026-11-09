@@ -78,14 +78,18 @@ export default function Lexicon({ tab, focus, onClose }: { tab: Tab; focus?: str
   const show = (d: { moves?: string[]; piece?: string }) => setDemo({ ...d, tap: demo.tap + 1 });
   const pressed = (d: { moves?: string[]; piece?: string }) => `${demo.moves}|${demo.piece}` === `${d.moves}|${d.piece}`;
   useEffect(() => dialog.current!.showModal(), []);
-  const close = () => dialog.current!.close();
+  // It slides or fades out before it closes: the dialog closes once its own animation ends.
+  const [leaving, setLeaving] = useState(false);
+  const close = () => setLeaving(true);
 
   return (
     <dialog
       ref={dialog}
       onClose={onClose}
+      onCancel={(e) => (e.preventDefault(), close())} // Escape
+      onAnimationEnd={(e) => leaving && e.target === e.currentTarget && !e.pseudoElement && dialog.current!.close()}
       onClick={(e) => e.target === dialog.current && close()} // a tap on the backdrop
-      className="m-0 mt-auto max-h-[88dvh] w-full max-w-none rounded-t-3xl border border-edge bg-shell p-0 text-chalk backdrop:bg-black/60 md:m-auto md:max-h-[85dvh] md:w-[min(56rem,92vw)] md:rounded-3xl"
+      className={`m-0 mt-auto max-h-[88dvh] w-full max-w-none rounded-t-3xl border border-edge bg-shell p-0 text-chalk backdrop:bg-black/60 md:m-auto md:max-h-[85dvh] md:w-[min(56rem,92vw)] md:rounded-3xl ${leaving ? "modal-out backdrop:fade-out" : "modal-in backdrop:fade-in"}`}
     >
       <div className="flex max-h-[inherit] flex-col md:grid md:grid-cols-[16rem_1fr]">
         <div className="relative h-40 flex-none bg-plastic md:aspect-square md:h-auto md:self-start">

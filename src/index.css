@@ -101,3 +101,65 @@ body {
     stroke-dashoffset: 0;
   }
 }
+
+/* Panels come and go: a sheet rises from the bottom on a phone; on a wide screen a drawer slides in from the right
+   and a dialog pops in the middle. Their backdrop fades along. */
+@keyframes rise {
+  from { transform: translateY(100%); }
+}
+@keyframes sink {
+  to { transform: translateY(100%); }
+}
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+}
+@keyframes slide-out {
+  to { transform: translateX(100%); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+}
+@keyframes pop-out {
+  to { opacity: 0; transform: translateY(12px) scale(0.97); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+@utility drawer-in {
+  animation: rise 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  @variant md {
+    animation-name: slide-in;
+  }
+}
+@utility drawer-out {
+  animation: sink 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  @variant md {
+    animation-name: slide-out;
+  }
+}
+@utility modal-in {
+  animation: rise 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  @variant md {
+    animation: pop-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+@utility modal-out {
+  animation: sink 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  @variant md {
+    animation: pop-out 160ms ease-in forwards;
+  }
+}
+@utility fade-in {
+  animation: fade-in 320ms ease-out;
+}
+@utility fade-out {
+  animation: fade-out 220ms ease-in forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-in, .drawer-out, .modal-in, .modal-out, .fade-in, .fade-out, ::backdrop {
+    animation-duration: 1ms !important;
+  }
+}

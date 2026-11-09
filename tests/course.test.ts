@@ -175,7 +175,12 @@ test("every case ends on its stage done, through the states its steps name", () 
   };
   // A demo: a case with its own cube, and the cases that go on from it on the same cube (the cross, petal by petal).
   const demos = COURSE.reduce<Group[][]>((all, g) => (g.from ? [...all, [g]] : (all.at(-1)!.push(g), all)), []);
-  for (const d of demos.filter(([g]) => g.stage > 0)) assert.ok(done[d[0].stage](d.flatMap((g) => g.moves).reduce(applyMove, d[0].from!)), d.at(-1)!.title);
+  for (const d of demos.filter(([g]) => g.stage > 0)) {
+    const [{ stage, from, title }] = d;
+    // Each starts where the stage before it ends, with its own stage not done yet.
+    if (stage > 1) assert.ok(done[stage - 1](from!) && !done[stage](from!), title);
+    assert.ok(done[stage](d.flatMap((g) => g.moves).reduce(applyMove, from!)), d.at(-1)!.title);
+  }
   const after = (title: string, n: number) => startOf(title).at(n);
   assert.deepEqual(yellowEdgesUp(after("Le point", 13)), [true, true, false, false]); // a line, held horizontal
   assert.deepEqual(edgesAligned(after("Deux en face", 10)), [false, true, true, false]); // two neighbors, right and back

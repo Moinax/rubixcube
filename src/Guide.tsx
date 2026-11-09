@@ -264,7 +264,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   // parts: white squares that came onto the bottom face, where the method builds; the part's whole-cube turns are
   // applied to where it started first, so turning the cube shows nothing new. Its key never meets an instruction's start.
   const endPeek = (() => {
-    if (!learn || step === 0 || (!atResult && newCubeAt(step))) return;
+    if (!learn || step === 0 || (!atResult && resultAt(step))) return;
     const g = flat[step - 1].group;
     const worked = groups[g];
     const after = atResult ? ends[g] : states[step];
@@ -310,9 +310,13 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const cases = course ? groups.map((g, i) => ({ g, first: flat.findIndex((f) => f.group === i) })).filter(({ g }) => g.stage === current) : [];
   // While a move plays, the outlines follow the piece it works on, from where it starts; while the cube glances at
   // where an instruction just put it, they stay on it, and only then move on to the next one.
-  const [glanced, setGlanced] = useState<number>();
-  useLayoutEffect(() => setGlanced(undefined), [step]); // coming back to a step glances again
-  const worked = anim?.group ?? (endPeek && endPeek.key !== glanced ? endPeek.worked : group);
+  // The glances of a step chain, each once: where the last instruction put its piece, below at a stage's start, then
+  // the next instruction's hidden piece.
+  const [glanced, setGlanced] = useState<number[]>([]);
+  useLayoutEffect(() => setGlanced([]), [step]); // coming back to a step glances again
+  const peek = [endPeek, startsBelow && { from: [0, -1, 0] as Vec, key: step + 0.5 }, hidden && { from: hidden, key: step }]
+    .find((p) => p && !glanced.includes(p.key)) || undefined;
+  const worked = anim?.group ?? (endPeek && peek === endPeek ? endPeek.worked : group);
   const { ref: pace } = usePopover(delay);
   // What a result stop closes: the last demo of a stage, or one demo among its cases.
   const ending = !atResult ? undefined : stageEndAt(step) ? "stage" : "demo";
@@ -588,8 +592,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               pair={worked?.pair}
               pairPlace={worked && slots.get(worked)!.pair}
               grip={!!worked?.fingers}
-              peek={endPeek ?? (startsBelow && glanced !== step + 0.5 ? { from: [0, -1, 0], key: step + 0.5 } : hidden && { from: hidden, key: step })}
-              onPeekEnd={setGlanced}
+              peek={peek}
+              onPeekEnd={(key) => setGlanced((g) => [...g, key])}
               next={worked?.fingers && move}
             />
           </div>

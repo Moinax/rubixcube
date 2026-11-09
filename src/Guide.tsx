@@ -260,35 +260,33 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const { ref: casePicker } = usePopover(step);
 
   const piece = group?.piece;
-  // At the end of each part of an instruction (and of the instruction itself), what it just put out of view is
-  // glanced at: white squares that came onto the bottom face, where the method builds, like a petal dropped into the
-  // cross. The part's whole-cube turns are applied to where it started first, so turning the cube shows nothing new.
-  // Its key never meets an instruction's start.
+  // What a move just put out of view is glanced at. A piece the instruction works on, on the move that lands it home
+  // (in its place, turned right) to stay there: the glance looks from the opposite side of each hidden face it shows.
+  // An instruction with no single piece (the four petals dropped one after the other), at the end of each of its
+  // parts: white squares that came onto the bottom face, where the method builds; the part's whole-cube turns are
+  // applied to where it started first, so turning the cube shows nothing new. Its key never meets an instruction's start.
   const endPeek = (() => {
-    if (!learn || step === 0) return;
-    // The end of the instruction just played (a result stop, the end, or the next one starting on the same cube), or
-    // of one of its parts.
-    const closing = atResult || done || step === groupStart;
-    const end = closing || (partEnds.includes(step) && step > groupStart) ? step : -1;
-    if (end < 0) return;
-    const worked = closing ? groups[flat[step - 1].group] : group!;
-    const from = closing ? flat.findIndex((f) => f.group === flat[step - 1].group) : end - parts[partEnds.indexOf(end)].count;
-    const turns = flat.slice(from, end).map((f) => f.move).filter(isRotation);
-    const before = play(states[from], turns);
-    const after = atResult ? ends[flat[step - 1].group] : states[end];
+    if (!learn || step === 0 || (!atResult && newCubeAt(step))) return;
+    const g = flat[step - 1].group;
+    const worked = groups[g];
+    const after = atResult ? ends[g] : states[step];
     const key = -1 - step - (atResult ? 0.5 : 0);
-    // A piece the instruction works on, just landed home (in its place, turned right) where the view doesn't reach:
-    // the glance looks from the opposite side of each hidden face it shows.
     const tracked = [worked.piece, worked.pair].filter((p): p is string => !!p);
     if (tracked.length) {
+      const last = flat.findLastIndex((f) => f.group === g);
+      const rest = [...states.slice(step, last + 1), ends[g]];
       for (const p of tracked) {
-        if (isHome(before, p) || !isHome(after, p)) continue;
+        if (isHome(states[step - 1], p) || !rest.every((s) => isHome(s, p))) continue;
         const pos = findPiece(after, p);
         if (pos.some((v) => v < 0)) return { from: pos.map((v) => (v < 0 ? -1 : 0)) as Vec, key, worked };
       }
       return;
     }
-    // No single piece (the four petals dropped one after the other): white squares that came onto the bottom face.
+    const closing = atResult || done || step === groupStart;
+    if (!closing && !(partEnds.includes(step) && step > groupStart)) return;
+    const from = closing ? flat.findIndex((f) => f.group === g) : step - parts[partEnds.indexOf(step)].count;
+    const turns = flat.slice(from, step).map((f) => f.move).filter(isRotation);
+    const before = play(states[from], turns);
     const whiteBelow = (s: string) => STICKERS.filter((t, i) => t.normal[1] === -1 && s[i] === "U").length;
     return whiteBelow(after) > whiteBelow(before) ? { from: [0, -1, 0] as Vec, key, worked } : undefined;
   })();

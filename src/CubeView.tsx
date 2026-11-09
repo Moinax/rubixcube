@@ -208,7 +208,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
   useEffect(() => {
     const ctx = scene.current!;
     // The fingers that travel with the turning face, and where each rests in the grip.
-    let riding: { dot: THREE.Object3D; home: THREE.Vector3; facing: THREE.Quaternion }[] = [];
+    let riding: THREE.Object3D[] = [];
     /** The cube `s`, with the cubies that `move` turns in the returned layer. */
     const build = (s: string, move?: string) => {
       const ats = tracked.map(([p]) => `${findPiece(s, p)}`);
@@ -246,7 +246,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
           dot.lookAt(dot.position.clone().add(new THREE.Vector3(...normal)));
           const rides = move && plays && inTheWay;
           (rides ? layer : ctx.root).add(dot);
-          if (rides) riding.push({ dot, home: dot.position.clone(), facing: dot.quaternion.clone() });
+          if (rides) riding.push(dot);
         }
       // A place stays put while a face turns through it, and only follows the whole cube.
       for (const [, slot] of tracked) {
@@ -281,23 +281,14 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
           ctx.onFrame = undefined;
           return ended.current?.();
         }
-        // The fingers go back to the grip before the next move, the way the wrist turns back: around the move's own
-        // axis, over the cube's surface, never through it.
+        // The fingers that turned with the face stay a moment where the move left them, then vanish, to be back in the
+        // grip when the cube is shown again for the next move: no trip back that would cross the cube.
         const back = riding;
-        for (const { dot } of back) ctx.root.add(dot);
         const landed = t;
-        const [turn, out] = [new THREE.Quaternion(), new THREE.Vector3()];
         ctx.onFrame = (now) => {
-          const r = ease(Math.min(1, (now - landed) / 350));
-          turn.setFromAxisAngle(vector, angle * (1 - r));
-          for (const { dot, home, facing } of back) {
-            dot.position.copy(home).applyQuaternion(turn);
-            // Lifted off the surface on the way, the most halfway, so it clears the cube's edges.
-            out.copy(dot.position).addScaledVector(vector, -dot.position.dot(vector)).setLength(0.6 * Math.sqrt(Math.sin(Math.PI * r)));
-            dot.position.add(out);
-            dot.quaternion.copy(turn).multiply(facing);
-          }
-          if (r < 1) return;
+          if (now - landed < 300) return;
+          for (const dot of back) dot.visible = false;
+          if (now - landed < 420) return;
           ctx.onFrame = undefined;
           ended.current?.();
         };

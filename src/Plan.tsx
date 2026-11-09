@@ -5,7 +5,7 @@ import Lexicon, { LexiconButton } from "./Lexicon";
 import { BAR_MENU, Chevron, IsoCube, MiniFace, TopBar, usePopover } from "./Home";
 import { Colored } from "./Scanner";
 import { STAGES } from "./beginner";
-import { CASES, MILESTONES, PLAN, PRINCIPLES, SCRAMBLED, SEEN, SEEN_FROM_BELOW, TOPS } from "./plan";
+import { CASES, ENDS, MILESTONES, PLAN, PRINCIPLES, SCRAMBLED, SEEN, SEEN_FROM_BELOW, STARTS, TOPS } from "./plan";
 import { tr } from "./i18n";
 
 const LABEL = "text-[11px] font-bold tracking-wide text-mist uppercase";
@@ -24,18 +24,25 @@ type Props = {
   onBack: () => void;
 };
 
-/** The cube at a milestone, with what it shows; greyed stickers can be anything. */
-function Milestone({ at, label }: { at: number; label: string }) {
-  const below = SEEN_FROM_BELOW.includes(at);
+/** The cube at a milestone; greyed stickers can be anything. */
+function Milestone({ at }: { at: number }) {
   return (
-    <figure className="@container min-w-0 text-center">
-      <div className="aspect-square w-full">
-        <CubeView state={MILESTONES[at]} below={below} />
-      </div>
-      {/* The captions grow with the cube they name. */}
-      <figcaption className="text-[clamp(0.875rem,5cqi,1.375rem)] font-semibold">{label}</figcaption>
-      <p className={`text-[clamp(0.75rem,3.5cqi,1rem)] text-mist ${below ? "" : "invisible"}`}>{tr({ fr: "vu du dessous", nl: "van onderen gezien", en: "seen from below" })}</p>
-    </figure>
+    <div className="aspect-square w-full min-w-0">
+      <CubeView state={MILESTONES[at]} below={SEEN_FROM_BELOW.includes(at)} />
+    </div>
+  );
+}
+
+/** A milestone named in a short sentence, under its cube and growing with it; "seen from below" when it is. */
+function MilestoneName({ at, label }: { at: number; label: string }) {
+  return (
+    <div className="@container min-w-0 self-start text-center">
+      <p className="text-[clamp(0.8125rem,4.5cqi,1.25rem)] leading-snug font-semibold text-balance">{label}</p>
+      {/* Kept, unseen, when it is not: the page stays the same height from stage to stage. */}
+      <p className={`text-[clamp(0.75rem,3.5cqi,1rem)] text-mist ${SEEN_FROM_BELOW.includes(at) ? "" : "invisible"}`}>
+        {tr({ fr: "vu du dessous", nl: "van onderen gezien", en: "seen from below" })}
+      </p>
+    </div>
   );
 }
 
@@ -100,18 +107,17 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
   }, [watched]);
   const back = { label: tr({ fr: "Les bases", nl: "De basis", en: "The basics" }), onClick: onBack };
   // What the stage starts from and ends on: its presentation.
+  const [from, to] = intro ? [0, LAST] : [stage - 1, stage];
   const beforeAfter = (
     <div>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
-        <Milestone
-          at={intro ? 0 : stage - 1}
-          label={intro ? tr({ fr: "Au départ", nl: "Bij het begin", en: "At the start" }) : tr({ fr: "Tu pars de", nl: "Je begint bij", en: "You start from" })}
-        />
-        <Chevron className="mb-8 text-mist" />
-        <Milestone
-          at={intro ? LAST : stage}
-          label={intro ? tr({ fr: "À la fin", nl: "Op het einde", en: "At the end" }) : tr({ fr: "Tu arrives à", nl: "Je komt uit bij", en: "You end up with" })}
-        />
+      {/* The cubes on one row, their names on the next: a name a line longer never moves its cube. */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-1">
+        <Milestone at={from} />
+        <Chevron className="text-mist" />
+        <Milestone at={to} />
+        <MilestoneName at={from} label={STARTS[from]} />
+        <span />
+        <MilestoneName at={to} label={ENDS[to]} />
       </div>
       <p className="mt-3 flex items-start justify-center gap-2 text-center text-xs text-mist">
         <i className="mt-0.5 size-3 flex-none rounded-[3px] " style={{ background: BLANK }} />
@@ -308,7 +314,8 @@ export default function Plan({ stage, view, cases: step, onStage, onView, onCase
             ) : (
               <>
                 {/* Where the stage leads, set apart: what you aim at says more than the pieces you hunt. */}
-                <p className="mt-2">
+                {/* Two lines kept, whatever its length: the page, centered, stays put from stage to stage. */}
+                <p className="mt-2 md:min-h-[3.25em]">
                   <span className="text-place">{tr({ fr: "C'est fini quand… ", nl: "Klaar wanneer… ", en: "Done when… " })}</span>
                   <Colored text={plan.done} />
                 </p>

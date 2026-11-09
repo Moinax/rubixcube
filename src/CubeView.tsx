@@ -281,18 +281,21 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
           ctx.onFrame = undefined;
           return ended.current?.();
         }
-        // The fingers glide back to the grip before the next move.
-        const back = riding.map(({ dot, home, facing }) => {
-          const [from, turned] = [dot.getWorldPosition(new THREE.Vector3()), dot.getWorldQuaternion(new THREE.Quaternion())];
-          ctx.root.add(dot);
-          return { dot, from, turned, home, facing };
-        });
+        // The fingers go back to the grip before the next move, the way the wrist turns back: around the move's own
+        // axis, over the cube's surface, never through it.
+        const back = riding;
+        for (const { dot } of back) ctx.root.add(dot);
         const landed = t;
+        const [turn, out] = [new THREE.Quaternion(), new THREE.Vector3()];
         ctx.onFrame = (now) => {
           const r = ease(Math.min(1, (now - landed) / 350));
-          for (const { dot, from, turned, home, facing } of back) {
-            dot.position.lerpVectors(from, home, r);
-            dot.quaternion.slerpQuaternions(turned, facing, r);
+          turn.setFromAxisAngle(vector, angle * (1 - r));
+          for (const { dot, home, facing } of back) {
+            dot.position.copy(home).applyQuaternion(turn);
+            // Lifted off the surface on the way, the most halfway, so it clears the cube's edges.
+            out.copy(dot.position).addScaledVector(vector, -dot.position.dot(vector)).setLength(0.6 * Math.sqrt(Math.sin(Math.PI * r)));
+            dot.position.add(out);
+            dot.quaternion.copy(turn).multiply(facing);
           }
           if (r < 1) return;
           ctx.onFrame = undefined;

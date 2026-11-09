@@ -434,11 +434,19 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   );
 
   // The stage menu, in the top bar: the number in a circle, the stage's title; its list under it.
-  const stageMenu = stage && (
+  const stageMark = (
+    <>
+      <span className="grid size-6 flex-none place-items-center rounded-full bg-chalk text-[11px] font-black text-plastic">{current || "i"}</span>
+      <span className="line-clamp-2 min-w-0 flex-1 text-sm leading-[1.1] font-semibold">{stage?.title}</span>
+    </>
+  );
+  // A menu only when there is another stage to go to; a single stage (holding the cube) is just its name.
+  const stageMenu = !stage ? undefined : firsts.filter((f) => f >= 0).length < 2 ? (
+    <div className={`${BAR_MENU.summary} cursor-default`}>{stageMark}</div>
+  ) : (
     <details ref={picker} className="group flex min-w-0 flex-1">
       <summary className={BAR_MENU.summary}>
-        <span className="grid size-6 flex-none place-items-center rounded-full bg-chalk text-[11px] font-black text-plastic">{current || "i"}</span>
-        <span className="line-clamp-2 min-w-0 flex-1 text-sm leading-[1.1] font-semibold">{stage.title}</span>
+        {stageMark}
         <Chevron to="down" className="flex-none text-mist transition group-open:rotate-180" />
       </summary>
       <ol className={BAR_MENU.list}>

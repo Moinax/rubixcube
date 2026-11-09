@@ -44,8 +44,8 @@ type GuideProps = {
   onStep: (step: number) => void;
   onHome: () => void;
   /** The cases of one stage, inside the plan's page for that stage: no progress bar or stage list; `header` (the
-   * page's own) takes their place, `back` is the way back, `onPresent` goes back to the stage's presentation (before
-   * the first case), `footer` goes under the card. */
+   * page's own) takes their place, `back` is the way back, `onPresent` goes back to the stage's presentation (from the
+   * case menu), `footer` goes under the card. */
   focus?: {
     back: { label: string; onClick: () => void };
     header: ReactNode;
@@ -125,7 +125,8 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
 
   // On the result of a course demo, before the next demo's cube fades in.
   const [atResult, setAtResult] = useState(false);
-  // Before the first case, the plan's page presents the stage: going back past the first move leads there.
+  // Before the first case, the plan's page presents the stage: its case menu leads there, never the player, whose keys
+  // stay within its moves.
   const present = focus?.onPresent;
   const done = step === total;
   const gi = atResult ? flat[step - 1].group : flat[step]?.group;
@@ -164,7 +165,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     land(to);
   };
   // ⏮ ⏭ jump between the starts of the instructions (a case, a piece, a phase): back to this one's start, or the
-  // one before when already there (then the presentation); on to the next one's, or the end.
+  // one before when already there; on to the next one's, or the end.
   const starts = groups.map((_, i) => flat.findIndex((f) => f.group === i)).filter((i) => i >= 0);
   const seriesBack = done ? starts.at(-1) : atResult || step > groupStart ? groupStart : starts.findLast((s) => s < step);
   const seriesNext = done ? undefined : (starts.find((s) => s > step) ?? total);
@@ -172,7 +173,6 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     if (fading) return;
     setAuto(false);
     if (seriesBack !== undefined) jump(seriesBack);
-    else present?.();
   };
   const nextSeries = () => {
     if (atResult) return forward(); // the next instruction is the next press away already
@@ -189,7 +189,6 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
     if (step + 1 === total || stageStartAt(step + 1)) setAuto(false);
   };
   const back = () => {
-    if (present && !step && !fading) return present();
     if (fading || !step) return;
     if (!atResult && resultAt(step)) {
       setAnim(null);
@@ -333,7 +332,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           <button
             onClick={prevSeries}
             onMouseDown={keepFocus}
-            disabled={seriesBack === undefined && !present}
+            disabled={seriesBack === undefined}
             aria-label={tr({ fr: "Série précédente", nl: "Vorige reeks", en: "Previous series" })}
             className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
           >
@@ -343,7 +342,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           <button
             onClick={back}
             onMouseDown={keepFocus}
-            disabled={!step && !present}
+            disabled={!step}
             aria-label={tr({ fr: "Coup précédent", nl: "Vorige zet", en: "Previous move" })}
             className="group relative grid h-10 w-10 place-items-center rounded-full text-zinc-200 enabled:hover:bg-white/15 disabled:opacity-30"
           >

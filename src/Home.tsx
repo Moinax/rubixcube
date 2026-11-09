@@ -1,12 +1,39 @@
-import { Fragment, useEffect, useRef, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import CubeView, { GRIP, INDEX_COLOR, THUMB_COLOR } from "./CubeView";
-import { applyMove, FACE_COLORS, SOLVED, STICKERS, type Face } from "./cube";
+import { cfopSolve } from "./cfop";
+import { applyMove, FACE_COLORS, randomCube, STICKERS, type Face } from "./cube";
 import { MILESTONES, SCRAMBLED, SEEN_FROM_BELOW } from "./plan";
 import { lang, LANGS, setLang, tr, type Lang } from "./i18n";
 
 export type Mode = "fast" | "learn" | "cfop" | "course";
 
-const SHOWCASE = "R U F' L2 D B' R2 U'".split(" ").reduce(applyMove, SOLVED);
+// A pro's pace: about 8 turns a second, some 80 moves of CFOP in ten seconds.
+const PRO_PACE = 120;
+
+/** A cube scrambled anew on each visit that solves itself the way a speedcuber would, then spins. */
+function Showcase() {
+  const [show, setShow] = useState(() => {
+    const state = randomCube();
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return { state, moves: still ? undefined : cfopSolve(state).flatMap((g) => g.moves) };
+  });
+  // A moment on the scramble first, so it reads as one.
+  const [go, setGo] = useState(false);
+  useEffect(() => {
+    const wait = setTimeout(() => setGo(true), 1200);
+    return () => clearTimeout(wait);
+  }, []);
+  const done = !show.moves; // solved, or never played: the cube spins
+  return (
+    <CubeView
+      state={show.state}
+      moves={go ? show.moves : undefined}
+      pace={PRO_PACE}
+      onEnd={() => setShow({ state: show.moves!.reduce(applyMove, show.state), moves: undefined })}
+      autoRotate={done}
+    />
+  );
+}
 
 /** A 3x3 face drawn from 9 face letters, "." for an empty cell; `marks` outlines cells as piece or place. */
 export function MiniFace({ cells, marks = {}, small }: { cells: string; marks?: Record<number, "piece" | "place">; small?: boolean }) {
@@ -174,7 +201,7 @@ export function Home({ resume, onResume, onMode }: HomeProps) {
         </header>
         <div className="grid flex-1 content-center items-center gap-6 py-6 md:grid-cols-2 md:gap-14">
           <div className="mx-auto aspect-square w-full max-w-56 md:max-w-md">
-            <CubeView state={SHOWCASE} autoRotate />
+            <Showcase />
           </div>
           <div className="mx-auto flex w-full max-w-md flex-col gap-4">
             {resume && (

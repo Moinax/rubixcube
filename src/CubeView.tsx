@@ -77,6 +77,8 @@ type Props = {
   autoRotate?: boolean;
   below?: boolean;
   peek?: { from: Vec; key: number };
+  /** How long a quarter turn takes, in ms; a half turn takes half as long again. */
+  pace?: number;
   onPeekEnd?: (key: number) => void;
 };
 
@@ -92,7 +94,7 @@ type Props = {
  * brings it back as it is held to play, slowing near that face without stopping; a hand on the cube stops it.
  * `onPeekEnd` hears when a glance is over, back in the hand or stopped by it.
  */
-export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, peek, onPeekEnd }: Props) {
+export default function CubeView({ state, moves, onEnd, piece, place, pair, pairPlace, replay, grip, next, autoRotate = false, below = false, peek, onPeekEnd, pace = 850 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<{ root: THREE.Group; controls: OrbitControls; onFrame?: (t: number) => void; onCamera?: (t: number) => void; endPeek?: () => void }>(null);
   const ended = useRef(onEnd);
@@ -265,7 +267,7 @@ export default function CubeView({ state, moves, onEnd, piece, place, pair, pair
       }
       const turns = quarterTurns(move);
       const angle = (-Math.PI / 2) * turns;
-      const duration = turns === 2 ? 1300 : 850;
+      const duration = turns === 2 ? pace * 1.5 : pace;
       const vector = new THREE.Vector3(...moveAxis(move));
       let start: number | undefined;
       ctx.onFrame = (t) => {

@@ -57,9 +57,12 @@ const WHERE_TITLE = tr({ fr: "Où j'en suis ?", nl: "Waar ben ik?", en: "Where a
 const pageTitle = (page: number) =>
   page > 0 ? STAGES[page].title : page === WHERE ? WHERE_TITLE : tr({ fr: "Le principe", nl: "Het idee", en: "The idea" });
 
-/** A page's mark in the phone menu: the stage's number, "?" for where you are, "i" for the idea. */
-const PageMark = ({ page, current }: { page: number; current?: boolean }) => (
-  <span className={`grid size-8 flex-none place-items-center rounded-full text-sm font-black ${current ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}>
+/** A page's mark in the menu: the stage's number, "?" for where you are, "i" for the idea; `small` in the top bar,
+ * where the case under it carries the bigger number. */
+const PageMark = ({ page, current, small }: { page: number; current?: boolean; small?: boolean }) => (
+  <span
+    className={`grid flex-none place-items-center rounded-full font-black ${small ? "size-6 text-[11px]" : "size-8 text-sm"} ${current ? "bg-chalk text-plastic" : "bg-raised text-chalk"}`}
+  >
     {page > 0 ? page : page === WHERE ? "?" : "i"}
   </span>
 );
@@ -215,7 +218,7 @@ export default function Plan({ stage, step, onStage, onStep, onBack }: Props) {
   const header = (
     <details ref={menu} className="group flex min-w-0 flex-1">
       <summary className={BAR_MENU.summary}>
-        <PageMark page={stage} current />
+        <PageMark page={stage} current small />
         <span className="line-clamp-2 min-w-0 flex-1 text-sm leading-[1.1] font-semibold">{pageTitle(stage)}</span>
         <Chevron to="down" className="flex-none text-mist transition group-open:rotate-180" />
       </summary>

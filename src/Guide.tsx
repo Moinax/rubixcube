@@ -433,7 +433,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
   const stageMenu = stage && (
     <details ref={picker} className="group flex min-w-0 flex-1">
       <summary className={BAR_MENU.summary}>
-        <span className="grid size-7 flex-none place-items-center rounded-full bg-chalk text-xs font-black text-plastic">{current || "i"}</span>
+        <span className="grid size-6 flex-none place-items-center rounded-full bg-chalk text-[11px] font-black text-plastic">{current || "i"}</span>
         <span className="line-clamp-2 min-w-0 flex-1 text-sm leading-[1.1] font-semibold">{stage.title}</span>
         <Chevron to="down" className="flex-none text-mist transition group-open:rotate-180" />
       </summary>
@@ -507,7 +507,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
           )}
           {/* The cases: one menu, at every size, so they read as the parts of one stage. */}
           {/* Shown even for a single case, so the cube and the player keep their height from one stage to the next. It reads
-              like the stage's menu above it: the case's number in a smaller circle, "Cas 1 sur 4" ("Étape 1 sur 4" for the steps of one demo) over its title, at a fixed
+              like the stage's menu above it: the case's number in a bigger circle than the stage's in the top bar, "Cas 1 sur 4" ("Étape 1 sur 4" for the steps of one demo) over its title, at a fixed
               height (a title too long for a line is cut, its menu line shows it whole); a menu
               only when there is something else to pick. */}
           {(cases.length > 0 || present) &&
@@ -518,7 +518,7 @@ export default function Guide({ start, groups, learn, course, stages = STAGES, s
               const chapter = (i: number) => `${i + 1}`;
               const line = (
                 <>
-                  <span className="ml-1 grid size-6 flex-none place-items-center rounded-full bg-chalk text-[11px] font-black text-plastic">{done ? "✓" : chapter(k)}</span>
+                  <span className="grid size-8 flex-none place-items-center rounded-full bg-chalk text-sm font-black text-plastic">{done ? "✓" : chapter(k)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs text-mist">
                       {done

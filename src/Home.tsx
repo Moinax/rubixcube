@@ -10,26 +10,39 @@ export type Mode = "fast" | "learn" | "cfop" | "course";
 // A pro's pace: about 8 turns a second, some 80 moves of CFOP in ten seconds.
 const PRO_PACE = 120;
 
-/** A cube scrambled anew on each visit that solves itself the way a speedcuber would, then spins. */
+// The solve the page opens on, drawn once per page load: shared by both renders of a strict-mode mount.
+let opening: { state: string; moves: string[]; solved: string } | undefined;
+// Whether the home screen has been shown since the page loaded: coming back to it shows the cube solved.
+let shown = false;
+
+/** On page load, a cube scrambled at random that solves itself the way a speedcuber would, then spins; coming back
+ * to the home screen, the cube spins solved. */
 function Showcase() {
-  const [show, setShow] = useState(() => {
-    const state = randomCube();
+  const [show, setShow] = useState<{ state: string; moves?: string[] }>(() => {
+    opening ??= (() => {
+      const state = randomCube();
+      const moves = cfopSolve(state).flatMap((g) => g.moves);
+      return { state, moves, solved: moves.reduce(applyMove, state) };
+    })();
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    return { state, moves: still ? undefined : cfopSolve(state).flatMap((g) => g.moves) };
+    return shown || still ? { state: opening.solved } : opening;
   });
+  useEffect(() => {
+    shown = true;
+  }, []);
   // A moment on the scramble first, so it reads as one.
   const [go, setGo] = useState(false);
   useEffect(() => {
     const wait = setTimeout(() => setGo(true), 1200);
     return () => clearTimeout(wait);
   }, []);
-  const done = !show.moves; // solved, or never played: the cube spins
+  const done = !show.moves; // solved: the cube spins
   return (
     <CubeView
       state={show.state}
       moves={go ? show.moves : undefined}
       pace={PRO_PACE}
-      onEnd={() => setShow({ state: show.moves!.reduce(applyMove, show.state), moves: undefined })}
+      onEnd={() => setShow({ state: opening!.solved })}
       autoRotate={done}
     />
   );
